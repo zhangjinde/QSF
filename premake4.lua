@@ -48,6 +48,8 @@ solution 'qsf'
         {
             'src',
             BOOST_ROOT,
+            'deps/lua/src',
+            'deps/zeromq/include',
         }
         libdirs 'bin'
         links
