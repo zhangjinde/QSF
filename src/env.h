@@ -14,7 +14,7 @@ struct lua_State;
 class Env
 {
 public:
-    static bool Init(const char* file);
+    static bool Initialize(const char* file);
     static void Release();
     
     // getter and setter are thread-safe
@@ -27,5 +27,5 @@ private:
 
 private:
     static lua_State*   L_;
-    static std::unique_ptr<std::mutex> mutex_;
+    static std::mutex   mutex_;
 };

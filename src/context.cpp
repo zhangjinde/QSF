@@ -2,9 +2,9 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "Context.h"
+#include "context.h"
 #include <cassert>
-#include "core/Logging.h"
+#include "core/logging.h"
 #include "qsf.h"
 
 

@@ -16,25 +16,18 @@ using std::unique_ptr;
 
 
 static const char*  QSF_QUEUE = "inproc://router.queue";
-static const char*  DUMMY_NAME = "#S$Z";
+static const char*  DUMMY_NAME = "#S$ZD@B";
 
+namespace {
 
-
-namespace
-{
-// initialize static objects
-// global zmq context
-static std::unique_ptr<zmq::context_t>  s_context;
+// global zmq context, do not need thread pool for I/O operations
+static zmq::context_t  s_context(0);
 
 // zmq message router
 static std::unique_ptr<zmq::socket_t>   s_router;
 
-// service objects mapped to name
-typedef std::unordered_map<std::string, ServicePtr>  ServiceList;
-static std::unique_ptr<ServiceList> s_services;
-
-// mutex to guard services
-static std::unique_ptr<std::mutex>  s_mutex;
+static std::unordered_map<std::string, ServicePtr> s_services;
+static std::mutex  s_mutex;  // mutex to guard services
 
 
 void SystemCommand(const std::string& command)
@@ -52,8 +45,8 @@ bool OnSysMessage(StringPiece from, StringPiece command)
     if (command == "exit")
     {
         // send `exit` signal to every service
-        lock_guard<mutex> guard(*s_mutex);
-        for (auto& item : *s_services)
+        lock_guard<mutex> guard(s_mutex);
+        for (auto& item : s_services)
         {
             const auto& name = item.first;
             s_router->send(name.c_str(), name.size(), ZMQ_SNDMORE);
@@ -102,12 +95,12 @@ void ServiceCleanup(const string& id)
 {
     fprintf(stdout, "service [%s] exit.\n", id.c_str());
     {
-        lock_guard<mutex> guard(*s_mutex);
-        if (s_services->size() == 1)
+        lock_guard<mutex> guard(s_mutex);
+        if (s_services.size() == 1) // this is the last service object
         {
             SystemCommand("quit");
         }
-        s_services->erase(id);
+        s_services.erase(id);
     }
 }
 
@@ -122,8 +115,8 @@ void ThreadCallback(string type, string id, vector<string> args)
         if (service)
         {
             {
-                lock_guard<mutex> guard(*s_mutex);
-                (*s_services)[id] = service;
+                lock_guard<mutex> guard(s_mutex);
+                s_services[id] = service;
             }
             service->Run(args);
         }
@@ -143,7 +136,7 @@ void ThreadCallback(string type, string id, vector<string> args)
 
 bool Initialize(const char* filename)
 {
-    if (!Env::Init(filename))
+    if (!Env::Initialize(filename))
     {
         return false;
     }
@@ -154,17 +147,10 @@ bool Initialize(const char* filename)
     conf.setToDefault();
     conf.parseFromText(conf_text);
 
-    s_services.reset(new ServiceList);
-    s_mutex.reset(new std::mutex);
-
-    // inproc transport do not need thread pool to handle I/O operations,
-    // set thread count to 0
-    s_context.reset(new zmq::context_t(0));
-
     int mandatory = 1;
     int linger = 0;
     int64_t max_msg_size = MAX_MSG_SIZE;
-    s_router.reset(new zmq::socket_t(*s_context, ZMQ_ROUTER));
+    s_router.reset(new zmq::socket_t(s_context, ZMQ_ROUTER));
     //s_router->setsockopt(ZMQ_ROUTER_MANDATORY, &mandatory, sizeof(mandatory));
     s_router->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
     s_router->setsockopt(ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
@@ -176,9 +162,7 @@ bool Initialize(const char* filename)
 void Release()
 {
     s_router.reset();
-    s_context.reset();
-    s_services.reset();
-    s_mutex.reset();
+    s_services.clear();
     Env::Release();
 }
 
@@ -190,7 +174,7 @@ namespace qsf {
 
 unique_ptr<zmq::socket_t> CreateDealer(const string& identity)
 {
-    unique_ptr<zmq::socket_t> dealer(new zmq::socket_t(*s_context, ZMQ_DEALER));
+    unique_ptr<zmq::socket_t> dealer(new zmq::socket_t(s_context, ZMQ_DEALER));
     int linger = 0;
     int64_t max_msg_size = MAX_MSG_SIZE;
     dealer->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
@@ -203,14 +187,19 @@ unique_ptr<zmq::socket_t> CreateDealer(const string& identity)
 void Stop()
 {
     SystemCommand("exit");
-    auto is_any_service = [&]()
+    while (true) // wait for any exist service
     {
-        lock_guard<mutex> guard(*s_mutex);
-        return s_services->size() > 0;
-    };
-    while (is_any_service()) // wait for any exist service
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        bool is_any_service = false;
+        {
+            lock_guard<mutex> guard(s_mutex);
+            is_any_service = !s_services.empty();
+        }
+        if (is_any_service)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+        break;
     }
 }
 
@@ -229,8 +218,8 @@ bool CreateService(const string& type, const string& id, const string& str)
     vector<string> args;
     split(" ", str, args);
     {
-        lock_guard<mutex> guard(*s_mutex);
-        if (s_services->count(id) > 0)
+        lock_guard<mutex> guard(s_mutex);
+        if (s_services.count(id)) // name registered already
         {
             return false;
         }

@@ -2,25 +2,24 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "Env.h"
+#include "env.h"
 #include <cassert>
 #include <lua.hpp>
-#include "core/Conv.h"
+#include "core/conv.h"
 
 
-lua_State*      Env::L_ = nullptr;
-std::unique_ptr<std::mutex>   Env::mutex_;
+lua_State*  Env::L_ = nullptr;
+std::mutex  Env::mutex_;
 
 //////////////////////////////////////////////////////////////////////////
 
-bool Env::Init(const char* file)
+bool Env::Initialize(const char* file)
 {
     if (file == nullptr)
     {
         return false;
     }
     assert(L_ == nullptr);
-    mutex_.reset(new std::mutex);
     L_ = luaL_newstate();
     assert(L_);
     int err = luaL_dofile(L_, file);
@@ -36,7 +35,7 @@ bool Env::Init(const char* file)
 
 void Env::Release()
 {
-    mutex_.reset();
+    std::lock_guard<std::mutex> guard(mutex_);
     if (L_)
     {
         lua_close(L_);
@@ -81,7 +80,7 @@ bool Env::Load(lua_State* L)
 bool Env::Set(const char* key, const char* value)
 {
     assert(key && value);
-    std::lock_guard<std::mutex> guard(*mutex_);
+    std::lock_guard<std::mutex> guard(mutex_);
     lua_getglobal(L_, key);
     int t = lua_type(L_, -1);
     if (!lua_isnil(L_, -1))
@@ -98,7 +97,7 @@ bool Env::Set(const char* key, const char* value)
 std::string Env::Get(const char* key)
 {
     assert(key);
-    std::lock_guard<std::mutex> guard(*mutex_);
+    std::lock_guard<std::mutex> guard(mutex_);
     lua_getglobal(L_, key);
     const char* r = lua_tostring(L_, -1);
     lua_pop(L_, -1);
