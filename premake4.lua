@@ -28,7 +28,8 @@ solution 'qsf'
             '_CRT_SECURE_NO_WARNINGS',
             '_SCL_SECURE_NO_WARNINGS',
             'NOMINMAX',
-        }      
+        }
+        links 'ws2_32'
 
     project 'qsf'
         location 'build'
@@ -54,7 +55,8 @@ solution 'qsf'
         libdirs 'bin'
         links
         {
-            'ws2_32',
+            'zeromq',
+            'lua52',
         }
 
 
