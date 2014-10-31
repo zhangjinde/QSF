@@ -57,7 +57,7 @@ bool OnSysMessage(StringPiece from, StringPiece command)
     else
     {
         // force quit
-        if (command == "quit")
+        if (command == "shutdown")
         {
             return false;
         }
@@ -98,7 +98,7 @@ void ServiceCleanup(const string& id)
         lock_guard<mutex> guard(s_mutex);
         if (s_services.size() == 1) // this is the last service object
         {
-            SystemCommand("quit");
+            SystemCommand("shutdown");
         }
         s_services.erase(id);
     }
