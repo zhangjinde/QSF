@@ -13,17 +13,18 @@
 class Context
 {
 public:
+    typedef std::function<void(StringPiece, StringPiece)> HandlerType;
+public:
     explicit Context(const std::string& name);
     ~Context();
 
     const std::string& Name() { return name_; }
 
     // recieve message
-    size_t  Recv(void (*handler)(const std::string&, ByteRange), 
-                 bool dont_wait = false);
+    size_t  Recv(const HandlerType& handler, bool dont_wait = false);
 
     // send message to other object
-    void    Send(const std::string& name, ByteRange json);
+    void    Send(StringPiece name, StringPiece data);
 
 private:
     // zmq socket object
