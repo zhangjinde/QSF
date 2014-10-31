@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <lua.hpp>
+#include "core/benchmark.h"     // getNowTickCount()
 #include "context.h"
 #include "qsf.h"
 
@@ -72,6 +73,27 @@ static int qsf_shutdown(lua_State* L)
     return 0;
 }
 
+static int qsf_sleep(lua_State* L)
+{
+    int msec = luaL_checkint(L, 1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(msec));
+    return 0;
+}
+
+static int qsf_tickcount(lua_State* L)
+{
+    uint64_t ticks = getNowTickCount() / 100000UL;
+    lua_pushnumber(L, (lua_Number)ticks);
+    return 1;
+}
+
+// number of CPU core
+static int qsf_concurrency(lua_State* L)
+{
+    lua_pushinteger(L, std::thread::hardware_concurrency());
+    return 1;
+}
+
 extern "C" 
 int luaopen_qsf_c(lua_State* L)
 {
@@ -81,6 +103,9 @@ int luaopen_qsf_c(lua_State* L)
         { "recv", qsf_recv },
         { "launch", qsf_launch },
         { "shutdown", qsf_shutdown },
+        { "sleep", qsf_sleep },
+        { "tickcount", qsf_tickcount },
+        { "concurrency", qsf_concurrency },
         {NULL, NULL},
     };
     luaL_newlibtable(L, lib);
