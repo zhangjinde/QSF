@@ -7,6 +7,7 @@
 #include "core/strings.h"
 #include "core/logging.h"
 #include "env.h"
+#include "lualib-src/lua_init.h"
 
 using std::string;
 
@@ -50,7 +51,7 @@ void LuaSandBox::Initialize()
     luaL_checkversion(L);
     lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
     luaL_openlibs(L);
-    //lua_init(L);
+    lua_initlibs(L);
     LoadLibPath();
     lua_pushlightuserdata(L, &ctx);
     lua_setfield(L, LUA_REGISTRYINDEX, "qsf_ctx");
