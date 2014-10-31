@@ -31,7 +31,7 @@ LuaSandBox::LuaSandBox(Context& ctx)
 {
     L = luaL_newstate();
     CHECK_NOTNULL(L);
-    Init();
+    Initialize();
 }
 
 
@@ -44,7 +44,7 @@ LuaSandBox::~LuaSandBox()
     }
 }
 
-void LuaSandBox::Init()
+void LuaSandBox::Initialize()
 {
     auto& ctx = GetContext();
     luaL_checkversion(L);

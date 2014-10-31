@@ -32,8 +32,8 @@ std::unique_ptr<zmq::socket_t> CreateDealer(const std::string& id);
 
 // create a context
 bool CreateService(const std::string& type, 
-                            const std::string& name, 
-                            const std::string& args);
+                   const std::string& name, 
+                   const std::string& args);
 
 // run service and message dispatching
 int  Start(const char* config);

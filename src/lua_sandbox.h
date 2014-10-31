@@ -19,7 +19,7 @@ public:
     virtual int Run(const std::vector<std::string>& args);
 
 private:
-    void Init();
+    void Initialize();
     void LoadLibPath();
 
 private:
