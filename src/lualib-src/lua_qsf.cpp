@@ -9,7 +9,7 @@
 
 
 // send message to a named service
-static int qsf_sendto(lua_State* L)
+static int qsf_send(lua_State* L)
 {
     Context* self = (Context*)lua_touserdata(L, lua_upvalueindex(1));
     assert(self);
@@ -99,7 +99,7 @@ int luaopen_qsf_c(lua_State* L)
 {
     static const luaL_Reg lib[] = 
     {
-        { "sendto", qsf_sendto },
+        { "send", qsf_send },
         { "recv", qsf_recv },
         { "launch", qsf_launch },
         { "shutdown", qsf_shutdown },
