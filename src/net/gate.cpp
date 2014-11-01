@@ -30,18 +30,20 @@ public:
 
     void AsynWrite(ByteRange data)
     {
-        Header head = {};
-        head.size = static_cast<uint16_t>(data.size());
-        size_t size = data.size() + sizeof(head);
-        uint8_t* buffer = (uint8_t*)malloc(size);
-        if (buffer == nullptr)
+        if (data.size() > 0 && data.size() < MAX_SEND_BYTES)
         {
-            return;
+            while (data.size() > MAX_PACKET_SIZE)
+            {
+                AsynWriteImpl(data.subpiece(0, MAX_PACKET_SIZE), 1);
+                data.advance(MAX_PACKET_SIZE);
+            }
+            AsynWriteImpl(data, 0);
+
         }
-        memcpy(buffer, &head, sizeof(head));
-        memcpy(buffer_+sizeof(head), data.data(), data.size());
-        boost::asio::async_write(socket_, boost::asio::buffer(buffer, size),
-            std::bind(&Session::HandleWrite, this, _1, _2, buffer));
+        else
+        {
+            LOG(ERROR) << serial_ << " invalid data buffer size: " << data.size();
+        }
     }
 
     uint32_t GetSerial() const { return serial_; }
@@ -49,16 +51,45 @@ public:
     boost::asio::ip::tcp::socket& GetSocket() { return socket_; }
 
 private:
+    void AsynWriteImpl(ByteRange data, uint8_t more)
+    {
+        size_t size = data.size() + sizeof(Header);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(malloc(size));
+        if (buffer == nullptr)
+        {
+            return;
+        }
+        Header* head = reinterpret_cast<Header*>(buffer);
+        head->size = static_cast<uint16_t>(data.size());
+        head->u.codec = NO_COMPRESSION;
+        head->u.more = more;
+        memcpy(buffer_ + sizeof(*head), data.data(), data.size());
+        boost::asio::async_write(socket_, boost::asio::buffer(buffer, size),
+            std::bind(&Session::HandleWrite, this, _1, _2, buffer));
+    }
+
     void HandleReadHead(const boost::system::error_code& err, size_t bytes)
     {
-        boost::asio::async_read(socket_, boost::asio::buffer(buffer_, head_.size),
-            std::bind(&Session::HandleReadBody, this, _1, _2));
+        if (!err)
+        {
+            if (bytes == sizeof(head_))
+            {
+                boost::asio::async_read(socket_, boost::asio::buffer(buffer_, head_.size),
+                    std::bind(&Session::HandleReadBody, this, _1, _2));
+            }
+        }
     }
 
     void HandleReadBody(const boost::system::error_code& err, size_t bytes)
     {
-        on_read_(serial_, ByteRange(buffer_, bytes));
-        StartRead();
+        if (!err)
+        {
+            if (bytes == head_.size)
+            {
+                on_read_(serial_, ByteRange(buffer_, bytes));
+                StartRead();
+            }
+        }
     }
 
     void HandleWrite(const boost::system::error_code& err, size_t bytes, uint8_t* buf)
@@ -72,7 +103,7 @@ private:
 
     Header  head_;
 
-    uint8_t buffer_[MAX_PACKET_SIZE - sizeof(Header)];
+    uint8_t buffer_[MAX_PACKET_SIZE];
 
     ReadCallback&   on_read_;
 };
@@ -82,12 +113,10 @@ private:
 Gate::Gate(boost::asio::io_service& io_service)
     : io_service_(io_service), acceptor_(io_service), drop_timer_(io_service)
 {
-
 }
 
 Gate::~Gate()
 {
-
 }
 
 void Gate::Start(const std::string& host, uint16_t port, ReadCallback callback)

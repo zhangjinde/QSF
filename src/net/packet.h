@@ -19,12 +19,43 @@ enum
 {
     // max content size, size of a packet is limited to 64k
     MAX_PACKET_SIZE = UINT16_MAX,
+
+    MAX_SEND_BYTES = 32 * MAX_PACKET_SIZE,
 };
+
+
+// Compression / decompression
+enum CodecType
+{
+    // no compression
+    NO_COMPRESSION = 0,
+
+    // Use LZ4 compression.
+    LZ4 = 1,
+
+    // Use Snappy compression
+    SNAPPY = 2,
+
+    // Use zlib compression
+    ZLIB = 3,
+
+    // Use LZMA2 compression.
+    LZMA2 = 4,
+};
+
+
+#pragma pack(push) 
+#pragma pack(4)
 
 struct Header
 {
-    uint16_t     size;          // content size
-    uint8_t      codec;         // compression type
-    uint8_t      more;          // more data
-    uint32_t     checksum;      // crc32c checksum value of content
+    uint16_t        size;       // body size
+    union 
+    {
+        uint16_t    checksum;  // crc16 checksum value of content
+        uint8_t     codec;     // compression type
+        uint8_t     more;      // more data
+    }u;
 };
+
+#pragma pack(pop)
