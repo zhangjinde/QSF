@@ -29,6 +29,8 @@ solution 'qsf'
             '_SCL_SECURE_NO_WARNINGS',
             'NOMINMAX',
         }
+        includedirs { BOOST_ROOT }
+        libdirs { BOOST_ROOT .. '/stage/lib' }
         links 'ws2_32'
 
     project 'qsf'
@@ -39,7 +41,6 @@ solution 'qsf'
         {
             '_ELPP_THREAD_SAFE',
             'BOOST_ASIO_SEPARATE_COMPILATION',
-            'BOOST_DATE_TIME_NO_LIB',
             'BOOST_REGEX_NO_LIB',
         }
         files
@@ -51,7 +52,6 @@ solution 'qsf'
         includedirs
         {
             'src',
-            BOOST_ROOT,
             'deps/lua/src',
             'deps/zeromq/include',
         }
