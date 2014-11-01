@@ -19,3 +19,6 @@
  *       than a traditional CRC-32.
  */
 uint32_t crc32c(const void* data, size_t nbytes, uint32_t init_crc = 0U);
+
+// CRC16 implementation according to CCITT standards.
+uint16_t crc16(const void* data, size_t nbytes);
