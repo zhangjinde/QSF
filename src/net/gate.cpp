@@ -8,7 +8,7 @@
 #ifdef NDEBUG
 const int kCheckHeartBeatSec = 10;
 #else
-const int kCheckHeartBeatSec = 60;
+const int kCheckHeartBeatSec = 30;
 #endif
 
 const int kDeadConnectionReserveSize = 8;
@@ -52,8 +52,19 @@ bool Gate::Kick(uint32_t serial)
     {
         auto session = iter->second;
         session->Close();
+        return true;
     }
     return false;
+}
+
+void Gate::Send(uint32_t serial, ByteRange data)
+{
+    auto iter = sessions_.find(serial);
+    if (iter != sessions_.end())
+    {
+        auto session = iter->second;
+        session->AsynWrite(data);
+    }
 }
 
 uint32_t Gate::NextSessionSerial()

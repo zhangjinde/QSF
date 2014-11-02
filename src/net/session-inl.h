@@ -7,8 +7,6 @@
 
 using namespace std::placeholders;
 
-const int kRecvBufReserveSize = 32;
-
 class Gate::Session : boost::noncopyable
 {
 public:

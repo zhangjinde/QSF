@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <ctime>
+#include <cassert>
 #include <string>
 #include <memory>
 #include <unordered_set>
@@ -31,6 +32,12 @@ public:
     void Stop();
 
     void Send(uint32_t serial, ByteRange data);
+    void Send(uint32_t serial, const void* data, size_t size)
+    {
+        assert(data && size > 0);
+        Send(serial, ByteRange(reinterpret_cast<const uint8_t*>(data), size));
+    }
+
     bool Kick(uint32_t serial);
 
     void DenyAddress(const std::string& address);

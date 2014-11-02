@@ -17,12 +17,13 @@
 
 enum
 {
-    // max content size, size of a packet is limited to 64k
-    MAX_PACKET_SIZE = UINT16_MAX,
+    // max content size, size of a packet is limited to 32k
+    MAX_PACKET_SIZE = 32 * 1024 * 1024,
 
     MAX_SEND_BYTES = 32 * MAX_PACKET_SIZE,
 };
 
+const int kRecvBufReserveSize = 1024;
 
 // Compression / decompression
 enum CodecType
