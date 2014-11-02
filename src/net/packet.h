@@ -45,17 +45,19 @@ enum CodecType
 
 
 #pragma pack(push) 
-#pragma pack(4)
+#pragma pack(2)
 
-struct Header
+struct ClientHeader
 {
-    uint16_t        size;       // body size
-    union 
-    {
-        uint16_t    checksum;  // crc16 checksum value of content
-        uint8_t     codec;     // compression type
-        uint8_t     more;      // more data
-    }u;
+    uint16_t    size;       // body size
+    uint16_t    checksum;   // checksum value of content
+};
+
+struct ServerHeader
+{
+    uint16_t    size;       // body size
+    uint8_t     codec;      // compression type
+    uint8_t     more;       // more data
 };
 
 #pragma pack(pop)
