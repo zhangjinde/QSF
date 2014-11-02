@@ -303,14 +303,14 @@ static inline uint64_t LE_LOAD64(const uint8_t *p) {
 #endif
 
 static inline void Slow_CRC32(uint64_t* l, uint8_t const **p) {
-    uint32_t c = *l ^ LE_LOAD32(*p);
+    uint32_t c = static_cast<uint32_t>(*l ^ LE_LOAD32(*p));
     *p += 4;
     *l = table3_[c & 0xff] ^
         table2_[(c >> 8) & 0xff] ^
         table1_[(c >> 16) & 0xff] ^
         table0_[c >> 24];
     // DO it twice.
-    c = *l ^ LE_LOAD32(*p);
+    c = static_cast<uint32_t>(*l ^ LE_LOAD32(*p));
     *p += 4;
     *l = table3_[c & 0xff] ^
         table2_[(c >> 8) & 0xff] ^
@@ -319,7 +319,7 @@ static inline void Slow_CRC32(uint64_t* l, uint8_t const **p) {
 }
 
 static inline void Fast_CRC32(uint64_t* l, uint8_t const **p) {
-#ifdef PLAT_X64
+#if PLAT_X64
     *l = _mm_crc32_u64(*l, LE_LOAD64(*p));
     *p += 8;
 #else
@@ -367,7 +367,7 @@ uint32_t ExtendImpl(uint32_t crc, const char* buf, size_t size) {
     }
 #undef STEP1
 #undef ALIGN
-    return l ^ 0xffffffffu;
+    return static_cast<uint32_t>(l ^ 0xffffffffu);
 }
 
 typedef uint32_t(*Crc32Impl)(uint32_t, const char*, size_t);
@@ -401,35 +401,6 @@ uint32_t crc32c_sw(const void* data, size_t nbytes, uint32_t init_crc) {
 
 } // namespace detail
 
-
-/*
- * Copyright 2001-2010 Georges Menie (www.menie.org)
- * Copyright 2010-2012 Salvatore Sanfilippo (adapted to Redis coding style)
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the University of California, Berkeley nor the
- *       names of its contributors may be used to endorse or promote products
- *       derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE REGENTS AND CONTRIBUTORS BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 
 /* CRC16 implementation according to CCITT standards.
  *
@@ -481,10 +452,12 @@ static const uint16_t crc16tab[256] = {
     0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
 };
 
-uint16_t crc16(const char *buf, int len) {
-    int counter;
+uint16_t crc16(const void* buf, size_t len) {
+    const char* data = reinterpret_cast<const char*>(buf);
     uint16_t crc = 0;
-    for (counter = 0; counter < len; counter++)
-        crc = (crc << 8) ^ crc16tab[((crc >> 8) ^ *buf++) & 0x00FF];
+    for (size_t i = 0; i < len; i++)
+    {
+        crc = (crc << 8) ^ crc16tab[((crc >> 8) ^ *data++) & 0x00FF];
+    }
     return crc;
 }
