@@ -3,6 +3,7 @@
 #include <ctime>
 #include <chrono>
 #include <boost/asio.hpp>
+#include "core/strings.h"
 #include "core/logging.h"
 #include "checksum.h"
 
@@ -48,7 +49,7 @@ void Client::Send(ByteRange data)
 {
     if (data.size() > MAX_PACKET_SIZE)
     {
-        LOG(ERROR) << "too big size to send: " << data.size();
+        LOG(ERROR) << "too big size to send: " << prettyPrint(data.size(), PRETTY_BYTES);
         return;
     }
     size_t size = data.size() + sizeof(ClientHeader);
@@ -108,6 +109,7 @@ void Client::HandleReadBody(const boost::system::error_code& ec, size_t bytes)
             on_read_(ByteRange(buffer_more_.data(), buffer_more_.size()));
             buffer_more_.resize(0);
         }
+        AsynReadHead();
     }
     else
     {

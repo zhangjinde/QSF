@@ -2,6 +2,7 @@
 
 #include <malloc.h>
 #include <vector>
+#include "core/strings.h"
 #include "packet.h"
 #include "checksum.h"
 
@@ -138,20 +139,22 @@ void Gate::Session::AsynWrite(ByteRange data)
     {
         while (data.size() > MAX_PACKET_SIZE)
         {
-            AsynWriteImpl(data.subpiece(0, MAX_PACKET_SIZE), 1);
+            auto frame = data.subpiece(0, MAX_PACKET_SIZE);
+            AsynWriteImpl(frame, 1);
             data.advance(MAX_PACKET_SIZE);
         }
         AsynWriteImpl(data, 0);
-
     }
     else
     {
-        LOG(DEBUG) << serial_ << " invalid data buffer size: " << data.size();
+        LOG(DEBUG) << serial_ << " invalid data buffer size: " 
+            << prettyPrint(data.size(), PRETTY_BYTES);
     }
 }
 
 void Gate::Session::AsynWriteImpl(ByteRange data, uint8_t more)
 {
+    assert(data.size() <= UINT16_MAX);
     size_t size = data.size() + sizeof(ServerHeader);
     uint8_t* buf = reinterpret_cast<uint8_t*>(malloc(size));
     if (buf == nullptr)

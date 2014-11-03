@@ -8,7 +8,7 @@
 #ifdef NDEBUG
 const int kCheckHeartBeatSec = 10;
 #else
-const int kCheckHeartBeatSec = 30;
+const int kCheckHeartBeatSec = 90;
 #endif
 
 const int kDeadConnectionReserveSize = 8;
