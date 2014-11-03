@@ -24,28 +24,19 @@ public:
     {
     }
 
-    virtual ~Service()
+    virtual ~Service() 
     {
     }
 
     Service(const Service&) = delete;
     Service& operator = (const Service&) = delete;
 
-    const std::string&  Type() const 
-    { 
-        return type_; 
-    }
+    const std::string&  Type() const { return type_; }
 
-    Context&  GetContext() 
-    { 
-        return ctx_; 
-    }
+    Context&  GetContext() { return ctx_; }
 
     // virtual interface
     virtual int Run(const std::vector<std::string>& args) = 0;
-
-public:
-    
 
 private:
     Context&        ctx_;
