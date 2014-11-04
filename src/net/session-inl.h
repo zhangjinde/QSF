@@ -5,6 +5,7 @@
 #include "core/strings.h"
 #include "packet.h"
 #include "checksum.h"
+#include "compression.h"
 
 using namespace std::placeholders;
 
@@ -28,10 +29,10 @@ public:
     time_t GetLastRecvTime() const { return last_recv_time_; }
 
 private:
-    void AsynWriteImpl(ByteRange data, uint8_t more);
+    void AsynWriteFrame(ByteRange frame, uint8_t more);
     void HandleReadHead(const boost::system::error_code& ec, size_t bytes);
     void HandleReadBody(const boost::system::error_code& ec, size_t bytes);
-    void HandleWrite(const boost::system::error_code& ec, size_t bytes, uint8_t* buf);
+    void HandleWrite(const boost::system::error_code& ec, size_t bytes, std::unique_ptr<IOBuf>& buf);
 
 private:
     boost::asio::ip::tcp::socket    socket_;
@@ -119,7 +120,8 @@ void Gate::Session::HandleReadBody(const boost::system::error_code& ec, size_t b
         if (head_.checksum == checksum)
         {
             last_recv_time_ = time(NULL);
-            callback_(serial_, 0, ByteRange(data, bytes));
+            auto buf = UnCompress(ZLIB, ByteRange(data, bytes));
+            callback_(serial_, 0, buf->range());
             AsynRead();
         }
         else
@@ -140,10 +142,10 @@ void Gate::Session::AsynWrite(ByteRange data)
         while (data.size() > MAX_PACKET_SIZE)
         {
             auto frame = data.subpiece(0, MAX_PACKET_SIZE);
-            AsynWriteImpl(frame, 1);
+            AsynWriteFrame(frame, 1);
             data.advance(MAX_PACKET_SIZE);
         }
-        AsynWriteImpl(data, 0);
+        AsynWriteFrame(data, 0);
     }
     else
     {
@@ -152,33 +154,27 @@ void Gate::Session::AsynWrite(ByteRange data)
     }
 }
 
-void Gate::Session::AsynWriteImpl(ByteRange data, uint8_t more)
+void Gate::Session::AsynWriteFrame(ByteRange frame, uint8_t more)
 {
-    assert(data.size() <= UINT16_MAX);
-    size_t size = data.size() + sizeof(ServerHeader);
-    uint8_t* buf = reinterpret_cast<uint8_t*>(malloc(size));
-    if (buf == nullptr)
-    {
-        //LOG(ERROR) << serial_ << ", out of memory with size: " << size;
-        return;
-    }
-    ServerHeader* head = reinterpret_cast<ServerHeader*>(buf);
-    head->size = static_cast<uint16_t>(data.size());
-    head->codec = NO_COMPRESSION;
+    assert(frame.size() <= UINT16_MAX);
+    const size_t head_size = sizeof(ServerHeader);
+    auto out = Compress(ZLIB, frame, head_size);
+    ServerHeader* head = reinterpret_cast<ServerHeader*>(out->buffer());
+    head->size = static_cast<uint16_t>(frame.size());
+    head->codec = ZLIB;
     head->more = more;
-    memcpy(buf + sizeof(*head), data.data(), data.size());
-    boost::asio::async_write(socket_, boost::asio::buffer(buf, size),
-        std::bind(&Gate::Session::HandleWrite, this, _1, _2, buf));
+    boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
+        std::bind(&Gate::Session::HandleWrite, this, _1, _2, std::ref(out)));
 }
 
 
 void Gate::Session::HandleWrite(const boost::system::error_code& ec,
                                 size_t bytes, 
-                                uint8_t* buf)
+                                std::unique_ptr<IOBuf>& buf)
 {
-    if (buf)
+    if (!ec)
     {
-        free(buf);
+        LOG(DEBUG) << ec.message();
     }
 }
 

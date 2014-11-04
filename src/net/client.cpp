@@ -6,6 +6,7 @@
 #include "core/strings.h"
 #include "core/logging.h"
 #include "checksum.h"
+#include "compression.h"
 
 using namespace std::placeholders;
 
@@ -52,19 +53,19 @@ void Client::Send(ByteRange data)
         LOG(ERROR) << "too big size to send: " << prettyPrint(data.size(), PRETTY_BYTES);
         return;
     }
-    size_t size = data.size() + sizeof(ClientHeader);
-    uint8_t* buf = reinterpret_cast<uint8_t*>(malloc(size));
-    if (buf == nullptr)
+    const uint32_t head_size = sizeof(ClientHeader);
+    auto out = Compress(ZLIB, data, head_size);
+    if (out->empty())
     {
         //LOG(ERROR) << serial_ << ", out of memory with size: " << size;
         return;
     }
-    ClientHeader* head = reinterpret_cast<ClientHeader*>(buf);
-    head->size = static_cast<uint16_t>(data.size());
-    head->checksum = crc16(data.data(), data.size());
-    memcpy(buf + sizeof(*head), data.data(), data.size());
-    boost::asio::async_write(socket_, boost::asio::buffer(buf, size),
-        std::bind(&Client::HandleSend, this, _1, _2, buf));
+    ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
+    size_t body_size = out->length() - head_size;
+    head->size = static_cast<uint16_t>(body_size);
+    head->checksum = crc16(out->buffer() + head_size, body_size);
+    boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
+        std::bind(&Client::HandleSend, this, _1, _2, std::ref(out)));
 }
 
 void Client::AsynReadHead()
@@ -94,11 +95,11 @@ void Client::HandleReadBody(const boost::system::error_code& ec, size_t bytes)
 {
     if (!ec)
     {
-        if (head_.more == 0 && buffer_more_.size() == 0)
+        if (head_.more == 0 && buffer_more_.size() == 0) // most case
         {
             std::swap(buffer_more_, buffer_);
         }
-        else
+        else // framed packet
         {
             auto oldsize = buffer_more_.size();
             buffer_more_.resize(oldsize + bytes);
@@ -117,14 +118,16 @@ void Client::HandleReadBody(const boost::system::error_code& ec, size_t bytes)
     }
 }
 
-void Client::HandleSend(const boost::system::error_code& ec, size_t bytes, uint8_t* buf)
+void Client::HandleSend(const boost::system::error_code& ec, size_t bytes, std::unique_ptr<IOBuf>& buf)
 {
-    free(buf);
-    if (ec)
+    if (!ec)
+    {
+        last_send_time_ = time(NULL);
+    }
+    else
     {
         LOG(ERROR) << ec.message();
     }
-    last_send_time_ = time(NULL);
 }
 
 void Client::HeartBeating()
@@ -132,17 +135,13 @@ void Client::HeartBeating()
     time_t now = time(NULL);
     if (now - last_send_time_ >= heart_beat_sec_)
     {
-        uint8_t* buf = reinterpret_cast<uint8_t*>(malloc(sizeof(ClientHeader)));
-        if (buf == nullptr)
-        {
-            //LOG(ERROR) << serial_ << ", out of memory with size: " << size;
-            return;
-        }
-        ClientHeader* head = reinterpret_cast<ClientHeader*>(buf);
+        auto out = IOBuf::create(sizeof(ClientHeader));
+        ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
         head->size = 0;
         head->checksum = 0;
-        boost::asio::async_write(socket_, boost::asio::buffer(head, sizeof(*head)),
-            std::bind(&Client::HandleSend, this, _1, _2, buf));
+        out->append(sizeof(*head));
+        boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
+            std::bind(&Client::HandleSend, this, _1, _2, std::ref(out)));
     }
     heart_beat_.expires_from_now(std::chrono::seconds(heart_beat_sec_/2));
     heart_beat_.async_wait(std::bind(&Client::HeartBeating, this));

@@ -12,7 +12,7 @@
 #include <boost/noncopyable.hpp>
 #include "core/range.h"
 #include "packet.h"
-
+#include "iobuf.h"
 
 class Client : boost::noncopyable
 {
@@ -39,7 +39,8 @@ private:
     void AsynReadHead();
     void HandleReadHead(const boost::system::error_code& ec, size_t bytes);
     void HandleReadBody(const boost::system::error_code& ec, size_t bytes);
-    void HandleSend(const boost::system::error_code& ec, size_t bytes, uint8_t* buf);
+    void HandleSend(const boost::system::error_code& ec, size_t bytes, 
+                    std::unique_ptr<IOBuf>& buf);
     void HeartBeating();
 
 private:
