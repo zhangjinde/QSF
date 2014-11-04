@@ -32,6 +32,22 @@ solution 'qsf'
         includedirs { BOOST_ROOT }
         libdirs { BOOST_ROOT .. '/stage/lib' }
         links 'ws2_32'
+        
+    configuration 'gmake'
+        buildoptions '-std=c++11 -mcrc32 -msse4.2 -rdynamic'
+        defines
+        {
+            '__STDC_LIMIT_MACROS',
+            '_ELPP_STACKTRACE_ON_CRASH',
+            'HAVE_UNISTD_H',
+        }
+        links
+        {
+            'z',
+            'rt',
+            'pthread',
+        }        
+        
 
     project 'qsf'
         location 'build'
@@ -58,8 +74,8 @@ solution 'qsf'
         libdirs 'bin'
         links
         {
-            'zeromq',
-            'lua52',
+            'zmq',
+            'lua',
         }
 
 

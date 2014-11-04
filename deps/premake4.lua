@@ -29,7 +29,7 @@ solution '3rdlibs'
             'NOMINMAX',
         }
 
-    project 'zeromq'
+    project 'zmq'
         language 'C++'
         kind 'SharedLib'
         location 'build'
@@ -48,7 +48,7 @@ solution '3rdlibs'
         }
         links 'ws2_32'
 
-    project 'lua52'
+    project 'lua'
         language 'C'
         kind 'SharedLib'
         location 'build'
