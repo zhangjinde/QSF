@@ -65,3 +65,14 @@ solution '3rdlibs'
             'lua/src/luac.c',
         }
         
+    project 'zlib'
+        language 'C'
+        kind 'SharedLib'
+        location 'build'
+        uuid '9C08AC41-18D8-4FB9-80F2-01F603917025'
+        defines {'ZLIB_DLL', 'Z_HAVE_STDARG_H'}
+        files
+        {
+            'zlib/*.h',
+            'zlib/*.c',
+        } 

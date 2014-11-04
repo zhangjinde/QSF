@@ -43,7 +43,6 @@ solution 'qsf'
         }
         links
         {
-            'z',
             'rt',
             'pthread',
         }        
@@ -68,6 +67,7 @@ solution 'qsf'
         includedirs
         {
             'src',
+            'deps/zlib',
             'deps/lua/src',
             'deps/zeromq/include',
         }
@@ -76,6 +76,7 @@ solution 'qsf'
         {
             'zmq',
             'lua',
+            'zlib',
         }
 
 
