@@ -59,7 +59,7 @@ void tls_key_free(tls_key_t key)
 
 void tls_key_set(tls_key_t key, void* ptr)
 {
-    CHECK(pthread_setspecific(id, ptr) == 0);
+    CHECK(pthread_setspecific(key, ptr) == 0);
 }
 
 void* tls_key_get(tls_key_t key)
