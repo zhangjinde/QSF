@@ -13,7 +13,7 @@ std::mutex  Env::mutex_;
 
 //////////////////////////////////////////////////////////////////////////
 
-bool Env::Initialize(const char* file)
+bool Env::initialize(const char* file)
 {
     if (file == nullptr)
     {
@@ -33,7 +33,7 @@ bool Env::Initialize(const char* file)
     return true;
 }
 
-void Env::Release()
+void Env::release()
 {
     std::lock_guard<std::mutex> guard(mutex_);
     if (L_)
@@ -43,7 +43,7 @@ void Env::Release()
     }
 }
 
-bool Env::Load(lua_State* L)
+bool Env::load(lua_State* L)
 {
     lua_pushglobaltable(L);
     lua_pushnil(L);  /* first key */
@@ -59,7 +59,7 @@ bool Env::Load(lua_State* L)
         if (lua_type(L, -1) == LUA_TBOOLEAN) 
         {
             int b = lua_toboolean(L, -1);
-            Set(key, b ? "true" : "false");
+            set(key, b ? "true" : "false");
         }
         else 
         {
@@ -69,7 +69,7 @@ bool Env::Load(lua_State* L)
                 fprintf(stderr, "invalid config table key = %s\n", key);
                 return false;
             }
-            Set(key, value);
+            set(key, value);
         }
         lua_pop(L, 1);
     }
@@ -77,7 +77,7 @@ bool Env::Load(lua_State* L)
     return true;
 }
 
-bool Env::Set(const char* key, const char* value)
+bool Env::set(const char* key, const char* value)
 {
     assert(key && value);
     std::lock_guard<std::mutex> guard(mutex_);
@@ -94,7 +94,7 @@ bool Env::Set(const char* key, const char* value)
     return true;
 }
 
-std::string Env::Get(const char* key)
+std::string Env::get(const char* key)
 {
     assert(key);
     std::lock_guard<std::mutex> guard(mutex_);
@@ -104,13 +104,9 @@ std::string Env::Get(const char* key)
     return r ? r : "";
 }
 
-int64_t Env::GetInt(const char* key)
+int64_t Env::getInt(const char* key)
 {
     assert(key);
-    std::string str = Get(key);
-    if (str.empty())
-    {
-        return 0;
-    }
-    return to<int64_t>(str);
+    std::string str = get(key);
+    return (!str.empty() ? to<int64_t>(str) : 0);
 }

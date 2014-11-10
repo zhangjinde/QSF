@@ -9,7 +9,7 @@
 
 
 Context::Context(const std::string& id)
-    : name_(id), socket_(qsf::CreateDealer(id))
+    : name_(id), socket_(qsf::createDealer(id))
 {
 }
 
@@ -17,7 +17,7 @@ Context::~Context()
 {
 }
 
-size_t  Context::Recv(const HandlerType& handler, bool dont_wait)
+size_t  Context::recv(const HandlerType& handler, bool dont_wait)
 {
     assert(handler);
     zmq::message_t from;
@@ -37,7 +37,7 @@ size_t  Context::Recv(const HandlerType& handler, bool dont_wait)
     return 0;
 }
 
-void Context::Send(StringPiece name, StringPiece data)
+void Context::send(StringPiece name, StringPiece data)
 {
     if (!name.empty() && !data.empty())
     {

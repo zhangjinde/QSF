@@ -32,7 +32,7 @@ LuaSandBox::LuaSandBox(Context& ctx)
 {
     L = luaL_newstate();
     CHECK_NOTNULL(L);
-    Initialize();
+    initialize();
 }
 
 
@@ -45,22 +45,22 @@ LuaSandBox::~LuaSandBox()
     }
 }
 
-void LuaSandBox::Initialize()
+void LuaSandBox::initialize()
 {
-    auto& ctx = GetContext();
+    auto& ctx = this->context();
     luaL_checkversion(L);
     lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
     luaL_openlibs(L);
     lua_initlibs(L);
-    LoadLibPath();
+    loadLibPath();
     lua_pushlightuserdata(L, &ctx);
     lua_setfield(L, LUA_REGISTRYINDEX, "qsf_ctx");
     lua_gc(L, LUA_GCRESTART, 0);
 }
 
-void LuaSandBox::LoadLibPath()
+void LuaSandBox::loadLibPath()
 {
-    string path = Env::Get("lua_path");
+    string path = Env::get("lua_path");
     if (!path.empty())
     {
         auto chunk = stringPrintf("package.path = package.path .. ';' .. '%s'", 
@@ -68,7 +68,7 @@ void LuaSandBox::LoadLibPath()
         int err = luaL_dostring(L, chunk.c_str());
         CHECK(!err) << lua_tostring(L, -1);
     }
-    string cpath = Env::Get("lua_cpath");
+    string cpath = Env::get("lua_cpath");
     if (!cpath.empty())
     {
         auto chunk = stringPrintf("package.cpath = package.cpath .. ';' .. '%s'", 
@@ -78,11 +78,11 @@ void LuaSandBox::LoadLibPath()
     }
 }
 
-int LuaSandBox::Run(const std::vector<string>& args)
+int LuaSandBox::run(const std::vector<string>& args)
 {
     assert(!args.empty());
     
-    const string& id = GetContext().Name();
+    const string& id = this->context().name();
     const string& filename = args[0];
 
     int r = luaL_loadfile(L, filename.c_str());

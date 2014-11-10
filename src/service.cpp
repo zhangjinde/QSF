@@ -6,7 +6,7 @@
 #include "lua_sandbox.h"
 
 
-ServicePtr CreateService(const std::string& type, Context& ctx)
+ServicePtr createService(const std::string& type, Context& ctx)
 {
     assert(!type.empty());
     if (type == "luasandbox")

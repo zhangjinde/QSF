@@ -18,7 +18,7 @@ static int qsf_send(lua_State* L)
     const char* name = luaL_checklstring(L, 1, &name_size);
     const char* data = luaL_checklstring(L, 2, &data_size);
     assert(data && data_size && name && name_size && name_size <= MAX_NAME_SIZE);
-    self->Send(StringPiece(name, name_size), StringPiece(data, data_size));
+    self->send(StringPiece(name, name_size), StringPiece(data, data_size));
     return 0;
 }
 
@@ -34,7 +34,7 @@ static int qsf_recv(lua_State* L)
         dontwait = (strcmp(option, "dontwait") == 0);
     }
     int r = 0;
-    self->Recv([&](StringPiece name, StringPiece data)
+    self->recv([&](StringPiece name, StringPiece data)
     {
         if (data.size() > 0)
         {
@@ -59,7 +59,7 @@ static int qsf_launch(lua_State* L)
         args.append(" ");
         args.append(value);
     }
-    bool r = qsf::CreateService("luasandbox", ident, args);
+    bool r = qsf::createService("luasandbox", ident, args);
     lua_pushboolean(L, r);
     return 1;
 }
@@ -69,7 +69,7 @@ static int qsf_shutdown(lua_State* L)
 {
     Context* self = (Context*)lua_touserdata(L, lua_upvalueindex(1));
     assert(self);
-    self->Send("sys", "shutdown");
+    self->send("sys", "shutdown");
     return 0;
 }
 

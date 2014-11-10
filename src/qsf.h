@@ -28,18 +28,18 @@ enum
 namespace qsf {
 
 // create a dealer object, thread-safe
-std::unique_ptr<zmq::socket_t> CreateDealer(const std::string& id);
+std::unique_ptr<zmq::socket_t> createDealer(const std::string& id);
 
 // create a context
-bool CreateService(const std::string& type, 
+bool createService(const std::string& type, 
                    const std::string& name, 
                    const std::string& args);
 
 // run service and message dispatching
-int  Start(const char* config);
+int  start(const char* config);
 
 // stop all service
-void Stop();
+void stop();
 
 };
 

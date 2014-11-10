@@ -16,11 +16,11 @@ public:
     virtual ~LuaSandBox();
 
     // the first argument is the main chunk file name
-    virtual int Run(const std::vector<std::string>& args);
+    virtual int run(const std::vector<std::string>& args);
 
 private:
-    void Initialize();
-    void LoadLibPath();
+    void initialize();
+    void loadLibPath();
 
 private:
     lua_State*  L = nullptr;

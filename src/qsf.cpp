@@ -30,17 +30,17 @@ static std::unordered_map<std::string, ServicePtr> s_services;
 static std::mutex  s_mutex;  // mutex to guard services
 
 
-void SystemCommand(const std::string& command)
+void systemCommand(const std::string& command)
 {
     string id = DUMMY_NAME;
-    auto dealer = qsf::CreateDealer(id);
+    auto dealer = qsf::createDealer(id);
     assert(dealer);
     dealer->send(id.c_str(), id.size(), ZMQ_SNDMORE);
     dealer->send("sys", 3, ZMQ_SNDMORE);
     dealer->send(command.c_str(), command.size());
 }
 
-bool OnSysMessage(StringPiece from, StringPiece command)
+bool onSysMessage(StringPiece from, StringPiece command)
 {
     if (command == "exit")
     {
@@ -65,7 +65,7 @@ bool OnSysMessage(StringPiece from, StringPiece command)
     return true;
 }
 
-bool DispatchMessage()
+bool dispatchMessage()
 {
     zmq::message_t from;    // where this message came from
     zmq::message_t to;      // where is this message going
@@ -80,7 +80,7 @@ bool DispatchMessage()
     if (destination == "sys")
     {
         StringPiece command((const char*)msg.data(), msg.size());
-        return OnSysMessage(source, command);
+        return onSysMessage(source, command);
     }
     else
     {
@@ -91,34 +91,34 @@ bool DispatchMessage()
     return true;
 }
 
-void ServiceCleanup(const string& id)
+void onServiceCleanup(const string& id)
 {
     fprintf(stdout, "service [%s] exit.\n", id.c_str());
     {
         lock_guard<mutex> guard(s_mutex);
         if (s_services.size() == 1) // this is the last service object
         {
-            SystemCommand("shutdown");
+            systemCommand("shutdown");
         }
         s_services.erase(id);
     }
 }
 
 
-void ThreadCallback(string type, string id, vector<string> args)
+void threadCallback(string type, string id, vector<string> args)
 {
     try
     {
         assert(!type.empty() && !args.empty());
         Context ctx(id);
-        auto service = CreateService(type, ctx);
+        auto service = createService(type, ctx);
         if (service)
         {
             {
                 lock_guard<mutex> guard(s_mutex);
                 s_services[id] = service;
             }
-            service->Run(args);
+            service->run(args);
         }
     }
     catch (std::exception& ex)
@@ -130,19 +130,19 @@ void ThreadCallback(string type, string id, vector<string> args)
         LOG(ERROR) << id << ": unknown exception occurs!";
     }
 
-    ServiceCleanup(id);
+    onServiceCleanup(id);
 }
 
 
-bool Initialize(const char* filename)
+bool initialize(const char* filename)
 {
-    if (!Env::Initialize(filename))
+    if (!Env::initialize(filename))
     {
         return false;
     }
 
     // config easylogging++
-    auto conf_text = Env::Get("logconf");
+    auto conf_text = Env::get("logconf");
     el::Configurations conf;
     conf.setToDefault();
     conf.parseFromText(conf_text);
@@ -159,11 +159,11 @@ bool Initialize(const char* filename)
     return true;
 }
 
-void Release()
+void release()
 {
     s_router.reset();
     s_services.clear();
-    Env::Release();
+    Env::release();
 }
 
 } // anonymouse namespace
@@ -172,7 +172,7 @@ void Release()
 
 namespace qsf {
 
-unique_ptr<zmq::socket_t> CreateDealer(const string& identity)
+unique_ptr<zmq::socket_t> createDealer(const string& identity)
 {
     unique_ptr<zmq::socket_t> dealer(new zmq::socket_t(s_context, ZMQ_DEALER));
     int linger = 0;
@@ -184,9 +184,9 @@ unique_ptr<zmq::socket_t> CreateDealer(const string& identity)
     return std::move(dealer);
 }
 
-void Stop()
+void stop()
 {
-    SystemCommand("exit");
+    systemCommand("exit");
     while (true) // wait for any exist service
     {
         bool is_any_service = false;
@@ -204,7 +204,7 @@ void Stop()
 }
 
 // create an service
-bool CreateService(const string& type, const string& id, const string& str)
+bool createService(const string& type, const string& id, const string& str)
 {
     // name of 'sys' is reserved
     if (type.empty() || id.empty() || id.size() > MAX_NAME_SIZE || id == "sys")
@@ -224,33 +224,26 @@ bool CreateService(const string& type, const string& id, const string& str)
             return false;
         }
     }
-    std::thread thrd(std::bind(ThreadCallback, type, id, args));
+    std::thread thrd(std::bind(threadCallback, type, id, args));
     thrd.detach(); // allow independent execution
 
     return true;
 }
 
-int Start(const char* filename)
+int start(const char* filename)
 {
-    try
+    SCOPE_EXIT{ release(); };
+    if (initialize(filename))
     {
-        SCOPE_EXIT{ Release(); };
-        if (Initialize(filename))
-        {
-            const string& name = Env::Get("start_name");
-            const string& args = Env::Get("start_file");
-            CreateService("luasandbox", name, args);
+        const string& name = Env::get("start_name");
+        const string& args = Env::get("start_file");
+        createService("luasandbox", name, args);
 
-            while (DispatchMessage())
-                ;
-        }
+        while (dispatchMessage())
+            ;
+        return 0;
     }
-    catch (std::exception& ex)
-    {
-        LOG(ERROR) << typeid(ex).name() << ": " << ex.what();
-        return 1;
-    }
-    return 0;
+    return 1;
 }
 
 } // namespace qsf

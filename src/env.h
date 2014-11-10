@@ -14,16 +14,16 @@ struct lua_State;
 class Env
 {
 public:
-    static bool Initialize(const char* file);
-    static void Release();
+    static bool initialize(const char* file);
+    static void release();
     
     // getter and setter are thread-safe
-    static bool Set(const char* key, const char* value);
-    static std::string Get(const char* key);
-    static int64_t GetInt(const char* key);
+    static bool set(const char* key, const char* value);
+    static std::string get(const char* key);
+    static int64_t getInt(const char* key);
 
 private:
-    static bool Load(lua_State* L);
+    static bool load(lua_State* L);
 
 private:
     static lua_State*   L_;

@@ -31,16 +31,16 @@ public:
     Service(const Service&) = delete;
     Service& operator = (const Service&) = delete;
 
-    const std::string&  Type() const { return type_; }
+    const std::string&  type() const { return type_; }
 
-    Context&  GetContext() { return ctx_; }
+    Context&  context() { return ctx_; }
 
     // virtual interface
-    virtual int Run(const std::vector<std::string>& args) = 0;
+    virtual int run(const std::vector<std::string>& args) = 0;
 
 private:
     Context&        ctx_;
     std::string     type_;
 };
 
-ServicePtr CreateService(const std::string& name, Context& ctx);
+ServicePtr createService(const std::string& name, Context& ctx);

@@ -18,13 +18,13 @@ public:
     explicit Context(const std::string& name);
     ~Context();
 
-    const std::string& Name() { return name_; }
+    const std::string& name() { return name_; }
 
     // recieve message
-    size_t  Recv(const HandlerType& handler, bool dont_wait = false);
+    size_t  recv(const HandlerType& handler, bool dont_wait = false);
 
     // send message to other object
-    void    Send(StringPiece name, StringPiece data);
+    void    send(StringPiece name, StringPiece data);
 
 private:
     // zmq socket object
