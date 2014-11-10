@@ -63,7 +63,12 @@ solution 'qsf'
             'src/**.h',
             'src/**.cpp',
         }
-        excludes 'src/test/**.*'
+        excludes 
+        {
+            'src/test/*.*',
+            'src/core/test/*.*',
+            'src/net/test/*.*',
+        }
         includedirs
         {
             'src',
@@ -80,28 +85,26 @@ solution 'qsf'
         }
 
 
-    project 'unittest'
+    project 'test-core'
         location 'build'
         kind 'ConsoleApp'
         uuid '9E30CCC3-DA13-47FB-9902-7BF6D4792380'
         defines 
         {
-            '_ELPP_THREAD_SAFE',
+            '_ELPP_THREAD_SAFE',         
         }
         files
         {
+            'src/core/**.*',
             'deps/gtest/src/gtest-all.cc',
-            'src/core/*.*',
-            'src/test/*.*', 
         }
         includedirs
         {
             'src',
             'deps/gtest',
-            'deps/gtest/include',
+            'deps/gtest/include',           
         }
         libdirs 
         {
             'bin',
-        }
-        
+        }     
