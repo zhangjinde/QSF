@@ -43,12 +43,20 @@
 
 namespace detail {
 
-    template<typename T> struct identity { typedef T type; };
+// Use implicit_cast as a safe version of static_cast or const_cast
+// for upcasting in the type hierarchy (i.e. casting a pointer to Foo
+// to a pointer to SuperclassOfFoo or casting a pointer to Foo to
+// a const pointer to Foo).
+// When you use implicit_cast, the compiler checks that the cast is safe.
+// Such explicit implicit_casts are necessary in surprisingly many
+// situations where C++ demands an exact type match instead of an
+// argument type convertable to a target type.
+template<typename T> struct identity { typedef T type; };
+template<typename T> T implicit_cast(typename identity<T>::type t)
+{
+    return t;
+}
 
-    template<typename T> T implicit_cast(typename identity<T>::type t)
-    {
-        return t;
-    }
 } // namespace detail
 
 /*******************************************************************************
