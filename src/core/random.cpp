@@ -21,19 +21,24 @@
 #include "random.h"
 #include <random>
 #include <cassert>
+#include "platform.h"
 #include "logging.h"
-#include "thread_local_ptr.h"
 
 
 static inline std::default_random_engine* get_tls_rng()
 {
-    static ThreadLocalPtr<std::default_random_engine> rng;
-    if (rng.get() == nullptr)
+    static THREAD_LOCAL std::default_random_engine* rng = nullptr;
+    if (rng == nullptr)
     {
-        rng.reset(new std::default_random_engine());
+        rng = new std::default_random_engine();
     }
-    assert(rng.get());
-    return rng.get();
+    assert(rng != nullptr);
+    return rng;
+}
+
+void Random::release()
+{
+    delete get_tls_rng();
 }
 
 void Random::seed(int32_t seed_value)

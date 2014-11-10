@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "platform.h"
 #include <cstdint>
 
 
@@ -31,8 +30,11 @@ class Random
 {
 public:
 
-    // initialize PRNG pointer and seed
+    // Initialize PRNG pointer and seed
     static void seed(int32_t seed = 0);
+
+    // Delete PRNG pointer
+    static void release();
 
     /**
      * Returns a random uint32_t

@@ -51,6 +51,7 @@ TEST(Random, MultiThreaded)
         {
             Random::seed();
             seeds[i] = Random::rand32();
+            Random::release();
         }));
     }
     for (auto& t : threads) 
