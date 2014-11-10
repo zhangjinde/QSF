@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 
 namespace detail {
 
@@ -31,21 +32,16 @@ template <typename T>
 class ThreadLocalPtr
 {
 public:
-    ThreadLocalPtr() 
-        : key_(detail::tls_key_create())
-    {
-    }
-
-    explicit ThreadLocalPtr(T* value)
+    explicit ThreadLocalPtr(T* value = nullptr)
         : key_(detail::tls_key_create())
     {
         detail::tls_key_set(key_, value);
     }
 
     ThreadLocalPtr(ThreadLocalPtr&& other)
-        : key_(other.key_)
+        : key_(0)
     {
-        other.key_ = 0;
+        std::swap(key_, other.key_);
     }
 
     ~ThreadLocalPtr()
@@ -53,24 +49,8 @@ public:
         destroy();
     }
 
-    // non-copyable
     ThreadLocalPtr(const ThreadLocalPtr&) = delete;
     ThreadLocalPtr& operator=(const ThreadLocalPtr&) = delete;
-
-    T* get() const
-    {
-        return static_cast<T*>(detail::tls_key_get(key_));
-    }
-
-    T* operator->() const
-    {
-        return get();
-    }
-
-    T& operator*() const
-    {
-        return *get();
-    }
 
     T* release()
     {
@@ -92,10 +72,26 @@ public:
         }
     }
 
-    explicit operator bool() const
+    void swap(ThreadLocalPtr<T>& other)
     {
-        return get() != nullptr;
+        std::swap(key_, other.key_);
     }
+
+    T* get() const
+    {
+        return static_cast<T*>(detail::tls_key_get(key_));
+    }
+
+    T* operator->() const { return get(); }
+    T& operator*() const { return *get(); }
+
+    explicit operator bool() const { return get() != nullptr; }
+
+    // Forbid comparison of scoped_ptr types.  If C2 != C, it totally doesn't
+    // make sense, and if C2 == C, it still doesn't make sense because you should
+    // never have the same object owned by two different scoped_ptrs.
+    template <class T2> bool operator==(ThreadLocalPtr<T2> const& p2) const = delete;
+    template <class T2> bool operator!=(ThreadLocalPtr<T2> const& p2) const = delete;
 
 private:
     void destroy()
@@ -112,3 +108,13 @@ private:
 private:
     detail::tls_key_t   key_;
 };
+
+namespace std {
+
+template <typename T>
+void swap(ThreadLocalPtr<T>& a, ThreadLocalPtr<T>& b)
+{
+    a.swap(b);
+}
+
+} 
