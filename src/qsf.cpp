@@ -3,16 +3,21 @@
 // See accompanying files LICENSE.
 
 #include "qsf.h"
+#include <mutex>
+#include <vector>
 #include <thread>
 #include <typeinfo>
+#include <unordered_set>
+#include <unordered_map>
 #include "core/scope_guard.h"
+#include "core/strings.h"
+#include "context.h"
+#include "service.h"
 #include "env.h"
+
 
 using std::mutex;
 using std::lock_guard;
-using std::string;
-using std::vector;
-using std::unique_ptr;
 
 
 static const char*  QSF_QUEUE = "inproc://router.queue";
@@ -20,26 +25,27 @@ static const char*  DUMMY_NAME = "#S$ZD@B";
 
 namespace {
 
-// global zmq context, do not need thread pool for I/O operations
+// Global zmq context, do not need thread pool for I/O operations
 static zmq::context_t  s_context(0);
 
-// zmq message router
+// 0mq message router
 static std::unique_ptr<zmq::socket_t>   s_router;
 
 static std::unordered_map<std::string, ServicePtr> s_services;
-static std::mutex  s_mutex;  // mutex to guard services
+static std::mutex  s_mutex;  // service guard
 
 
 void systemCommand(const std::string& command)
 {
-    string id = DUMMY_NAME;
-    auto dealer = qsf::createDealer(id);
+    std::string name = DUMMY_NAME;
+    auto dealer = qsf::createDealer(name);
     assert(dealer);
-    dealer->send(id.c_str(), id.size(), ZMQ_SNDMORE);
+    dealer->send(name.c_str(), name.size(), ZMQ_SNDMORE);
     dealer->send("sys", 3, ZMQ_SNDMORE);
     dealer->send(command.c_str(), command.size());
 }
 
+// Handle system command messages
 bool onSysMessage(StringPiece from, StringPiece command)
 {
     if (command == "exit")
@@ -65,6 +71,7 @@ bool onSysMessage(StringPiece from, StringPiece command)
     return true;
 }
 
+// Message routing between service objects
 bool dispatchMessage()
 {
     zmq::message_t from;    // where this message came from
@@ -91,32 +98,33 @@ bool dispatchMessage()
     return true;
 }
 
-void onServiceCleanup(const string& id)
+// Terminate application when no services exist
+void onServiceCleanup(const std::string& name)
 {
-    fprintf(stdout, "service [%s] exit.\n", id.c_str());
+    fprintf(stdout, "service [%s] exit.\n", name.c_str());
     {
         lock_guard<mutex> guard(s_mutex);
         if (s_services.size() == 1) // this is the last service object
         {
             systemCommand("shutdown");
         }
-        s_services.erase(id);
+        s_services.erase(name);
     }
 }
 
-
-void threadCallback(string type, string id, vector<string> args)
+// Callback function for service thread
+void threadCallback(std::string type, std::string name, std::vector<std::string> args)
 {
     try
     {
         assert(!type.empty() && !args.empty());
-        Context ctx(id);
+        Context ctx(name);
         auto service = createService(type, ctx);
         if (service)
         {
             {
                 lock_guard<mutex> guard(s_mutex);
-                s_services[id] = service;
+                s_services[name] = service;
             }
             service->run(args);
         }
@@ -127,10 +135,10 @@ void threadCallback(string type, string id, vector<string> args)
     }
     catch (...)
     {
-        LOG(ERROR) << id << ": unknown exception occurs!";
+        LOG(ERROR) << name << ": unknown exception occurs!";
     }
 
-    onServiceCleanup(id);
+    onServiceCleanup(name);
 }
 
 
@@ -168,13 +176,13 @@ void release()
 
 } // anonymouse namespace
 
-//////////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////////////////
 namespace qsf {
 
-unique_ptr<zmq::socket_t> createDealer(const string& identity)
+std::unique_ptr<zmq::socket_t> createDealer(const std::string& identity)
 {
-    unique_ptr<zmq::socket_t> dealer(new zmq::socket_t(s_context, ZMQ_DEALER));
+    std::unique_ptr<zmq::socket_t> dealer(new zmq::socket_t(s_context, ZMQ_DEALER));
     int linger = 0;
     int64_t max_msg_size = MAX_MSG_SIZE;
     dealer->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
@@ -203,11 +211,10 @@ void stop()
     }
 }
 
-// create an service
-bool createService(const string& type, const string& id, const string& str)
+bool createService(const std::string& type, const std::string& name, const std::string& str)
 {
     // name of 'sys' is reserved
-    if (type.empty() || id.empty() || id.size() > MAX_NAME_SIZE || id == "sys")
+    if (type.empty() || name.empty() || name.size() > MAX_NAME_SIZE || name == "sys")
     {
         return false;
     }
@@ -215,16 +222,16 @@ bool createService(const string& type, const string& id, const string& str)
     {
         return false;
     }
-    vector<string> args;
+    std::vector<std::string> args;
     split(" ", str, args);
     {
         lock_guard<mutex> guard(s_mutex);
-        if (s_services.count(id)) // name registered already
+        if (s_services.count(name)) // name registered already
         {
             return false;
         }
     }
-    std::thread thrd(std::bind(threadCallback, type, id, args));
+    std::thread thrd(std::bind(threadCallback, type, name, args));
     thrd.detach(); // allow independent execution
 
     return true;
@@ -235,8 +242,8 @@ int start(const char* filename)
     SCOPE_EXIT{ release(); };
     if (initialize(filename))
     {
-        const string& name = Env::get("start_name");
-        const string& args = Env::get("start_file");
+        auto name = Env::get("start_name");
+        auto args = Env::get("start_file");
         createService("luasandbox", name, args);
 
         while (dispatchMessage())

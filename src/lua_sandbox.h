@@ -8,18 +8,21 @@
 
 struct lua_State;
 
-// lua virutal machine sand box
+// Lua sand box service
 class LuaSandBox : public Service
 {
 public:
     explicit LuaSandBox(Context& ctx);
     virtual ~LuaSandBox();
 
-    // the first argument is the main chunk file name
+    // First argument is the main chunk file name
     virtual int run(const std::vector<std::string>& args);
 
 private:
+    // Pre-load modules
     void initialize();
+
+    // Load lua module searching path
     void loadLibPath();
 
 private:

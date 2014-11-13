@@ -8,8 +8,8 @@
 #include "qsf.h"
 
 
-Context::Context(const std::string& id)
-    : name_(id), socket_(qsf::createDealer(id))
+Context::Context(const std::string& name)
+    : name_(name), socket_(qsf::createDealer(name))
 {
 }
 

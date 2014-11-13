@@ -10,7 +10,7 @@
 
 struct lua_State;
 
-// global environment
+// Global environment
 class Env
 {
 public:

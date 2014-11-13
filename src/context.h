@@ -14,22 +14,24 @@ class Context
 {
 public:
     typedef std::function<void(StringPiece, StringPiece)> HandlerType;
+
 public:
     explicit Context(const std::string& name);
     ~Context();
 
+    // Unique name of this context
     const std::string& name() { return name_; }
 
-    // recieve message
+    // Recieve message
     size_t  recv(const HandlerType& handler, bool dont_wait = false);
 
-    // send message to other object
+    // Send message to other context
     void    send(StringPiece name, StringPiece data);
 
 private:
-    // zmq socket object
+    // 0mq socket object
     std::unique_ptr<zmq::socket_t>  socket_;
 
-    // identity of this object, should be unique in current process
+    // Identity of this object, should be unique in current process
     std::string  name_;
 };
