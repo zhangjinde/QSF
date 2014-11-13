@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include "core/scope_guard.h"
 #include "core/strings.h"
+#include "core/random.h"
 #include "context.h"
 #include "service.h"
 #include "env.h"
@@ -102,6 +103,7 @@ bool dispatchMessage()
 void onServiceCleanup(const std::string& name)
 {
     fprintf(stdout, "service [%s] exit.\n", name.c_str());
+    Random::release();
     {
         lock_guard<mutex> guard(s_mutex);
         if (s_services.size() == 1) // this is the last service object
