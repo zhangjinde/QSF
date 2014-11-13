@@ -3,11 +3,13 @@
 #include <malloc.h>
 #include <vector>
 #include "core/strings.h"
+#include "core/checksum.h"
 #include "packet.h"
-#include "checksum.h"
 #include "compression.h"
 
 using namespace std::placeholders;
+
+namespace net {
 
 class Gate::Session : boost::noncopyable
 {
@@ -18,21 +20,21 @@ public:
 
     ~Session();
 
-    void AsynRead();
-    void AsynWrite(ByteRange data);
-    void Close(const boost::system::error_code& ec = boost::asio::error::connection_aborted);
+    void startRead();
+    void write(ByteRange data);
+    void close(const boost::system::error_code& ec = boost::asio::error::connection_aborted);
 
-    std::string GetAddress();
-    boost::asio::ip::tcp::socket& GetSocket() { return socket_; }
-    uint32_t GetSerial() const { return serial_; }
-    bool IsClosed() const { return closed_; }
-    time_t GetLastRecvTime() const { return last_recv_time_; }
+    std::string remoteAddress();
+    boost::asio::ip::tcp::socket& socket() { return socket_; }
+    uint32_t serial() const { return serial_; }
+    bool isClosed() const { return closed_; }
+    time_t lastRecvTime() const { return last_recv_time_; }
 
 private:
-    void AsynWriteFrame(ByteRange frame, uint8_t more);
-    void HandleReadHead(const boost::system::error_code& ec, size_t bytes);
-    void HandleReadBody(const boost::system::error_code& ec, size_t bytes);
-    void HandleWrite(const boost::system::error_code& ec, size_t bytes, std::unique_ptr<IOBuf>& buf);
+    void writeFrame(ByteRange frame, uint8_t more);
+    void handleReadHead(const boost::system::error_code& ec, size_t bytes);
+    void handleReadBody(const boost::system::error_code& ec, size_t bytes);
+    void handleWrite(const boost::system::error_code& ec, size_t bytes, std::unique_ptr<IOBuf>& buf);
 
 private:
     boost::asio::ip::tcp::socket    socket_;
@@ -42,6 +44,7 @@ private:
     ClientHeader  head_;
     std::vector<uint8_t> buffer_;
     ReadCallback&   callback_;
+    std::string     remote_addr_;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -59,16 +62,16 @@ Gate::Session::Session(boost::asio::io_service& io_service,
 
 Gate::Session::~Session()
 {
-    Close();
+    close();
 }
 
-void Gate::Session::AsynRead()
+void Gate::Session::startRead()
 {
     boost::asio::async_read(socket_, boost::asio::buffer(&head_, sizeof(head_)),
-        std::bind(&Gate::Session::HandleReadHead, this, _1, _2));
+        std::bind(&Gate::Session::handleReadHead, this, _1, _2));
 }
 
-void Gate::Session::Close(const boost::system::error_code& ec)
+void Gate::Session::close(const boost::system::error_code& ec)
 {
     if (!closed_ && socket_.is_open())
     {
@@ -77,23 +80,23 @@ void Gate::Session::Close(const boost::system::error_code& ec)
         closed_ = true;
 
         StringPiece msg(ec.message());
-        callback_(serial_, ec.value(), msg);
+        callback_(ec.value(), serial_, msg);
     }
 }
 
-void Gate::Session::HandleReadHead(const boost::system::error_code& ec, size_t bytes)
+void Gate::Session::handleReadHead(const boost::system::error_code& ec, size_t bytes)
 {
     if (!ec)
     {
         if (head_.size > MAX_PACKET_SIZE)
         {
-            Close(boost::asio::error::message_size);
+            close(boost::asio::error::message_size);
             return;
         }
         if (head_.size == 0) // empty content means heartbeating
         {
             last_recv_time_ = time(NULL);
-            AsynRead();
+            startRead();
         }
         else
         {
@@ -102,7 +105,7 @@ void Gate::Session::HandleReadHead(const boost::system::error_code& ec, size_t b
                 buffer_.resize(head_.size);
             }
             boost::asio::async_read(socket_, boost::asio::buffer(buffer_.data(), head_.size),
-                std::bind(&Gate::Session::HandleReadBody, this, _1, _2));
+                std::bind(&Gate::Session::handleReadBody, this, _1, _2));
         }
     }
     else
@@ -111,7 +114,7 @@ void Gate::Session::HandleReadHead(const boost::system::error_code& ec, size_t b
     }
 }
 
-void Gate::Session::HandleReadBody(const boost::system::error_code& ec, size_t bytes)
+void Gate::Session::handleReadBody(const boost::system::error_code& ec, size_t bytes)
 {
     if (!ec)
     {
@@ -120,13 +123,13 @@ void Gate::Session::HandleReadBody(const boost::system::error_code& ec, size_t b
         if (head_.checksum == checksum)
         {
             last_recv_time_ = time(NULL);
-            auto buf = UnCompress(ZLIB, ByteRange(data, bytes));
-            callback_(serial_, 0, buf->range());
-            AsynRead();
+            auto buf = uncompress(ZLIB, ByteRange(data, bytes));
+            callback_(0, serial_, buf->range());
+            startRead();
         }
         else
         {
-            Close(boost::asio::error::invalid_argument);
+            close(boost::asio::error::invalid_argument);
         }
     }
     else
@@ -135,17 +138,17 @@ void Gate::Session::HandleReadBody(const boost::system::error_code& ec, size_t b
     }
 }
 
-void Gate::Session::AsynWrite(ByteRange data)
+void Gate::Session::write(ByteRange data)
 {
     if (data.size() > 0 && data.size() < MAX_SEND_BYTES)
     {
         while (data.size() > MAX_PACKET_SIZE)
         {
             auto frame = data.subpiece(0, MAX_PACKET_SIZE);
-            AsynWriteFrame(frame, 1);
+            writeFrame(frame, 1);
             data.advance(MAX_PACKET_SIZE);
         }
-        AsynWriteFrame(data, 0);
+        writeFrame(data, 0);
     }
     else
     {
@@ -154,21 +157,21 @@ void Gate::Session::AsynWrite(ByteRange data)
     }
 }
 
-void Gate::Session::AsynWriteFrame(ByteRange frame, uint8_t more)
+void Gate::Session::writeFrame(ByteRange frame, uint8_t more)
 {
     assert(frame.size() <= UINT16_MAX);
     const size_t head_size = sizeof(ServerHeader);
-    auto out = Compress(ZLIB, frame, head_size);
+    auto out = compress(ZLIB, frame, head_size);
     ServerHeader* head = reinterpret_cast<ServerHeader*>(out->buffer());
     head->size = static_cast<uint16_t>(frame.size());
     head->codec = ZLIB;
     head->more = more;
     boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
-        std::bind(&Gate::Session::HandleWrite, this, _1, _2, std::ref(out)));
+        std::bind(&Gate::Session::handleWrite, this, _1, _2, std::ref(out)));
 }
 
 
-void Gate::Session::HandleWrite(const boost::system::error_code& ec,
+void Gate::Session::handleWrite(const boost::system::error_code& ec,
                                 size_t bytes, 
                                 std::unique_ptr<IOBuf>& buf)
 {
@@ -178,8 +181,14 @@ void Gate::Session::HandleWrite(const boost::system::error_code& ec,
     }
 }
 
-std::string Gate::Session::GetAddress()
+std::string Gate::Session::remoteAddress()
 {
-    auto endpoint = socket_.remote_endpoint();
-    return endpoint.address().to_string();
+    if (remote_addr_.empty())
+    {
+        auto endpoint = socket_.remote_endpoint();
+        remote_addr_ = endpoint.address().to_string();
+    }
+    return remote_addr_;
 }
+
+} // namespace net

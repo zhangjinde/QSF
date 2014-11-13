@@ -14,7 +14,9 @@
 #include <boost/noncopyable.hpp>
 #include "core/range.h"
 
-typedef std::function<void(uint32_t, int, ByteRange)>   ReadCallback;
+namespace net {
+
+typedef std::function<void(int, uint32_t, ByteRange)>   ReadCallback;
 
 class Gate : boost::noncopyable
 {
@@ -27,28 +29,28 @@ public:
          uint32_t heart_beat_sec);
     ~Gate();
 
-    void Start(const std::string& host, uint16_t port, ReadCallback callback);
+    void start(const std::string& host, uint16_t port, ReadCallback callback);
 
-    void Stop();
+    void stop();
 
-    void Send(uint32_t serial, ByteRange data);
+    void send(uint32_t serial, ByteRange data);
     void Send(uint32_t serial, const void* data, size_t size)
     {
         assert(data && size > 0);
-        Send(serial, ByteRange(reinterpret_cast<const uint8_t*>(data), size));
+        send(serial, ByteRange(reinterpret_cast<const uint8_t*>(data), size));
     }
 
-    bool Kick(uint32_t serial);
+    bool kick(uint32_t serial);
 
-    void DenyAddress(const std::string& address);
-    void AllowAddress(const std::string& address);
+    void denyAddress(const std::string& address);
+    void allowAddress(const std::string& address);
 
 private:
-    uint32_t NextSessionSerial();
+    uint32_t nextSessionSerial();
 
-    void StartAccept();
-    void HandleAccept(const boost::system::error_code& err, SessionPtr ptr);
-    void CheckHeartBeat();
+    void startAccept();
+    void handleAccept(const boost::system::error_code& err, SessionPtr ptr);
+    void checkHeartBeat();
 
 private:
     boost::asio::io_service&        io_service_;
@@ -65,3 +67,5 @@ private:
 
     std::unordered_set<std::string>  black_list_;
 };
+
+} // namespace net

@@ -15,6 +15,8 @@
  *
  */
 
+namespace net {
+
 enum
 {
     // max content size, size of a packet is limited to 16K
@@ -63,3 +65,5 @@ struct ServerHeader
 };
 
 #pragma pack(pop)
+
+} // namespace net

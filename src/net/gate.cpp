@@ -5,6 +5,8 @@
 #include "core/logging.h"
 #include "session-inl.h"
 
+namespace net {
+
 #ifdef NDEBUG
 const int kCheckHeartBeatSec = 10;
 #else
@@ -12,7 +14,6 @@ const int kCheckHeartBeatSec = 90;
 #endif
 
 const int kDeadConnectionReserveSize = 8;
-
 
 Gate::Gate(boost::asio::io_service& io_service, 
            uint32_t max_connections, 
@@ -29,7 +30,7 @@ Gate::~Gate()
 {
 }
 
-void Gate::Start(const std::string& host, uint16_t port, ReadCallback callback)
+void Gate::start(const std::string& host, uint16_t port, ReadCallback callback)
 {
     using namespace boost::asio::ip;
     assert(callback);
@@ -41,58 +42,58 @@ void Gate::Start(const std::string& host, uint16_t port, ReadCallback callback)
     acceptor_.bind(endpoint);
     acceptor_.listen();
 
-    drop_timer_.async_wait(std::bind(&Gate::CheckHeartBeat, this));
-    StartAccept();
+    drop_timer_.async_wait(std::bind(&Gate::checkHeartBeat, this));
+    startAccept();
 }
 
-bool Gate::Kick(uint32_t serial)
+bool Gate::kick(uint32_t serial)
 {
     auto iter = sessions_.find(serial);
     if (iter != sessions_.end())
     {
         auto session = iter->second;
-        session->Close();
+        session->close();
         return true;
     }
     return false;
 }
 
-void Gate::Send(uint32_t serial, ByteRange data)
+void Gate::send(uint32_t serial, ByteRange data)
 {
     auto iter = sessions_.find(serial);
     if (iter != sessions_.end())
     {
         auto session = iter->second;
-        session->AsynWrite(data);
+        session->write(data);
     }
 }
 
-uint32_t Gate::NextSessionSerial()
+uint32_t Gate::nextSessionSerial()
 {
     while (sessions_.count(current_serial_++))
         ;
     return current_serial_;
 }
 
-void Gate::StartAccept()
+void Gate::startAccept()
 {
-    auto serial = NextSessionSerial();
+    auto serial = nextSessionSerial();
     SessionPtr session = std::make_shared<Session>(io_service_, serial, on_read_);
-    acceptor_.async_accept(session->GetSocket(), std::bind(&Gate::HandleAccept,
+    acceptor_.async_accept(session->socket(), std::bind(&Gate::handleAccept,
         this, _1, session));
 }
 
-void Gate::HandleAccept(const boost::system::error_code& err, SessionPtr ptr)
+void Gate::handleAccept(const boost::system::error_code& err, SessionPtr ptr)
 {
     if (!err)
     {
         if (sessions_.size() < max_connections_)
         {
-            const auto& address = ptr->GetAddress();
+            const auto& address = ptr->remoteAddress();
             if (!black_list_.count(address))
             {
-                sessions_[ptr->GetSerial()] = ptr;
-                ptr->AsynRead();
+                sessions_[ptr->serial()] = ptr;
+                ptr->startRead();
             }
             else
             {
@@ -106,21 +107,21 @@ void Gate::HandleAccept(const boost::system::error_code& err, SessionPtr ptr)
     }
     if (acceptor_.is_open())
     {
-        StartAccept();
+        startAccept();
     }
 }
 
-void Gate::DenyAddress(const std::string& address)
+void Gate::denyAddress(const std::string& address)
 {
     black_list_.insert(address);
 }
 
-void Gate::AllowAddress(const std::string& address)
+void Gate::allowAddress(const std::string& address)
 {
     black_list_.erase(address);
 }
 
-void Gate::CheckHeartBeat()
+void Gate::checkHeartBeat()
 {
     std::vector<uint32_t> dead_connections;
     dead_connections.reserve(kDeadConnectionReserveSize);
@@ -128,12 +129,12 @@ void Gate::CheckHeartBeat()
     for (auto& item : sessions_)
     {
         auto& session = item.second;
-        auto elapsed = now - session->GetLastRecvTime();
+        auto elapsed = now - session->lastRecvTime();
         if (elapsed >= heart_beat_sec_)
         {
-            session->Close(boost::asio::error::timed_out);
+            session->close(boost::asio::error::timed_out);
         }
-        if (session->IsClosed())
+        if (session->isClosed())
         {
             dead_connections.emplace_back(item.first);
         }
@@ -145,5 +146,7 @@ void Gate::CheckHeartBeat()
 
     // repeat timer
     drop_timer_.expires_from_now(std::chrono::seconds(kCheckHeartBeatSec));
-    drop_timer_.async_wait(std::bind(&Gate::CheckHeartBeat, this));
+    drop_timer_.async_wait(std::bind(&Gate::checkHeartBeat, this));
 }
+
+} // namespace net

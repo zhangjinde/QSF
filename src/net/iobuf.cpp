@@ -1,6 +1,8 @@
 #include "iobuf.h"
 #include <malloc.h>
 
+namespace net {
+
 std::unique_ptr<IOBuf> IOBuf::create(size_t capacity)
 {
     return std::make_unique<IOBuf>(IOBuf::CREATE, capacity);
@@ -60,3 +62,5 @@ IOBuf::~IOBuf()
     }
     data_ = nullptr;
 }
+
+} // namespace net

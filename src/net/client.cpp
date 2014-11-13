@@ -5,10 +5,12 @@
 #include <boost/asio.hpp>
 #include "core/strings.h"
 #include "core/logging.h"
-#include "checksum.h"
+#include "core/checksum.h"
 #include "compression.h"
 
 using namespace std::placeholders;
+
+namespace net {
 
 Client::Client(boost::asio::io_service& io_service, uint32_t heart_beat_sec_)
     : socket_(io_service), 
@@ -23,14 +25,14 @@ Client::~Client()
 {
 }
 
-void Client::Connect(const std::string& host, uint16_t port)
+void Client::connect(const std::string& host, uint16_t port)
 {
     using namespace boost::asio;
     ip::tcp::endpoint endpoint(ip::address::from_string(host), port);
     socket_.connect(endpoint);
 }
 
-void Client::Connect(const std::string& host,
+void Client::connect(const std::string& host,
                      uint16_t port, 
                      ConnectCallback callback)
 {
@@ -39,14 +41,14 @@ void Client::Connect(const std::string& host,
     socket_.async_connect(endpoint, callback);
 }
 
-void Client::StartRead(ReadCallback callback)
+void Client::startRead(ReadCallback callback)
 {
     on_read_ = callback;
-    heart_beat_.async_wait(std::bind(&Client::HeartBeating, this));
-    AsynReadHead();
+    heart_beat_.async_wait(std::bind(&Client::heartBeating, this));
+    readHead();
 }
 
-void Client::Send(ByteRange data)
+void Client::send(ByteRange data)
 {
     if (data.size() > MAX_PACKET_SIZE)
     {
@@ -54,7 +56,7 @@ void Client::Send(ByteRange data)
         return;
     }
     const uint32_t head_size = sizeof(ClientHeader);
-    auto out = Compress(ZLIB, data, head_size);
+    auto out = compress(ZLIB, data, head_size);
     if (out->empty())
     {
         //LOG(ERROR) << serial_ << ", out of memory with size: " << size;
@@ -65,16 +67,16 @@ void Client::Send(ByteRange data)
     head->size = static_cast<uint16_t>(body_size);
     head->checksum = crc16(out->buffer() + head_size, body_size);
     boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
-        std::bind(&Client::HandleSend, this, _1, _2, std::ref(out)));
+        std::bind(&Client::handleSend, this, _1, _2, std::ref(out)));
 }
 
-void Client::AsynReadHead()
+void Client::readHead()
 {
     boost::asio::async_read(socket_, boost::asio::buffer(&head_, sizeof(head_)),
-        std::bind(&Client::HandleReadHead, this, _1, _2));
+        std::bind(&Client::handleReadHead, this, _1, _2));
 }
 
-void Client::HandleReadHead(const boost::system::error_code& ec, size_t bytes)
+void Client::handleReadHead(const boost::system::error_code& ec, size_t bytes)
 {
     if (!ec)
     {
@@ -82,7 +84,7 @@ void Client::HandleReadHead(const boost::system::error_code& ec, size_t bytes)
         {
             buffer_.resize(head_.size);
             boost::asio::async_read(socket_, boost::asio::buffer(buffer_.data(), head_.size),
-                std::bind(&Client::HandleReadBody, this, _1, _2));
+                std::bind(&Client::handleReadBody, this, _1, _2));
         }
     }
     else
@@ -91,7 +93,7 @@ void Client::HandleReadHead(const boost::system::error_code& ec, size_t bytes)
     }
 }
 
-void Client::HandleReadBody(const boost::system::error_code& ec, size_t bytes)
+void Client::handleReadBody(const boost::system::error_code& ec, size_t bytes)
 {
     if (!ec)
     {
@@ -110,7 +112,7 @@ void Client::HandleReadBody(const boost::system::error_code& ec, size_t bytes)
             on_read_(ByteRange(buffer_more_.data(), buffer_more_.size()));
             buffer_more_.resize(0);
         }
-        AsynReadHead();
+        readHead();
     }
     else
     {
@@ -118,7 +120,7 @@ void Client::HandleReadBody(const boost::system::error_code& ec, size_t bytes)
     }
 }
 
-void Client::HandleSend(const boost::system::error_code& ec, size_t bytes, std::unique_ptr<IOBuf>& buf)
+void Client::handleSend(const boost::system::error_code& ec, size_t bytes, std::unique_ptr<IOBuf>& buf)
 {
     if (!ec)
     {
@@ -130,7 +132,7 @@ void Client::HandleSend(const boost::system::error_code& ec, size_t bytes, std::
     }
 }
 
-void Client::HeartBeating()
+void Client::heartBeating()
 {
     time_t now = time(NULL);
     if (now - last_send_time_ >= heart_beat_sec_)
@@ -141,8 +143,10 @@ void Client::HeartBeating()
         head->checksum = 0;
         out->append(sizeof(*head));
         boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
-            std::bind(&Client::HandleSend, this, _1, _2, std::ref(out)));
+            std::bind(&Client::handleSend, this, _1, _2, std::ref(out)));
     }
     heart_beat_.expires_from_now(std::chrono::seconds(heart_beat_sec_/2));
-    heart_beat_.async_wait(std::bind(&Client::HeartBeating, this));
+    heart_beat_.async_wait(std::bind(&Client::heartBeating, this));
 }
+
+} // namespace net

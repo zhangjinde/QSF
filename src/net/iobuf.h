@@ -6,6 +6,7 @@
 #include <boost/noncopyable.hpp>
 #include "core/range.h"
 
+namespace net {
 
 class IOBuf : boost::noncopyable
 {
@@ -41,7 +42,7 @@ public:
     uint8_t* data() { return buffer() + length(); }
 
     ByteRange range() { return ByteRange(buffer(), length()); }
-    
+
     void append(size_t amount)
     {
         DCHECK(length_ + amount <= capacity_);
@@ -54,3 +55,5 @@ private:
     size_t          length_ = 0;
     FreeFunction    freefn_ = nullptr;
 };
+
+} // namespace net

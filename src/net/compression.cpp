@@ -4,11 +4,12 @@
 #include "core/scope_guard.h"
 #include <zlib.h>
 
+namespace net {
 namespace {
 
-static void FreeFn(void* data) {}
+static void freeFn(void* data) {}
 
-inline std::unique_ptr<IOBuf> ZlibCompress(ByteRange data, size_t reserved)
+inline std::unique_ptr<IOBuf> zlibCompress(ByteRange data, size_t reserved)
 {
     z_stream stream;
     memset(&stream, 0, sizeof(stream));
@@ -39,7 +40,7 @@ inline std::unique_ptr<IOBuf> ZlibCompress(ByteRange data, size_t reserved)
     return out;
 }
 
-inline std::unique_ptr<IOBuf> ZlibUnCompress(ByteRange data)
+inline std::unique_ptr<IOBuf> zlibUnCompress(ByteRange data)
 {
     static THREAD_LOCAL uint8_t buffer[MAX_PACKET_SIZE*2];
 
@@ -66,31 +67,34 @@ inline std::unique_ptr<IOBuf> ZlibUnCompress(ByteRange data)
     rc = inflate(&stream, Z_FINISH);
     CHECK_EQ(rc, Z_STREAM_END) << stream.msg;
 
-    return IOBuf::takeOwnership(buffer, stream.total_out, FreeFn);
+    return IOBuf::takeOwnership(buffer, stream.total_out, freeFn);
 }
 
 } // anounymouse namespace
 
-std::unique_ptr<IOBuf> Compress(CodecType codec, ByteRange data, size_t reserved)
+
+std::unique_ptr<IOBuf> compress(CodecType codec, ByteRange data, size_t reserved)
 {
     switch (codec)
     {
     case ZLIB:
-        return ZlibCompress(data, reserved);
+        return zlibCompress(data, reserved);
     default:
         throw std::invalid_argument(to<std::string>(
             "Compression type ", codec, " not supported"));
     }
 }
 
-std::unique_ptr<IOBuf> UnCompress(CodecType codec, ByteRange data)
+std::unique_ptr<IOBuf> uncompress(CodecType codec, ByteRange data)
 {
     switch (codec)
     {
     case ZLIB:
-        return ZlibUnCompress(data);
+        return zlibUnCompress(data);
     default:
         throw std::invalid_argument(to<std::string>(
             "Compression type ", codec, " not supported"));
     }
 }
+
+} // namespace net

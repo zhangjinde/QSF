@@ -14,6 +14,8 @@
 #include "packet.h"
 #include "iobuf.h"
 
+namespace net {
+
 class Client : boost::noncopyable
 {
 public:
@@ -24,24 +26,24 @@ public:
     Client(boost::asio::io_service& io_service, uint32_t heart_beat_sec);
     ~Client();
 
-    void Connect(const std::string& host, uint16_t port);
-    void Connect(const std::string& host, uint16_t port, ConnectCallback callback);
+    void connect(const std::string& host, uint16_t port);
+    void connect(const std::string& host, uint16_t port, ConnectCallback callback);
 
-    void StartRead(ReadCallback callback);
-    void Send(ByteRange data);
-    void Send(const void* data, size_t size)
+    void startRead(ReadCallback callback);
+    void send(ByteRange data);
+    void send(const void* data, size_t size)
     {
         assert(data && size > 0);
-        Send(ByteRange(reinterpret_cast<const uint8_t*>(data), size));
+        send(ByteRange(reinterpret_cast<const uint8_t*>(data), size));
     }
 
 private:
-    void AsynReadHead();
-    void HandleReadHead(const boost::system::error_code& ec, size_t bytes);
-    void HandleReadBody(const boost::system::error_code& ec, size_t bytes);
-    void HandleSend(const boost::system::error_code& ec, size_t bytes, 
+    void readHead();
+    void handleReadHead(const boost::system::error_code& ec, size_t bytes);
+    void handleReadBody(const boost::system::error_code& ec, size_t bytes);
+    void handleSend(const boost::system::error_code& ec, size_t bytes, 
                     std::unique_ptr<IOBuf>& buf);
-    void HeartBeating();
+    void heartBeating();
 
 private:
     boost::asio::ip::tcp::socket    socket_;
@@ -55,3 +57,5 @@ private:
     time_t  last_send_time_ = 0;
     const uint32_t heart_beat_sec_;
 };
+
+} // namespace net
