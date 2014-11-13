@@ -12,7 +12,7 @@
 
 #include "checksum.h"
 #include <cstring>
-#include "core/cpuid.h"
+#include "cpuid.h"
 
 #ifdef _WIN32
 #include <nmmintrin.h>
