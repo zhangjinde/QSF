@@ -46,7 +46,7 @@ public:
     void allowAddress(const std::string& address);
 
 private:
-    uint32_t nextSessionSerial();
+    uint32_t nextSerial();
 
     void startAccept();
     void handleAccept(const boost::system::error_code& err, SessionPtr ptr);

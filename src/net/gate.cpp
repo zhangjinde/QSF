@@ -46,6 +46,14 @@ void Gate::start(const std::string& host, uint16_t port, ReadCallback callback)
     startAccept();
 }
 
+void Gate::stop()
+{
+    drop_timer_.cancel();
+    acceptor_.close();
+    black_list_.clear();
+    sessions_.clear();
+}
+
 bool Gate::kick(uint32_t serial)
 {
     auto iter = sessions_.find(serial);
@@ -68,7 +76,7 @@ void Gate::send(uint32_t serial, ByteRange data)
     }
 }
 
-uint32_t Gate::nextSessionSerial()
+uint32_t Gate::nextSerial()
 {
     while (sessions_.count(current_serial_++))
         ;
@@ -77,7 +85,7 @@ uint32_t Gate::nextSessionSerial()
 
 void Gate::startAccept()
 {
-    auto serial = nextSessionSerial();
+    auto serial = nextSerial();
     SessionPtr session = std::make_shared<Session>(io_service_, serial, on_read_);
     acceptor_.async_accept(session->socket(), std::bind(&Gate::handleAccept,
         this, _1, session));
@@ -104,6 +112,10 @@ void Gate::handleAccept(const boost::system::error_code& err, SessionPtr ptr)
         {
             LOG(INFO) << "reach max session limits: " << max_connections_;
         }
+    }
+    else
+    {
+        LOG(INFO) << err.message();
     }
     if (acceptor_.is_open())
     {
