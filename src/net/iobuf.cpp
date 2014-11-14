@@ -3,24 +3,24 @@
 
 namespace net {
 
-std::unique_ptr<IOBuf> IOBuf::create(size_t capacity)
+std::shared_ptr<IOBuf> IOBuf::create(size_t capacity)
 {
-    return std::make_unique<IOBuf>(IOBuf::CREATE, capacity);
+    return std::make_shared<IOBuf>(IOBuf::CREATE, capacity);
 }
 
-std::unique_ptr<IOBuf> IOBuf::copyBuffer(const void* buf, size_t size)
+std::shared_ptr<IOBuf> IOBuf::copyBuffer(const void* buf, size_t size)
 {
-    return std::make_unique<IOBuf>(IOBuf::COPY_BUFFER, buf, size);
+    return std::make_shared<IOBuf>(IOBuf::COPY_BUFFER, buf, size);
 }
 
-std::unique_ptr<IOBuf> IOBuf::copyBuffer(ByteRange r)
+std::shared_ptr<IOBuf> IOBuf::copyBuffer(ByteRange r)
 {
-    return std::make_unique<IOBuf>(IOBuf::COPY_BUFFER, r.data(), r.size());
+    return std::make_shared<IOBuf>(IOBuf::COPY_BUFFER, r.data(), r.size());
 }
 
-std::unique_ptr<IOBuf> IOBuf::takeOwnership(void* data, size_t size, FreeFunction fn)
+std::shared_ptr<IOBuf> IOBuf::takeOwnership(void* data, size_t size, FreeFunction fn)
 {
-    return std::make_unique<IOBuf>(IOBuf::TAKE_OWNERSHIP, data, size, fn);
+    return std::make_shared<IOBuf>(IOBuf::TAKE_OWNERSHIP, data, size, fn);
 }
 
 IOBuf::IOBuf(CreateOp, size_t capacity)

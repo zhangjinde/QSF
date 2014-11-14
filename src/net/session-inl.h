@@ -34,7 +34,7 @@ private:
     void writeFrame(ByteRange frame, uint8_t more);
     void handleReadHead(const boost::system::error_code& ec, size_t bytes);
     void handleReadBody(const boost::system::error_code& ec, size_t bytes);
-    void handleWrite(const boost::system::error_code& ec, size_t bytes, std::unique_ptr<IOBuf>& buf);
+    void handleWrite(const boost::system::error_code& ec, size_t bytes, std::shared_ptr<IOBuf> buf);
 
 private:
     boost::asio::ip::tcp::socket    socket_;
@@ -167,15 +167,15 @@ void Gate::Session::writeFrame(ByteRange frame, uint8_t more)
     head->codec = ZLIB;
     head->more = more;
     boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
-        std::bind(&Gate::Session::handleWrite, this, _1, _2, std::ref(out)));
+        std::bind(&Gate::Session::handleWrite, this, _1, _2, out));
 }
 
 
 void Gate::Session::handleWrite(const boost::system::error_code& ec,
                                 size_t bytes, 
-                                std::unique_ptr<IOBuf>& buf)
+                                std::shared_ptr<IOBuf> buf)
 {
-    if (!ec)
+    if (ec)
     {
         LOG(DEBUG) << ec.message();
     }

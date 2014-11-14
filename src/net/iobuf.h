@@ -17,10 +17,10 @@ public:
 
     typedef void(*FreeFunction)(void* buf);
 
-    static std::unique_ptr<IOBuf> create(size_t capacity);
-    static std::unique_ptr<IOBuf> copyBuffer(const void* buf, size_t size);
-    static std::unique_ptr<IOBuf> copyBuffer(ByteRange data);
-    static std::unique_ptr<IOBuf> takeOwnership(void* data, size_t size, FreeFunction fn);
+    static std::shared_ptr<IOBuf> create(size_t capacity);
+    static std::shared_ptr<IOBuf> copyBuffer(const void* buf, size_t size);
+    static std::shared_ptr<IOBuf> copyBuffer(ByteRange data);
+    static std::shared_ptr<IOBuf> takeOwnership(void* data, size_t size, FreeFunction fn);
 
     IOBuf(CreateOp, size_t capacity);
     IOBuf(CopyBufferOp, const void* data, size_t capacity);

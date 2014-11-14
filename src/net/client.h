@@ -42,7 +42,7 @@ private:
     void handleReadHead(const boost::system::error_code& ec, size_t bytes);
     void handleReadBody(const boost::system::error_code& ec, size_t bytes);
     void handleSend(const boost::system::error_code& ec, size_t bytes, 
-                    std::unique_ptr<IOBuf>& buf);
+                    std::shared_ptr<IOBuf> buf);
     void heartBeating();
 
 private:

@@ -9,14 +9,16 @@ namespace {
 
 static void freeFn(void* data) {}
 
-inline std::unique_ptr<IOBuf> zlibCompress(ByteRange data, size_t reserved)
+inline std::shared_ptr<IOBuf> zlibCompress(ByteRange data, size_t reserved)
 {
     z_stream stream;
-    memset(&stream, 0, sizeof(stream));
+    stream.zalloc = nullptr;
+    stream.zfree = nullptr;
+    stream.opaque = nullptr;
 
     SCOPE_EXIT
     {
-        int rc = inflateEnd(&stream);
+        int rc = deflateEnd(&stream);
         CHECK(rc == Z_OK) << stream.msg;
     };
 
@@ -40,12 +42,14 @@ inline std::unique_ptr<IOBuf> zlibCompress(ByteRange data, size_t reserved)
     return out;
 }
 
-inline std::unique_ptr<IOBuf> zlibUnCompress(ByteRange data)
+inline std::shared_ptr<IOBuf> zlibUnCompress(ByteRange data)
 {
     static THREAD_LOCAL uint8_t buffer[MAX_PACKET_SIZE*2];
 
     z_stream stream;
-    memset(&stream, 0, sizeof(stream));
+    stream.zalloc = nullptr;
+    stream.zfree = nullptr;
+    stream.opaque = nullptr;
 
     SCOPE_EXIT
     {
@@ -73,7 +77,7 @@ inline std::unique_ptr<IOBuf> zlibUnCompress(ByteRange data)
 } // anounymouse namespace
 
 
-std::unique_ptr<IOBuf> compress(CodecType codec, ByteRange data, size_t reserved)
+std::shared_ptr<IOBuf> compress(CodecType codec, ByteRange data, size_t reserved)
 {
     switch (codec)
     {
@@ -85,7 +89,7 @@ std::unique_ptr<IOBuf> compress(CodecType codec, ByteRange data, size_t reserved
     }
 }
 
-std::unique_ptr<IOBuf> uncompress(CodecType codec, ByteRange data)
+std::shared_ptr<IOBuf> uncompress(CodecType codec, ByteRange data)
 {
     switch (codec)
     {
