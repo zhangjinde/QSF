@@ -34,7 +34,7 @@ TEST(Conv, Integral2Integral)
     EXPECT_EQ(to<int8_t>(s64), s64);
 
     s64 = numeric_limits<int32_t>::max();
-    EXPECT_ANY_THROW(to<int8_t>(s64));    // convert large to less
+    EXPECT_THROW(to<int8_t>(s64), std::range_error);    // convert large to less
 }
 
 TEST(Conv, Floating2Floating)
@@ -48,9 +48,9 @@ TEST(Conv, Floating2Floating)
     EXPECT_EQ(double(f2), d2);
 
     double invalidFloat = std::numeric_limits<double>::max();
-    EXPECT_ANY_THROW(to<float>(invalidFloat));
+    EXPECT_THROW(to<float>(invalidFloat), std::range_error);
     invalidFloat = -std::numeric_limits<double>::max();
-    EXPECT_ANY_THROW(to<float>(invalidFloat));
+    EXPECT_THROW(to<float>(invalidFloat), std::range_error);
 
     try
     {
@@ -121,7 +121,7 @@ TEST(Conv, testString2Integral)
     EXPECT_EQ(to<int16_t>(string("-32768")), -32768);
     EXPECT_EQ(to<uint16_t>(string("65535")), 65535);
     EXPECT_EQ(to<int32_t>(string("-2147483648")), -2147483648L);
-    EXPECT_ANY_THROW(to<int16_t>(string("-2147483648")));
+    EXPECT_THROW(to<int16_t>(string("-2147483648")), std::range_error);
     EXPECT_EQ(to<uint32_t>(string("4294967295")), 4294967295);
     EXPECT_EQ(to<int64_t>(string("-9223372036854775808")), INT64_MIN);
     EXPECT_EQ(to<int64_t>(string("9223372036854775807")), INT64_MAX);
@@ -130,12 +130,12 @@ TEST(Conv, testString2Integral)
     // empty string
     string s = "";
     StringPiece pc(s);
-    EXPECT_ANY_THROW(to<int>(pc));
+    EXPECT_THROW(to<int>(pc), std::range_error);
 
     // corrupted string
     s = "-1";
     StringPiece pc2(s.data(), s.data() + 1); // Only  "-"
-    EXPECT_ANY_THROW(to<int64_t>(&pc2));
+    EXPECT_THROW(to<int64_t>(&pc2), std::range_error);
 }
 
 TEST(Conv, testString2Bool)
@@ -161,19 +161,19 @@ TEST(Conv, testString2Bool)
     EXPECT_TRUE(to<bool>(string("T")));
     EXPECT_TRUE(to<bool>(string("on")));
 
-    EXPECT_ANY_THROW(to<bool>(string("")));
-    EXPECT_ANY_THROW(to<bool>(string("2")));
-    EXPECT_ANY_THROW(to<bool>(string("11")));
-    EXPECT_ANY_THROW(to<bool>(string("19")));
-    EXPECT_ANY_THROW(to<bool>(string("o")));
-    EXPECT_ANY_THROW(to<bool>(string("fal")));
-    EXPECT_ANY_THROW(to<bool>(string("tru")));
-    EXPECT_ANY_THROW(to<bool>(string("ye")));
-    EXPECT_ANY_THROW(to<bool>(string("yes foo")));
-    EXPECT_ANY_THROW(to<bool>(string("bar no")));
-    EXPECT_ANY_THROW(to<bool>(string("one")));
-    EXPECT_ANY_THROW(to<bool>(string("true_")));
-    EXPECT_ANY_THROW(to<bool>(string("bogus_token_that_is_too_long")));
+    EXPECT_THROW(to<bool>(string("")), std::range_error);
+    EXPECT_THROW(to<bool>(string("2")), std::range_error);
+    EXPECT_THROW(to<bool>(string("11")), std::range_error);
+    EXPECT_THROW(to<bool>(string("19")), std::range_error);
+    EXPECT_THROW(to<bool>(string("o")), std::range_error);
+    EXPECT_THROW(to<bool>(string("fal")), std::range_error);
+    EXPECT_THROW(to<bool>(string("tru")), std::range_error);
+    EXPECT_THROW(to<bool>(string("ye")), std::range_error);
+    EXPECT_THROW(to<bool>(string("yes foo")), std::range_error);
+    EXPECT_THROW(to<bool>(string("bar no")), std::range_error);
+    EXPECT_THROW(to<bool>(string("one")), std::range_error);
+    EXPECT_THROW(to<bool>(string("true_")), std::range_error);
+    EXPECT_THROW(to<bool>(string("bogus_token_that_is_too_long")), std::range_error);
 
     // Test with strings that are not NUL terminated.
     const char buf[] = "01234";
@@ -182,7 +182,7 @@ TEST(Conv, testString2Bool)
     const char buf2[] = "one two three";
     EXPECT_TRUE(to<bool>(StringPiece(buf2, buf2 + 2)));  // "on"
     const char buf3[] = "false";
-    EXPECT_ANY_THROW(to<bool>(StringPiece(buf3, buf3 + 3))); // "fal"
+    EXPECT_THROW(to<bool>(StringPiece(buf3, buf3 + 3)), std::range_error); // "fal"
 
     // Test the StringPiece* API
     const char buf4[] = "001foo";
@@ -191,7 +191,7 @@ TEST(Conv, testString2Bool)
     EXPECT_EQ(buf4 + 3, sp4.begin());
     const char buf5[] = "0012";
     StringPiece sp5(buf5);
-    EXPECT_ANY_THROW(to<bool>(&sp5));
+    EXPECT_THROW(to<bool>(&sp5), std::range_error);
     EXPECT_EQ(buf5, sp5.begin());
 }
 
@@ -202,7 +202,7 @@ TEST(Conv, StringPieceToDouble)
     EXPECT_EQ(to<double>(&pc), 2134123.125);
     EXPECT_EQ(pc, " zorro");
 
-    EXPECT_ANY_THROW(to<double>(StringPiece(s)));
+    EXPECT_THROW(to<double>(StringPiece(s)), std::range_error);
     EXPECT_EQ(to<double>(StringPiece(s.data(), pc.data())), 2134123.125);
 
     // Test NaN conversion
@@ -218,12 +218,12 @@ TEST(Conv, StringPieceToDouble)
     EXPECT_TRUE(std::isnan(to<double>("NaN")));
     EXPECT_EQ(to<double>("inf"), numeric_limits<double>::infinity());
     EXPECT_EQ(to<double>("infinity"), numeric_limits<double>::infinity());
-    EXPECT_ANY_THROW(to<double>("infinitX"));
+    EXPECT_THROW(to<double>("infinitX"), std::range_error);
     EXPECT_EQ(to<double>("-inf"), -numeric_limits<double>::infinity());
     EXPECT_EQ(to<double>("-infinity"), -numeric_limits<double>::infinity());
-    EXPECT_ANY_THROW(to<double>("-infinitX"));
+    EXPECT_THROW(to<double>("-infinitX"), std::range_error);
 
-    EXPECT_ANY_THROW(to<double>("")); // empty string to double
+    EXPECT_THROW(to<double>(""), std::range_error); // empty string to double
 }
 
 TEST(Conv, testVariadicTo)
