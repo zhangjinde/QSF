@@ -29,9 +29,19 @@ solution 'qsf'
             '_SCL_SECURE_NO_WARNINGS',
             'NOMINMAX',
         }
-        includedirs { BOOST_ROOT }
+        includedirs 
+        { 
+            'deps/zlib',
+            'deps/lua/src',
+            'deps/zeromq/include',
+            BOOST_ROOT,
+        }
         libdirs { BOOST_ROOT .. '/stage/lib' }
-        links 'ws2_32'
+        links 
+        {
+            'ws2_32',
+            'zlib',
+        }
         
     configuration 'gmake'
         buildoptions '-std=c++11 -mcrc32 -msse4.2 -rdynamic'
@@ -43,6 +53,7 @@ solution 'qsf'
         }
         links
         {
+            'z',
             'rt',
             'pthread',
         }        
@@ -72,16 +83,12 @@ solution 'qsf'
         includedirs
         {
             'src',
-            'deps/zlib',
-            'deps/lua/src',
-            'deps/zeromq/include',
         }
         libdirs 'bin'
         links
         {
             'zmq',
             'lua',
-            'zlib',
         }
 
 
