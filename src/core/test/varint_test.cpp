@@ -129,27 +129,6 @@ BENCHMARK_INITIALIZER(generateRandomValues)
 
 } // anonymouse namespace
 
-// Benchmark results (Intel(R) Xeon(R) CPU E5-2660 0 @ 2.20GHz, Linux x86_64)
-//
-// I0814 19:13:14.466256  7504 VarintTest.cpp:146] Random seed is -1216518886
-// ============================================================================
-// folly/test/VarintTest.cpp                       relative  time/iter  iters/s
-// ============================================================================
-// VarintEncoding                                               6.69us  149.37K
-// VarintDecoding                                               6.85us  145.90K
-// ============================================================================
-//
-// Disabling the "fast path" code in decodeVarint hurts performance:
-//
-// I0814 19:15:13.871467  9550 VarintTest.cpp:156] Random seed is -1216518886
-// ============================================================================
-// folly/test/VarintTest.cpp                       relative  time/iter  iters/s
-// ============================================================================
-// VarintEncoding                                               6.75us  148.26K
-// VarintDecoding                                              12.60us   79.37K
-// ============================================================================
-
-
 
 BENCHMARK(VarintEncoding, iters)
 {
