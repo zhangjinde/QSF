@@ -41,7 +41,7 @@ public:
     const uint8_t* data() const { return buffer() + length(); }
     uint8_t* data() { return buffer() + length(); }
 
-    ByteRange range() { return ByteRange(buffer(), length()); }
+    ByteRange toByteRange() { return ByteRange(buffer(), length()); }
 
     void append(size_t amount)
     {
