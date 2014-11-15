@@ -29,20 +29,20 @@ solution 'qsf'
             '_SCL_SECURE_NO_WARNINGS',
             'NOMINMAX',
         }
-        includedirs 
-        { 
+        includedirs
+        {
             'deps/zlib',
             'deps/lua/src',
             'deps/zeromq/include',
             BOOST_ROOT,
         }
         libdirs { BOOST_ROOT .. '/stage/lib' }
-        links 
+        links
         {
             'ws2_32',
             'zlib',
         }
-        
+
     configuration 'gmake'
         buildoptions '-std=c++11 -mcrc32 -msse4.2 -rdynamic'
         defines
@@ -56,8 +56,8 @@ solution 'qsf'
             'z',
             'rt',
             'pthread',
-        }        
-        
+        }
+
 
     project 'qsf'
         location 'build'
@@ -74,7 +74,7 @@ solution 'qsf'
             'src/**.h',
             'src/**.cpp',
         }
-        excludes 
+        excludes
         {
             'src/test/*.*',
             'src/core/test/*.*',
@@ -96,9 +96,9 @@ solution 'qsf'
         location 'build'
         kind 'ConsoleApp'
         uuid '9E30CCC3-DA13-47FB-9902-7BF6D4792380'
-        defines 
+        defines
         {
-            '_ELPP_THREAD_SAFE',         
+            '_ELPP_THREAD_SAFE',
         }
         files
         {
@@ -109,9 +109,36 @@ solution 'qsf'
         {
             'src',
             'deps/gtest',
-            'deps/gtest/include',           
+            'deps/gtest/include',
         }
-        libdirs 
+        libdirs
         {
             'bin',
-        }     
+        }
+
+    project 'test-net'
+        location 'build'
+        kind 'ConsoleApp'
+        uuid '7EAB00F8-E324-45FC-83FA-3ADD6439BB89'
+        defines
+        {
+            '_ELPP_THREAD_SAFE',
+            'BOOST_ASIO_SEPARATE_COMPILATION',
+            'BOOST_REGEX_NO_LIB',
+        }
+        files
+        {
+            'src/core/*.*',
+            'src/net/**.*',
+            'deps/gtest/src/gtest-all.cc',
+        }
+        includedirs
+        {
+            'src',
+            'deps/gtest',
+            'deps/gtest/include',
+        }
+        libdirs
+        {
+            'bin',
+        }
