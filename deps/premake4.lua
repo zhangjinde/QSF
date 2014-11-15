@@ -8,7 +8,7 @@ solution '3rdlibs'
     --flags {'ExtraWarnings'}
     targetdir '../bin'
     location '../'
-    platforms {'x64'}
+    platforms {'x32', 'x64'}
 
     configuration 'Debug'
         defines { 'DEBUG' }

@@ -9,7 +9,7 @@ solution 'qsf'
     language 'C++'
     --flags {'ExtraWarnings'}
     targetdir 'bin'
-    platforms {'x64'}
+    platforms {'x32', 'x64'}
 
     configuration 'Debug'
         defines { 'DEBUG' }
