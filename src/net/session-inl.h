@@ -124,7 +124,7 @@ void Gate::Session::handleReadBody(const boost::system::error_code& ec, size_t b
         {
             last_recv_time_ = time(NULL);
             auto buf = uncompress(ZLIB, ByteRange(data, bytes));
-            callback_(0, serial_, buf->toByteRange());
+            callback_(0, serial_, buf->byteRange());
             startRead();
         }
         else

@@ -26,7 +26,7 @@ TEST(IOBuf, Create)
     addToBuffer(buf, msg.data(), msg.length());
     EXPECT_EQ(buf->length(), msg.length());
     EXPECT_EQ(buf->capacity(), 1024-msg.length());
-    StringPiece s(buf->toByteRange());
+    StringPiece s(buf->byteRange());
     EXPECT_EQ(s, msg);
 }
 
@@ -38,7 +38,7 @@ TEST(IOBuf, copyBuffer)
     EXPECT_EQ(buf->capacity(), 0);
     EXPECT_EQ(buf->length(), msg.length());
     EXPECT_FALSE(buf->empty());
-    StringPiece s(buf->toByteRange());
+    StringPiece s(buf->byteRange());
     EXPECT_EQ(s, msg);
 }
 
@@ -52,7 +52,7 @@ TEST(IOBuf, takeOwnership)
     EXPECT_EQ(buf->length(), msg_size);
     EXPECT_FALSE(buf->empty());
 
-    StringPiece s(buf->toByteRange());
+    StringPiece s(buf->byteRange());
     EXPECT_EQ(s, msg);
 
     *buf->buffer() = 'A';
