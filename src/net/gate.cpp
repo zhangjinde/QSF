@@ -101,33 +101,31 @@ void Gate::startAccept()
 
 void Gate::handleAccept(const boost::system::error_code& err, SessionPtr ptr)
 {
-    if (!err)
+    if (acceptor_.is_open())
     {
-        if (sessions_.size() < max_connections_)
+        startAccept();
+    }
+    if (err)
+    {
+        LOG(INFO) << err.message();
+        return ;
+    }
+    if (sessions_.size() < max_connections_)
+    {
+        const auto& address = ptr->remoteAddress();
+        if (!black_list_.count(address))
         {
-            const auto& address = ptr->remoteAddress();
-            if (!black_list_.count(address))
-            {
-                sessions_[ptr->serial()] = ptr;
-                ptr->startRead();
-            }
-            else
-            {
-                LOG(INFO) << "session banned: " << address;
-            }
+            sessions_[ptr->serial()] = ptr;
+            ptr->startRead();
         }
         else
         {
-            LOG(INFO) << "reach max session limits: " << max_connections_;
+            LOG(DEBUG) << "session banned: " << address;
         }
     }
     else
     {
-        LOG(INFO) << err.message();
-    }
-    if (acceptor_.is_open())
-    {
-        startAccept();
+        LOG(DEBUG) << "max session limits: " << max_connections_;
     }
 }
 

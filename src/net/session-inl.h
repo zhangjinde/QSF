@@ -110,7 +110,7 @@ void Gate::Session::handleReadHead(const boost::system::error_code& ec, size_t b
     }
     else
     {
-        LOG(DEBUG) << ec.message();
+        LOG(INFO) << ec.message();
     }
 }
 
@@ -134,7 +134,7 @@ void Gate::Session::handleReadBody(const boost::system::error_code& ec, size_t b
     }
     else
     {
-        LOG(DEBUG) << ec.message();
+        LOG(INFO) << ec.message();
     }
 }
 
@@ -177,7 +177,7 @@ void Gate::Session::handleWrite(const boost::system::error_code& ec,
 {
     if (ec)
     {
-        LOG(DEBUG) << ec.message();
+        LOG(INFO) << ec.message();
     }
 }
 
