@@ -66,6 +66,14 @@ bool Gate::kick(uint32_t serial)
     return false;
 }
 
+void Gate::kickAll()
+{
+    for (auto& item : sessions_)
+    {
+        item.second->close();
+    }
+}
+
 void Gate::send(uint32_t serial, ByteRange data)
 {
     auto iter = sessions_.find(serial);

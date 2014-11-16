@@ -42,6 +42,9 @@ public:
     }
 
     bool kick(uint32_t serial);
+    void kickAll();
+
+    uint32_t size() const { return sessions_.size(); }
 
     void denyAddress(const std::string& address);
     void allowAddress(const std::string& address);
