@@ -35,6 +35,10 @@ public:
     void stop();
 
     void send(uint32_t serial, ByteRange data);
+    void send(uint32_t serial, const std::string& str)
+    {
+        send(serial, ByteRange(StringPiece(str)));
+    }
     void send(uint32_t serial, const void* data, size_t size)
     {
         assert(data && size > 0);
@@ -51,7 +55,6 @@ public:
 
 private:
     uint32_t nextSerial();
-
     void startAccept();
     void handleAccept(const boost::system::error_code& err, SessionPtr ptr);
     void checkHeartBeat();

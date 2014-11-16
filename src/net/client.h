@@ -32,6 +32,7 @@ public:
 
     void startRead(ReadCallback callback);
     void send(ByteRange data);
+    void send(const std::string& str) { send(ByteRange(StringPiece(str))); }
     void send(const void* data, size_t size)
     {
         assert(data && size > 0);
