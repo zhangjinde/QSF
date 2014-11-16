@@ -72,4 +72,6 @@ private:
     std::unordered_set<std::string>  black_list_;
 };
 
+typedef std::shared_ptr<Gate>   GatePtr;
+
 } // namespace net

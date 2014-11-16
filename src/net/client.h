@@ -59,4 +59,6 @@ private:
     const uint32_t heart_beat_sec_;
 };
 
+typedef std::shared_ptr<Client> ClientPtr;
+
 } // namespace net
