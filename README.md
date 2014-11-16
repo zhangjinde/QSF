@@ -19,5 +19,5 @@ To build the library and test suits:
 ### Build on Linux (Ubuntu 12.04 x64)
 
 1. Type `./build_deps.sh` to install dependency libraries
-2. Type './build.sh' to generate make files and build executables
+2. Type `./build.sh` to generate makefiles and build executables
 
