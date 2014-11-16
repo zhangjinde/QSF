@@ -51,6 +51,7 @@ solution 'qsf'
             '_ELPP_STACKTRACE_ON_CRASH',
             'HAVE_UNISTD_H',
         }
+        includedirs '/usr/include/lua5.2'
         links
         {
             'z',
