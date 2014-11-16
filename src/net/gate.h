@@ -13,6 +13,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/noncopyable.hpp>
 #include "core/range.h"
+#include "packet.h"
 
 namespace net {
 
@@ -24,9 +25,9 @@ class Gate : boost::noncopyable
     typedef std::shared_ptr<Session> SessionPtr;
 
 public:
-    Gate(boost::asio::io_service& io_service, 
-         uint32_t max_connections,
-         uint32_t heart_beat_sec);
+    explicit Gate(boost::asio::io_service& io_service, 
+                  uint32_t max_connections = DEFAULT_MAX_CONNECTIONS,
+                  uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC);
     ~Gate();
 
     void start(const std::string& host, uint16_t port, ReadCallback callback);
@@ -34,7 +35,7 @@ public:
     void stop();
 
     void send(uint32_t serial, ByteRange data);
-    void Send(uint32_t serial, const void* data, size_t size)
+    void send(uint32_t serial, const void* data, size_t size)
     {
         assert(data && size > 0);
         send(serial, ByteRange(reinterpret_cast<const uint8_t*>(data), size));

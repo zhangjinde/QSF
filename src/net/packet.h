@@ -24,6 +24,12 @@ enum
 
     // max 512K
     MAX_SEND_BYTES = 32 * MAX_PACKET_SIZE,
+
+    // default value of max client connection
+    DEFAULT_MAX_CONNECTIONS = 8000,
+
+    // default value of heartbeat seconds
+    DEFAULT_MAX_HEARTBEAT_SEC = 30,
 };
 
 const int kRecvBufReserveSize = 1024;
