@@ -48,7 +48,7 @@ solution '3rdlibs'
         }
         links 'ws2_32'
 
-    project 'lua'
+    project 'lua5.2'
         language 'C'
         kind 'SharedLib'
         location 'build'

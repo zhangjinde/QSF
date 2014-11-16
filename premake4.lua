@@ -57,6 +57,7 @@ solution 'qsf'
             'z',
             'rt',
             'pthread',
+            'boost_system',
         }
 
 
@@ -89,7 +90,7 @@ solution 'qsf'
         links
         {
             'zmq',
-            'lua',
+            'lua5.2',
         }
 
 
