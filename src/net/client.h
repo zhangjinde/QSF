@@ -23,7 +23,8 @@ public:
     typedef std::function<void(ByteRange)>  ReadCallback;
 
 public:
-    Client(boost::asio::io_service& io_service, uint32_t heart_beat_sec);
+    explicit Client(boost::asio::io_service& io_service, 
+                    uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC);
     ~Client();
 
     void connect(const std::string& host, uint16_t port);
