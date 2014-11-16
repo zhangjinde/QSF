@@ -29,7 +29,11 @@ enum
     DEFAULT_MAX_CONNECTIONS = 6000,
 
     // default value of heartbeat seconds
+#ifdef NDEBUG
     DEFAULT_MAX_HEARTBEAT_SEC = 30,
+#else
+    DEFAULT_MAX_HEARTBEAT_SEC = 300,
+#endif
 };
 
 const int kRecvBufReserveSize = 1024;

@@ -97,20 +97,23 @@ void Client::handleReadBody(const boost::system::error_code& ec, size_t bytes)
 {
     if (!ec)
     {
-        if (head_.more == 0 && buffer_more_.size() == 0) // most case
+        if (head_.more == 0 && buffer_more_.size() == 0) // hot path
         {
-            std::swap(buffer_more_, buffer_);
+            auto buf = uncompress(ZLIB, ByteRange(buffer_.data(), bytes));
+            on_read_(buf->byteRange());
         }
         else // framed packet
         {
+            auto buf = uncompress(ZLIB, ByteRange(buffer_.data(), bytes));
+            auto range = buf->byteRange();
             auto oldsize = buffer_more_.size();
-            buffer_more_.resize(oldsize + bytes);
-            memcpy(buffer_more_.data() + oldsize, buffer_.data(), bytes);
-        }
-        if (head_.more == 0)
-        {
-            on_read_(ByteRange(buffer_more_.data(), buffer_more_.size()));
-            buffer_more_.resize(0);
+            buffer_more_.resize(oldsize + range.size());
+            memcpy(buffer_more_.data() + oldsize, range.data(), range.size());
+            if (head_.more == 0)
+            {
+                on_read_(ByteRange(buffer_more_.data(), buffer_more_.size()));
+                buffer_more_.resize(0);
+            }
         }
         readHead();
     }

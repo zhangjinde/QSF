@@ -163,7 +163,7 @@ void Gate::Session::writeFrame(ByteRange frame, uint8_t more)
     const size_t head_size = sizeof(ServerHeader);
     auto out = compress(ZLIB, frame, head_size);
     ServerHeader* head = reinterpret_cast<ServerHeader*>(out->buffer());
-    head->size = static_cast<uint16_t>(frame.size());
+    head->size = static_cast<uint16_t>(out->length() - head_size);
     head->codec = ZLIB;
     head->more = more;
     boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
