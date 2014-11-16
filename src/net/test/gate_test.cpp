@@ -3,8 +3,10 @@
 #include "rand_string.h"
 #include "net/gate.h"
 #include "net/client.h"
+#include "core/strings.h"
 
 using namespace std;
+using namespace net;
 
 const static string DEFAULT_HOST = "127.0.0.1";
 const static uint16_t DEFAULT_PORT = 10086;
@@ -84,9 +86,11 @@ TEST(Gate, denyAddress)
     gate.kickAll();
 }
 
-void test_send(const string& msg)
+static void test_send(const string& msg)
 {
     ByteRange bytes = StringPiece(msg);
+    std::string request = stringPrintf("request msg size %d", msg.size());
+
     boost::asio::io_service io_service;
     net::Gate gate(io_service);
     gate.start(DEFAULT_HOST, DEFAULT_PORT,
@@ -94,11 +98,11 @@ void test_send(const string& msg)
     {
         if (!err)
         {
-            EXPECT_EQ(bytes, data);
-            gate.send(serial, data);
+            ByteRange r = StringPiece(request);
+            EXPECT_EQ(r, data);
+            gate.send(serial, bytes);
         }
     });
-
 
     net::Client client(io_service);
     client.connect(DEFAULT_HOST, DEFAULT_PORT,
@@ -107,10 +111,10 @@ void test_send(const string& msg)
         EXPECT_TRUE(!ec);
         if (!ec)
         {
-            client.send(msg);
-            client.startRead([&](ByteRange data)
+            client.send(request);
+            client.startRead([&](ByteRange response)
             {
-                EXPECT_EQ(bytes, data);
+                EXPECT_EQ(bytes, response);
                 io_service.stop();
             });
         }
@@ -121,7 +125,8 @@ void test_send(const string& msg)
 
 TEST(Gate, send)
 {
-    for (auto size : { 32, 64, 128, 512, 1024, 2048, 8196 })
+    int sizeTable[] = { 32, 128, 1024, 8196, MAX_PACKET_SIZE+1, MAX_PACKET_SIZE*4 };
+    for (auto size : sizeTable)
     {
         auto msg = randString(size);
         test_send(msg);
