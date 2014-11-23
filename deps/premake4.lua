@@ -37,14 +37,14 @@ solution '3rdlibs'
         defines { 'DLL_EXPORT', 'FD_SETSIZE=1024', }
         files
         {
-            'zeromq/include/*.h',
-            'zeromq/src/*.hpp',
-            'zeromq/src/*.cpp',
+            'libzmq/include/*.h',
+            'libzmq/src/*.hpp',
+            'libzmq/src/*.cpp',
         }
         includedirs
         {
-            'zeromq/include',
-            'zeromq/builds/msvc',
+            'libzmq/include',
+            'libzmq/builds/msvc',
         }
         links 'ws2_32'
 

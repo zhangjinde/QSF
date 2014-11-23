@@ -33,7 +33,7 @@ solution 'qsf'
         {
             'deps/zlib',
             'deps/lua/src',
-            'deps/zeromq/include',
+            'deps/libzmq/include',
             BOOST_ROOT,
         }
         libdirs { BOOST_ROOT .. '/stage/lib' }
