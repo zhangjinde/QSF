@@ -106,4 +106,13 @@ typedef SSIZE_T ssize_t;
 // noexcept operator was not supported in MSVC 2013
 #define noexcept       _NOEXCEPT
 
+#else
+
+/* _countof helper */
+#if !defined (_countof)
+template <typename Type, size_t Size>
+char(&__countof_helper(Type(&_Array)[Size]))[Size];
+#define _countof(_Array) (sizeof(__countof_helper(_Array)) + 0)
+#endif  /* !defined (_countof) */
+
 #endif // _MSC_VER
