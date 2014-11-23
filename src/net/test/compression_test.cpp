@@ -5,19 +5,54 @@
 #include "net/compression.h"
 
 using namespace std;
+using namespace net;
 
-
-TEST(compression, zlibCompress)
+TEST(compression, compressServerPacket)
 {
     for (auto size : { 32, 64, 128, 512, 1024, 2048, 8196 })
     {
         auto str = randString(size);
-        ByteRange origin(reinterpret_cast<const uint8_t*>(str.data()), str.length());
-        auto buf = net::compress(net::ZLIB, origin);
+        ByteRange origin = StringPiece(str);
+        auto buf = compressServerPacket(origin, false);
         EXPECT_FALSE(buf->empty());
-        auto compressed = buf->byteRange();
-        auto buf_out = net::uncompress(net::ZLIB, compressed);
-        auto uncompressed = buf_out->byteRange();
-        EXPECT_EQ(origin, uncompressed);
+        const ServerHeader* head = reinterpret_cast<const ServerHeader*>(buf->buffer());
+        const size_t head_size = sizeof(*head);
+        if (size <= NO_COMPRESSION_SIZE)
+        {
+            EXPECT_EQ(head->codec, NO_COMPRESSION);
+            EXPECT_EQ(head->size, origin.size());
+        }
+        else
+        {
+            EXPECT_EQ(head->codec, ZLIB);
+        }
+        auto compressed_frame = ByteRange(buf->buffer() + head_size, buf->length()-head_size);
+        auto buf_out = uncompressPacketFrame((CodecType)head->codec, compressed_frame);
+        EXPECT_EQ(origin, buf_out->byteRange());
+    }
+}
+
+TEST(compression, compressClientPacket)
+{
+    for (auto size : { 32, 64, 128, 512, 1024, 2048, 8196 })
+    {
+        auto str = randString(size);
+        ByteRange origin = StringPiece(str);
+        auto buf = compressClientPacket(origin);
+        EXPECT_FALSE(buf->empty());
+        const ClientHeader* head = reinterpret_cast<const ClientHeader*>(buf->buffer());
+        const size_t head_size = sizeof(*head);
+        if (size <= NO_COMPRESSION_SIZE)
+        {
+            EXPECT_EQ(head->codec, NO_COMPRESSION);
+            EXPECT_EQ(head->size, origin.size());
+        }
+        else
+        {
+            EXPECT_EQ(head->codec, ZLIB);
+        }
+        auto compressed_frame = ByteRange(buf->buffer() + head_size, buf->length() - head_size);
+        auto buf_out = uncompressPacketFrame((CodecType)head->codec, compressed_frame);
+        EXPECT_EQ(origin, buf_out->byteRange());
     }
 }

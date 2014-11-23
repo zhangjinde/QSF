@@ -8,7 +8,7 @@
 namespace net {
 
 #ifdef NDEBUG
-const int kCheckHeartBeatSec = 10;
+const int kCheckHeartBeatSec = 5;
 #else
 const int kCheckHeartBeatSec = 90;
 #endif

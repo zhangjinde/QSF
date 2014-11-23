@@ -31,7 +31,7 @@ public:
     time_t lastRecvTime() const { return last_recv_time_; }
 
 private:
-    void writeFrame(ByteRange frame, uint8_t more);
+    void writeFrame(ByteRange frame, bool more);
     void handleReadHead(const boost::system::error_code& ec, size_t bytes);
     void handleReadBody(const boost::system::error_code& ec, size_t bytes);
     void handleWrite(const boost::system::error_code& ec, size_t bytes, std::shared_ptr<IOBuf> buf);
@@ -119,12 +119,15 @@ void Gate::Session::handleReadBody(const boost::system::error_code& ec, size_t b
     if (!ec)
     {
         const uint8_t* data = buffer_.data();
-        auto checksum = crc16(data, bytes);
+        auto checksum = crc32c(data, bytes);
         if (head_.checksum == checksum)
         {
             last_recv_time_ = time(NULL);
-            auto buf = uncompress(ZLIB, ByteRange(data, bytes));
-            callback_(0, serial_, buf->byteRange());
+            auto out = uncompressPacketFrame((CodecType)head_.codec, ByteRange(data, bytes));
+            if (out)
+            {
+                callback_(0, serial_, out->byteRange());
+            }
             startRead();
         }
         else
@@ -145,7 +148,7 @@ void Gate::Session::write(ByteRange data)
         while (data.size() > MAX_PACKET_SIZE)
         {
             auto frame = data.subpiece(0, MAX_PACKET_SIZE);
-            writeFrame(frame, 1);
+            writeFrame(frame, true);
             data.advance(MAX_PACKET_SIZE);
         }
         writeFrame(data, 0);
@@ -157,17 +160,15 @@ void Gate::Session::write(ByteRange data)
     }
 }
 
-void Gate::Session::writeFrame(ByteRange frame, uint8_t more)
+void Gate::Session::writeFrame(ByteRange frame, bool more)
 {
     assert(frame.size() <= UINT16_MAX);
-    const size_t head_size = sizeof(ServerHeader);
-    auto out = compress(ZLIB, frame, head_size);
-    ServerHeader* head = reinterpret_cast<ServerHeader*>(out->buffer());
-    head->size = static_cast<uint16_t>(out->length() - head_size);
-    head->codec = ZLIB;
-    head->more = more;
-    boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
-        std::bind(&Gate::Session::handleWrite, this, _1, _2, out));
+    auto out = compressServerPacket(frame, more);
+    if (out && !out->empty())
+    {
+        boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), 
+            out->length()), std::bind(&Gate::Session::handleWrite, this, _1, _2, out));
+    }
 }
 
 

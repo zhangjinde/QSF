@@ -25,18 +25,20 @@ enum
     // max 512K
     MAX_SEND_BYTES = 32 * MAX_PACKET_SIZE,
 
+    NO_COMPRESSION_SIZE = 128,
+
     // default value of max client connection
     DEFAULT_MAX_CONNECTIONS = 6000,
 
     // default value of heartbeat seconds
 #ifdef NDEBUG
-    DEFAULT_MAX_HEARTBEAT_SEC = 30,
+    DEFAULT_MAX_HEARTBEAT_SEC = 10,
 #else
     DEFAULT_MAX_HEARTBEAT_SEC = 300,
 #endif
 };
 
-const int kRecvBufReserveSize = 1024;
+const int kRecvBufReserveSize = 256;
 
 // Compression / decompression
 enum CodecType
@@ -59,13 +61,16 @@ enum CodecType
 
 
 #pragma pack(push) 
-#pragma pack(2)
+#pragma pack(4)
 
 struct ClientHeader
 {
     uint16_t    size;       // body size
-    uint16_t    checksum;   // checksum value of content
+    uint8_t     codec;      // compression type
+    uint8_t     flag;       // reserved
+    uint32_t    checksum;   // checksum value of content
 };
+
 
 struct ServerHeader
 {
@@ -73,6 +78,9 @@ struct ServerHeader
     uint8_t     codec;      // compression type
     uint8_t     more;       // more data
 };
+
+static_assert(sizeof(ClientHeader) % 4 == 0, "must be 4 bytes packed");
+static_assert(sizeof(ServerHeader) % 4 == 0, "must be 4 bytes packed");
 
 #pragma pack(pop)
 

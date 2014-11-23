@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include "core/strings.h"
 #include "core/logging.h"
-#include "core/checksum.h"
+
 #include "compression.h"
 
 using namespace std::placeholders;
@@ -55,19 +55,12 @@ void Client::send(ByteRange data)
         LOG(ERROR) << "too big size to send: " << prettyPrint(data.size(), PRETTY_BYTES);
         return;
     }
-    const uint32_t head_size = sizeof(ClientHeader);
-    auto out = compress(ZLIB, data, head_size);
-    if (out->empty())
+    auto out = compressClientPacket(data);
+    if (out && !out->empty())
     {
-        //LOG(ERROR) << serial_ << ", out of memory with size: " << size;
-        return;
+        boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), 
+            out->length()), std::bind(&Client::handleSend, this, _1, _2, out));
     }
-    ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
-    size_t body_size = out->length() - head_size;
-    head->size = static_cast<uint16_t>(body_size);
-    head->checksum = crc16(out->buffer() + head_size, body_size);
-    boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
-        std::bind(&Client::handleSend, this, _1, _2, out));
 }
 
 void Client::readHead()
@@ -99,16 +92,22 @@ void Client::handleReadBody(const boost::system::error_code& ec, size_t bytes)
     {
         if (head_.more == 0 && buffer_more_.size() == 0) // hot path
         {
-            auto buf = uncompress(ZLIB, ByteRange(buffer_.data(), bytes));
-            on_read_(buf->byteRange());
+            auto buf = uncompressPacketFrame((CodecType)head_.codec, ByteRange(buffer_.data(), bytes));
+            if (buf)
+            {
+                on_read_(buf->byteRange());
+            }
         }
         else // framed packet
         {
-            auto buf = uncompress(ZLIB, ByteRange(buffer_.data(), bytes));
-            auto range = buf->byteRange();
-            auto oldsize = buffer_more_.size();
-            buffer_more_.resize(oldsize + range.size());
-            memcpy(buffer_more_.data() + oldsize, range.data(), range.size());
+            auto buf = uncompressPacketFrame((CodecType)head_.codec, ByteRange(buffer_.data(), bytes));
+            if (buf)
+            {
+                auto range = buf->byteRange();
+                auto oldsize = buffer_more_.size();
+                buffer_more_.resize(oldsize + range.size());
+                memcpy(buffer_more_.data() + oldsize, range.data(), range.size());
+            }
             if (head_.more == 0)
             {
                 on_read_(ByteRange(buffer_more_.data(), buffer_more_.size()));
