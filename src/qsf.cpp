@@ -21,7 +21,7 @@ using std::mutex;
 using std::lock_guard;
 
 
-static const char*  QSF_QUEUE = "inproc://router.queue";
+static const char*  QSF_ROUTER = "inproc://qsf.router";
 static const char*  DUMMY_NAME = "#S$ZD@B";
 
 namespace {
@@ -35,6 +35,14 @@ static std::unique_ptr<zmq::socket_t>   s_router;
 static std::unordered_map<std::string, ServicePtr> s_services;
 static std::mutex  s_mutex;  // service guard
 
+void checkLibraryVersion()
+{
+    int major, minor, patch;
+    zmq::version(&major, &minor, &patch);
+    CHECK(major == ZMQ_VERSION_MAJOR)
+        << "expect zmq major ver" << ZMQ_VERSION_MAJOR
+        << ", but get " << major;
+}
 
 void systemCommand(const std::string& command)
 {
@@ -146,6 +154,8 @@ void threadCallback(std::string type, std::string name, std::vector<std::string>
 
 bool initialize(const char* filename)
 {
+    checkLibraryVersion();
+
     if (!Env::initialize(filename))
     {
         return false;
@@ -164,7 +174,7 @@ bool initialize(const char* filename)
     //s_router->setsockopt(ZMQ_ROUTER_MANDATORY, &mandatory, sizeof(mandatory));
     s_router->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
     s_router->setsockopt(ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
-    s_router->bind(QSF_QUEUE);
+    s_router->bind(QSF_ROUTER);
 
     return true;
 }
@@ -190,7 +200,7 @@ std::unique_ptr<zmq::socket_t> createDealer(const std::string& identity)
     dealer->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
     dealer->setsockopt(ZMQ_IDENTITY, identity.c_str(), identity.size());
     dealer->setsockopt(ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
-    dealer->connect(QSF_QUEUE);
+    dealer->connect(QSF_ROUTER);
     return std::move(dealer);
 }
 
