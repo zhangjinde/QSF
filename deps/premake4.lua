@@ -22,7 +22,6 @@ solution '3rdlibs'
         defines
         {
             'WIN32',
-            'WIN32_LEAN_AND_MEAN',
             '_WIN32_WINNT=0x0600',
             '_CRT_SECURE_NO_WARNINGS',
             '_SCL_SECURE_NO_WARNINGS',
@@ -34,7 +33,12 @@ solution '3rdlibs'
         kind 'SharedLib'
         location 'build'
         uuid 'A75AF625-DDF0-4E60-97D8-A2FDC6229AF7'
-        defines { 'DLL_EXPORT', 'FD_SETSIZE=1024', }
+        defines 
+        { 
+            'DLL_EXPORT', 
+            'FD_SETSIZE=1024', 
+            'HAVE_LIBSODIUM',
+        }
         files
         {
             'libzmq/include/*.h',
@@ -43,11 +47,33 @@ solution '3rdlibs'
         }
         includedirs
         {
+            'libsodium/src/libsodium/include',
             'libzmq/include',
             'libzmq/builds/msvc',
         }
-        links 'ws2_32'
+        links {'ws2_32', 'sodium'}
 
+    project 'sodium'
+        language 'C'
+        kind 'SharedLib'
+        location 'build'
+        uuid 'CB19F7EE-55D6-4C40-849D-64E2D3849041'
+        defines 
+        {
+            'SODIUM_DLL_EXPORT',
+            'inline=__inline',
+        }
+        files
+        {
+            'libsodium/src/**.h',
+            'libsodium/src/**.c',
+        }
+        includedirs
+        {
+            'libsodium/src/libsodium/include',
+            'libsodium/src/libsodium/include/sodium',
+        }        
+        
     project 'lua5.2'
         language 'C'
         kind 'SharedLib'
