@@ -92,7 +92,7 @@ int LuaSandBox::run(const std::vector<string>& args)
         return 1;
     }
     lua_pushlstring(L, id.c_str(), id.size());
-    for (int i = 1; i < args.size(); i++)
+    for (auto i = 1U; i < args.size(); i++)
     {
         lua_pushlstring(L, args[i].c_str(), args[i].size());
     }

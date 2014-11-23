@@ -194,7 +194,7 @@ void runBenchmarks()
     // PLEASE KEEP QUIET. MEASUREMENTS IN PROGRESS.
     auto const globalBaseline = runBenchmarkGetNSPerIteration(
         get<2>(getBenchmarks().front()), 0);
-    for (auto i = 1; i < benchmarks.size(); i++)
+    for (auto i = 1U; i < benchmarks.size(); i++)
     {
         double elapsed = 0.0;
         if (strcmp(get<1>(benchmarks[i]), "-") != 0) // skip separators
@@ -320,7 +320,7 @@ void printBenchmarkResultsAsTable(
     // Compute the longest benchmark name
     size_t longestName = 0;
     auto& benchmarks = getBenchmarks();
-    for (auto i = 1; i < benchmarks.size(); i++)
+    for (auto i = 1U; i < benchmarks.size(); i++)
     {
         longestName = max(longestName, strlen(get<1>(benchmarks[i])));
     }
