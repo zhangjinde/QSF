@@ -8,6 +8,7 @@ extern "C" {
 int luaopen_qsf_c(lua_State* L);
 int luaopen_utils(lua_State* L);
 int luaopen_zmq(lua_State* L);
+int luaopen_gate(lua_State* L);
 }
 
 void lua_initlibs(lua_State* L)
@@ -17,6 +18,7 @@ void lua_initlibs(lua_State* L)
         { "qsf.c", luaopen_qsf_c },
         { "utils", luaopen_utils },
         { "zmq", luaopen_zmq },
+        { "gate", luaopen_gate },
         { NULL, NULL },
     };
 
