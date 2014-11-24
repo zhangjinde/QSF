@@ -79,8 +79,18 @@ void Gate::send(uint32_t serial, ByteRange data)
     auto iter = sessions_.find(serial);
     if (iter != sessions_.end())
     {
-        auto session = iter->second;
+        auto& session = iter->second;
         session->write(data);
+    }
+}
+
+void Gate::sendAll(const void* data, size_t size)
+{
+    assert(data && size > 0);
+    for (auto& item : sessions_)
+    {
+        auto& session = item.second;
+        session->write(ByteRange(reinterpret_cast<const uint8_t*>(data), size));
     }
 }
 

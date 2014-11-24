@@ -44,6 +44,7 @@ public:
         assert(data && size > 0);
         send(serial, ByteRange(reinterpret_cast<const uint8_t*>(data), size));
     }
+    void sendAll(const void* data, size_t size);
 
     bool kick(uint32_t serial);
     void kickAll();
