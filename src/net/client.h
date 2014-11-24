@@ -39,6 +39,8 @@ public:
         send(ByteRange(reinterpret_cast<const uint8_t*>(data), size));
     }
 
+    void stop();
+
 private:
     void readHead();
     void handleReadHead(const boost::system::error_code& ec, size_t bytes);

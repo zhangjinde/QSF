@@ -23,6 +23,12 @@ Client::Client(boost::asio::io_service& io_service, uint32_t heart_beat_sec_)
 
 Client::~Client()
 {
+    stop();
+}
+
+void Client::stop()
+{
+    socket_.close();
 }
 
 void Client::connect(const std::string& host, uint16_t port)
