@@ -1,6 +1,14 @@
 sudo apt-get install liblua5.2-dev zlib1g-dev libboost1.55-dev
 
-# zmq 2.2 is too old, compile version 4.0 for our own self
+# libsodium for zmq curve
+cd ../libsodium
+sh ./autogen.sh
+./configure
+make
+sudo make install
+make clean
+
+# zmq from ubuntu repo is version 2.2, which is too old for us
 cd deps/libzmq
 chmod +x ./configure
 ./configure
@@ -8,4 +16,5 @@ make
 sudo make install
 sudo cp include/zmq.hpp /usr/local/include/
 make clean
+
 
