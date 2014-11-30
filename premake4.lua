@@ -2,6 +2,8 @@
 -- Premake4 build script (http://industriousone.com/premake/download)
 --
 
+assert(os.get() == 'windows' or os.get() == 'linux')
+
 local BOOST_ROOT = os.getenv('BOOST_ROOT') or ''
 
 solution 'qsf'
