@@ -1,15 +1,26 @@
-#include <memory>
-#include <thread>
-#include <lua.hpp>
-#include <zmq.hpp>
+// Copyright (C) 2014 ichenq@gmail.com. All rights reserved.
+// Distributed under the terms and conditions of the Apache License.
+// See accompanying files LICENSE.
+
+#include <stdio.h>
+#include <assert.h>
+#include <zmq.h>
 #include <zmq_utils.h>
-#include "core/platform.h"
-#include "core/scope_guard.h"
+#include <lua.hpp>
 
 
-static std::unique_ptr<zmq::context_t>   global_context;
+#ifdef _MSC_VER
+# define snprintf       _snprintf
+# define LZMQ_EXPORT    __declspec(dllexport)
+#else
+# define LZMQ_EXPORT
+#endif
 
-#define ZSOCK_META_HANDLE  "socket*.gc"
+
+static void* global_context = NULL;
+
+
+#define ZSOCK_META_HANDLE  "socket*"
 #define check_socket(L)     (*(void**)luaL_checkudata(L, 1, ZSOCK_META_HANDLE))
 
 inline int lzmq_throw_error(lua_State* L)
@@ -21,7 +32,7 @@ inline int lzmq_throw_error(lua_State* L)
 static int lzmq_create_socket(lua_State* L)
 {
     int type = luaL_checkint(L, 1);
-    void* socket = zmq_socket((void*)*global_context, type);
+    void* socket = zmq_socket(global_context, type);
     if (socket == NULL)
     {
         return lzmq_throw_error(L);
@@ -149,15 +160,16 @@ static int zsocket_recv(lua_State* L)
     }
     zmq_msg_t msg;
     zmq_msg_init(&msg);
-    SCOPE_EXIT{ zmq_msg_close(&msg); };
     int rc = zmq_recvmsg(socket, &msg, flag);
     if (rc == -1)
     {
+        zmq_msg_close(&msg);
         return lzmq_throw_error(L);
     }
     size_t len = zmq_msg_size(&msg);
     void* data = zmq_msg_data(&msg);
     lua_pushlstring(L, (const char*)data, len);
+    zmq_msg_close(&msg);
     return 1;
 }
 
@@ -510,6 +522,48 @@ static int zsocket_set_ipv4only(lua_State* L)
     return 0;
 }
 
+static int lzmq_init(lua_State* L)
+{
+    if (global_context == NULL)
+    {
+        global_context = zmq_ctx_new();
+    }
+    int io_threads = luaL_optint(L, 1, ZMQ_IO_THREADS_DFLT);
+    int max_sockets = luaL_optint(L, 1, ZMQ_MAX_SOCKETS_DFLT);
+    int rc = zmq_ctx_set(global_context, ZMQ_IO_THREADS, io_threads);
+    if (rc != 0)
+    {
+        return lzmq_throw_error(L);
+    }
+    rc = zmq_ctx_set(global_context, ZMQ_MAX_SOCKETS, max_sockets);
+    if (rc != 0)
+    {
+        return lzmq_throw_error(L);
+    }
+    return 0;
+}
+
+static int lzmq_shutdown(lua_State* L)
+{
+    int rc = zmq_ctx_shutdown(global_context);
+    if (rc != 0)
+    {
+        return lzmq_throw_error(L);
+    }
+    return 0;
+}
+
+static int lzmq_terminate(lua_State* L)
+{
+    int rc = zmq_ctx_term(global_context);
+    if (rc != 0)
+    {
+        return lzmq_throw_error(L);
+    }
+    global_context = NULL;
+    return 0;
+}
+
 static int lzmq_version(lua_State* L)
 {
     const char* option = lua_tostring(L, 1);
@@ -531,7 +585,6 @@ static int lzmq_version(lua_State* L)
         return 1;
     }
 }
-
 
 static int lzmq_z85_encode(lua_State *L)
 {
@@ -596,9 +649,16 @@ static int lzmq_curve_keypair(lua_State* L)
     return 2;
 }
 
-#define push_literal(L, name, value)  \
-    lua_pushstring(L, name); \
-    lua_pushnumber(L, value);  \
+static int lzmq_sleep(lua_State* L)
+{
+    int sec = luaL_checkint(L, 1);
+    zmq_sleep(sec);
+    return 0;
+}
+
+#define push_literal(L, name, value)\
+    lua_pushstring(L, name);        \
+    lua_pushnumber(L, value);       \
     lua_rawset(L, -3);
 
 static void push_socket_constant(lua_State* L)
@@ -654,34 +714,47 @@ static void create_metatable(lua_State* L)
         { "set_curve_secret_key", zsocket_set_curve_secret_key },
         { "set_curve_public_key", zsocket_set_curve_public_key },
         { "set_curve_server_key", zsocket_set_curve_server_key },
-        { "set_ipv6", zsocket_set_ipv6 }, 
+        { "set_ipv6", zsocket_set_ipv6 },
         { "set_ipv4only", zsocket_set_ipv4only },
         { "set_conflate", zsocket_set_conflate },
         { NULL, NULL },
     };
-    luaL_newmetatable(L, ZSOCK_META_HANDLE);
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-    luaL_setfuncs(L, methods, 0);
-    lua_pop(L, 1);  /* pop new metatable */
+    if (luaL_newmetatable(L, ZSOCK_META_HANDLE))
+    {
+        lua_pushvalue(L, -1);
+        lua_setfield(L, -2, "__index");
+        luaL_setfuncs(L, methods, 0);
+        lua_pushliteral(L, "__metatable");
+        lua_pushliteral(L, "cannot access this metatable");
+        lua_settable(L, -3);
+        lua_pop(L, 1);  /* pop new metatable */
+    }
+    else
+    {
+        luaL_error(L, "`%s` already registered.", ZSOCK_META_HANDLE);
+    }
 }
 
-extern "C"
-int luaopen_zmq(lua_State* L)
+extern "C" LZMQ_EXPORT 
+int luaopen_luazmq(lua_State* L)
 {
-    global_context.reset(new zmq::context_t(std::thread::hardware_concurrency()));
-
     static const luaL_Reg lib[] =
     {
+        { "init", lzmq_init },
+        { "shutdown", lzmq_shutdown },
+        { "terminate", lzmq_terminate },
         { "version", lzmq_version },
         { "z85_encode", lzmq_z85_encode },
         { "z85_decode", lzmq_z85_decode },
         { "curve_keypair", lzmq_curve_keypair },
         { "socket", lzmq_create_socket },
+        { "sleep", lzmq_sleep },
         { NULL, NULL },
     };
+
+    luaL_checkversion(L);
     luaL_newlib(L, lib);
-    create_metatable(L);
     push_socket_constant(L);
+    create_metatable(L);
     return 1;
 }
