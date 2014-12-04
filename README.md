@@ -21,3 +21,13 @@ To build the library and test suits:
 1. Type `./build_deps.sh` to install dependency libraries
 2. Type `./build.sh` to generate makefiles and build executables
 
+
+## References
+
+[1] [ZeroMQ The Guide](http://zguide.zeromq.org/page:all)
+
+[2] [Lua 5.2 Manual Reference](http://www.lua.org/manual/5.2/)
+
+[3] [MySQL 5.5 C API Function Overview](http://dev.mysql.com/doc/refman/5.5/en/c-api-function-overview.html)
+
+[4] [Redis Command List](http://redis.io/commands)
