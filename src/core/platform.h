@@ -21,17 +21,6 @@
 # define PLAT_X64  0
 #endif
 
-// macro wrappers for C++11's "final" and "override" keywords
-#if !defined(QSF_FINAL) && !defined(QSF_OVERRIDE)
-# if defined(__clang__) || __GNUC_PREREQ(4, 7)
-#  define FINAL     final
-#  define OVERRIDE  override
-# else
-#  define FINAL
-#  define OVERRIDE
-# endif
-#endif
-
 #if defined(__GNUC__) && __GNUC__ >= 4
 # define LIKELY(x)   (__builtin_expect((x), 1))
 # define UNLIKELY(x) (__builtin_expect((x), 0))
@@ -45,7 +34,7 @@
 #include <cstddef>
 typedef std::max_align_t MaxAlign;
 #elif defined(__GNUC__)
-# define ATTR_ALIGN(x)        __attribute__((aligned(x)))
+# define ATTR_ALIGN(x)      __attribute__((aligned(x)))
 struct MaxAlign { char c; } __attribute__((aligned));
 #endif
 
