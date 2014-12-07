@@ -38,6 +38,18 @@ enum
 #endif
 };
 
+// Protocol error code
+enum
+{
+    ERR_ACCEPT_FAILED = 1000001,        // accept failed
+    ERR_ADDRRESS_BANNED = 1000002,      // banned IP address
+    ERR_MAX_CONN_LIMIT = 1000003,       // reach max connection limit
+    ERR_INVALID_BODY_SIZE = 1000004,    // body size too big
+    ERR_INVALID_CHECKSUM = 1000005,     // invalid body checksum
+    ERR_SND_SIZE_TOO_BIG = 1000006,     // send buffer too big
+    ERR_HEARTBEAT_TIMEOUT = 1000007,    // timeout issue
+};
+
 const int kRecvBufReserveSize = 256;
 
 // Compression / decompression

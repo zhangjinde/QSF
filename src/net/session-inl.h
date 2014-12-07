@@ -22,7 +22,7 @@ public:
 
     void startRead();
     void write(ByteRange data);
-    void close(const boost::system::error_code& ec = boost::asio::error::connection_aborted);
+    void close();
 
     std::string remoteAddress();
     boost::asio::ip::tcp::socket& socket() { return socket_; }
@@ -71,16 +71,13 @@ void Gate::Session::startRead()
         std::bind(&Gate::Session::handleReadHead, this, _1, _2));
 }
 
-void Gate::Session::close(const boost::system::error_code& ec)
+void Gate::Session::close()
 {
     if (!closed_ && socket_.is_open())
     {
         socket_.shutdown(boost::asio::socket_base::shutdown_both);
         socket_.close();
         closed_ = true;
-
-        StringPiece msg(ec.message());
-        callback_(ec.value(), serial_, msg);
     }
 }
 
@@ -90,7 +87,8 @@ void Gate::Session::handleReadHead(const boost::system::error_code& ec, size_t b
     {
         if (head_.size > MAX_PACKET_SIZE)
         {
-            close(boost::asio::error::message_size);
+            auto errmsg = stringPrintf("invalid body size: %u", bytes);
+            callback_(ERR_INVALID_BODY_SIZE, serial_, StringPiece(errmsg));
             return;
         }
         if (head_.size == 0) // empty content means heartbeating
@@ -110,7 +108,7 @@ void Gate::Session::handleReadHead(const boost::system::error_code& ec, size_t b
     }
     else
     {
-        LOG(INFO) << ec.message();
+        callback_(ec.value(), serial_, StringPiece(ec.message()));
     }
 }
 
@@ -132,12 +130,15 @@ void Gate::Session::handleReadBody(const boost::system::error_code& ec, size_t b
         }
         else
         {
-            close(boost::asio::error::invalid_argument);
+            close();
+            auto errmsg = stringPrintf("invalid body checksum, expect %x, but get %x", 
+                checksum, head_.checksum);
+            callback_(ERR_INVALID_CHECKSUM, serial_, StringPiece(errmsg));
         }
     }
     else
     {
-        LOG(INFO) << ec.message();
+        callback_(ec.value(), serial_, StringPiece(ec.message()));
     }
 }
 
@@ -155,8 +156,9 @@ void Gate::Session::write(ByteRange data)
     }
     else
     {
-        LOG(DEBUG) << serial_ << " invalid data buffer size: " 
-            << prettyPrint(data.size(), PRETTY_BYTES);
+        auto errmsg = stringPrintf("%u: invalid data size to send: %u", 
+                prettyPrint(data.size(), PRETTY_BYTES));
+        callback_(ERR_SND_SIZE_TOO_BIG, serial_, StringPiece(errmsg));
     }
 }
 
@@ -178,7 +180,8 @@ void Gate::Session::handleWrite(const boost::system::error_code& ec,
 {
     if (ec)
     {
-        LOG(INFO) << ec.message();
+        close();
+        callback_(ec.value(), serial_, StringPiece(ec.message()));
     }
 }
 

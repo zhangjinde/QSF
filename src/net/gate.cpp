@@ -117,7 +117,7 @@ void Gate::handleAccept(const boost::system::error_code& err, SessionPtr ptr)
     }
     if (err)
     {
-        LOG(INFO) << err.message();
+        on_read_(err.value(), ptr->serial(), StringPiece(err.message()));
         return ;
     }
     if (sessions_.size() < max_connections_)
@@ -130,12 +130,14 @@ void Gate::handleAccept(const boost::system::error_code& err, SessionPtr ptr)
         }
         else
         {
-            LOG(DEBUG) << "session banned: " << address;
+            auto errmsg = stringPrintf("address [%s] was in black list.", address.c_str());
+            on_read_(ERR_ADDRRESS_BANNED, ptr->serial(), StringPiece(errmsg));
         }
     }
     else
     {
-        LOG(DEBUG) << "max session limits: " << max_connections_;
+        auto errmsg = stringPrintf("too many connections now, current is: %d", sessions_.size());
+        on_read_(ERR_MAX_CONN_LIMIT, ptr->serial(), StringPiece(errmsg));
     }
 }
 
@@ -160,7 +162,8 @@ void Gate::checkHeartBeat()
         auto elapsed = now - session->lastRecvTime();
         if (elapsed >= heart_beat_sec_)
         {
-            session->close(boost::asio::error::timed_out);
+            session->close();
+            on_read_(ERR_HEARTBEAT_TIMEOUT, session->serial(), StringPiece("timeout"));
         }
         if (session->isClosed())
         {
