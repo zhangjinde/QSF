@@ -13,6 +13,7 @@ using namespace std::placeholders;
 namespace net {
 
 const int kDeadConnectionReserveSize = 8;
+const int kSessionRecvBufReserveSize = 64;
 
 // Connection session object
 struct Gate::Session : boost::noncopyable
@@ -29,6 +30,7 @@ struct Gate::Session : boost::noncopyable
     Session(boost::asio::io_service& io_service, uint32_t serial)
         : socket_(io_service), serial_(serial)
     {
+        recv_buf_.reserve(kSessionRecvBufReserveSize);
     }
 };
 

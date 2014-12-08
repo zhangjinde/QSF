@@ -41,17 +41,22 @@ struct Client
 static int gate_create(lua_State* L)
 {
     Gateway* ptr = new Gateway;
-    uint32_t heart_beat_sec = net::DEFAULT_MAX_HEARTBEAT_SEC;
+    assert(ptr);
     uint32_t max_connections = net::DEFAULT_MAX_CONNECTIONS;
+    uint32_t heart_beat_sec = net::DEFAULT_MAX_HEARTBEAT_SEC;
+    uint32_t heart_beat_check_sec = net::DEFAULT_HEARTBEAT_CHECK_SEC;
     if (lua_gettop(L) > 0 && lua_istable(L, -1))
     {
         lua_getfield(L, 1, "heart_beat");
         heart_beat_sec = (uint32_t)luaL_checkinteger(L, -1);
+        lua_getfield(L, 1, "heart_beat_check");
+        heart_beat_check_sec = (uint32_t)luaL_checkinteger(L, -1);
         lua_getfield(L, 1, "max_connection");
         max_connections = (uint32_t)luaL_checkinteger(L, -1);
-        lua_pop(L, 2);
+        lua_pop(L, 3);
     }
-    ptr->server.reset(new net::Gate(*global_io_service, max_connections, heart_beat_sec));
+    ptr->server.reset(new net::Gate(*global_io_service, 
+        max_connections, heart_beat_sec, heart_beat_check_sec));
     ptr->ref = LUA_NOREF;
     void* udata = lua_newuserdata(L, sizeof(ptr));
     memcpy(udata, &ptr, sizeof(ptr));
