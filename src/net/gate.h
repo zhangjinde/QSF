@@ -12,8 +12,8 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/noncopyable.hpp>
-#include "core/range.h"
 #include "packet.h"
+#include "iobuf.h"
 
 namespace net {
 
@@ -21,30 +21,31 @@ typedef std::function<void(int, uint32_t, ByteRange)>   ReadCallback;
 
 class Gate : boost::noncopyable
 {
-    class Session;
+    struct Session;
     typedef std::shared_ptr<Session> SessionPtr;
 
 public:
     explicit Gate(boost::asio::io_service& io_service, 
                   uint32_t max_connections = DEFAULT_MAX_CONNECTIONS,
-                  uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC);
+                  uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC,
+                  uint32_t heart_beat_check_sec = DEFAULT_HEARTBEAT_CHECK_SEC);
     ~Gate();
 
     void start(const std::string& host, uint16_t port, ReadCallback callback);
 
     void stop();
 
-    void send(uint32_t serial, ByteRange data);
-    void send(uint32_t serial, const std::string& str)
+    bool send(uint32_t serial, ByteRange data);
+    bool send(uint32_t serial, const std::string& str)
     {
-        send(serial, ByteRange(StringPiece(str)));
+        return send(serial, ByteRange(StringPiece(str)));
     }
-    void send(uint32_t serial, const void* data, size_t size)
+    bool send(uint32_t serial, const void* buf, size_t size)
     {
-        assert(data && size > 0);
-        send(serial, ByteRange(reinterpret_cast<const uint8_t*>(data), size));
+        assert(buf && size > 0);
+        return send(serial, ByteRange(reinterpret_cast<const uint8_t*>(buf), size));
     }
-    void sendAll(const void* data, size_t size);
+    void sendAll(const void* buf, size_t size);
 
     bool kick(uint32_t serial);
     void kickAll();
@@ -56,9 +57,19 @@ public:
 
 private:
     uint32_t nextSerial();
-    void startAccept();
-    void handleAccept(const boost::system::error_code& err, SessionPtr ptr);
+    SessionPtr getSession(uint32_t serial);
+    void kick(SessionPtr session);
     void checkHeartBeat();
+    void startAccept();
+    void sessionStartRead(SessionPtr session);
+    bool sessionWritePacket(SessionPtr session, ByteRange data);
+    void sessionWriteFrame(SessionPtr session, ByteRange frame, bool more);
+
+    void handleAccept(const boost::system::error_code& err, SessionPtr ptr);
+    void handleReadHead(uint32_t serial, const boost::system::error_code& ec, size_t bytes);
+    void handleReadBody(uint32_t serial, const boost::system::error_code& ec, size_t bytes);
+    void handleWrite(uint32_t serial, const boost::system::error_code& ec, size_t bytes, 
+                     std::shared_ptr<IOBuf> buf);
 
 private:
     boost::asio::io_service&        io_service_;
@@ -71,6 +82,7 @@ private:
     std::unordered_map<uint32_t, SessionPtr> sessions_;
 
     const uint32_t heart_beat_sec_;
+    const uint32_t heart_beat_check_sec_;
     const uint32_t max_connections_;
 
     std::unordered_set<std::string>  black_list_;
