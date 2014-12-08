@@ -104,13 +104,8 @@ static int gate_start(lua_State* L)
         luaL_argcheck(L, lua_isfunction(L, -1), 1, "callback must be function");
         lua_pushinteger(L, err);
         lua_pushnumber(L, serial);
-        int args = 2;
-        if (!err)
-        {
-            lua_pushlstring(L, (const char*)data.data(), data.size());
-            args = 3;
-        }
-        if (lua_pcall(L, args, LUA_MULTRET, 0) != 0)
+        lua_pushlstring(L, (const char*)data.data(), data.size());
+        if (lua_pcall(L, 3, LUA_MULTRET, 0) != 0)
         {
             LOG(ERROR) << lua_tostring(L, -1);
         }
