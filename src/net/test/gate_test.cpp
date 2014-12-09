@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <cinttypes>
 #include <string>
 #include "rand_string.h"
 #include "net/gate.h"
@@ -89,7 +90,7 @@ TEST(Gate, denyAddress)
 static void test_send(const string& msg)
 {
     ByteRange bytes = StringPiece(msg);
-    std::string request = stringPrintf("request msg size %d", msg.size());
+    std::string request = stringPrintf("request msg size %" PRIu64, msg.size());
 
     boost::asio::io_service io_service;
     net::Gate gate(io_service);
