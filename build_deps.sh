@@ -1,4 +1,4 @@
-sudo apt-get install liblua5.2-dev zlib1g-dev libboost1.55-dev
+sudo apt-get install liblua5.2-dev zlib1g-dev libboost1.55-all-dev
 
 # libsodium for zmq curve
 cd ../libsodium
