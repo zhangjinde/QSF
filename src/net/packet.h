@@ -25,7 +25,7 @@ enum
     // max 512K
     MAX_SEND_BYTES = 32 * MAX_PACKET_SIZE,
 
-    NO_COMPRESSION_SIZE = 128,
+    DEFAULT_NO_COMPRESSION_SIZE = 128,
 
     // default value of max client connection
     DEFAULT_MAX_CONNECTIONS = 6000,

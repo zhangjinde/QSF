@@ -28,7 +28,8 @@ public:
     explicit Gate(boost::asio::io_service& io_service, 
                   uint32_t max_connections = DEFAULT_MAX_CONNECTIONS,
                   uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC,
-                  uint32_t heart_beat_check_sec = DEFAULT_HEARTBEAT_CHECK_SEC);
+                  uint32_t heart_beat_check_sec = DEFAULT_HEARTBEAT_CHECK_SEC,
+                  uint16_t max_no_compress_size = DEFAULT_NO_COMPRESSION_SIZE);
     ~Gate();
 
     void start(const std::string& host, uint16_t port, ReadCallback callback);
@@ -84,6 +85,7 @@ private:
     const uint32_t heart_beat_sec_;
     const uint32_t heart_beat_check_sec_;
     const uint32_t max_connections_;
+    const uint16_t max_no_compress_size_;
 
     std::unordered_set<std::string>  black_list_;
 };

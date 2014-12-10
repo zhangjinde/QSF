@@ -24,7 +24,8 @@ public:
 
 public:
     explicit Client(boost::asio::io_service& io_service, 
-                    uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC);
+                    uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC,
+                    uint16_t no_compress_size = DEFAULT_NO_COMPRESSION_SIZE);
     ~Client();
 
     void connect(const std::string& host, uint16_t port);
@@ -45,7 +46,8 @@ private:
     void readHead();
     void handleReadHead(const boost::system::error_code& ec, size_t bytes);
     void handleReadBody(const boost::system::error_code& ec, size_t bytes);
-    void handleSend(const boost::system::error_code& ec, size_t bytes, 
+    void handleSend(const boost::system::error_code& ec, 
+                    size_t bytes, 
                     std::shared_ptr<IOBuf> buf);
     void heartBeating();
 
@@ -59,7 +61,9 @@ private:
     ReadCallback            on_read_;
 
     time_t  last_send_time_ = 0;
+
     const uint32_t heart_beat_sec_;
+    const uint16_t no_compress_size_;
 };
 
 typedef std::shared_ptr<Client> ClientPtr;

@@ -45,6 +45,7 @@ static int gate_create(lua_State* L)
     uint32_t max_connections = net::DEFAULT_MAX_CONNECTIONS;
     uint32_t heart_beat_sec = net::DEFAULT_MAX_HEARTBEAT_SEC;
     uint32_t heart_beat_check_sec = net::DEFAULT_HEARTBEAT_CHECK_SEC;
+    uint16_t no_compression_size = net::DEFAULT_NO_COMPRESSION_SIZE;
     if (lua_gettop(L) > 0 && lua_istable(L, -1))
     {
         lua_getfield(L, 1, "heart_beat");
@@ -53,10 +54,13 @@ static int gate_create(lua_State* L)
         heart_beat_check_sec = (uint32_t)luaL_checkinteger(L, -1);
         lua_getfield(L, 1, "max_connection");
         max_connections = (uint32_t)luaL_checkinteger(L, -1);
-        lua_pop(L, 3);
+        lua_getfield(L, 1, "no_compression_size");
+        no_compression_size = (uint16_t)luaL_checkinteger(L, -1);
+        lua_pop(L, 4);
     }
     ptr->server.reset(new net::Gate(*global_io_service, 
-        max_connections, heart_beat_sec, heart_beat_check_sec));
+        max_connections, heart_beat_sec, heart_beat_check_sec, 
+        no_compression_size));
     ptr->ref = LUA_NOREF;
     void* udata = lua_newuserdata(L, sizeof(ptr));
     memcpy(udata, &ptr, sizeof(ptr));

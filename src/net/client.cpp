@@ -10,12 +10,18 @@
 
 using namespace std::placeholders;
 
+const int kHeartBeatCheckingSec = 3;
+
 namespace net {
 
-Client::Client(boost::asio::io_service& io_service, uint32_t heart_beat_sec_)
+Client::Client(boost::asio::io_service& io_service, 
+               uint32_t heart_beat_sec_,
+               uint16_t no_compress_size)
     : socket_(io_service), 
       heart_beat_sec_(heart_beat_sec_),
-      heart_beat_(io_service, std::chrono::seconds(1))
+      heart_beat_(io_service, std::chrono::seconds(kHeartBeatCheckingSec)),
+      no_compress_size_(no_compress_size)
+
 {
     buffer_.reserve(kRecvBufReserveSize);
     buffer_more_.reserve(kRecvBufReserveSize);
@@ -61,17 +67,24 @@ void Client::send(ByteRange data)
         LOG(ERROR) << "too big size to send: " << prettyPrint(data.size(), PRETTY_BYTES);
         return;
     }
-    auto out = compressClientPacket(data);
+    CodecType codec = NO_COMPRESSION;
+    if (data.size() > no_compress_size_)
+    {
+        codec = ZLIB;
+    }
+    auto out = compressClientPacket(codec, data);
     if (out && !out->empty())
     {
-        boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), 
-            out->length()), std::bind(&Client::handleSend, this, _1, _2, out));
+        boost::asio::async_write(socket_, 
+            boost::asio::buffer(out->buffer(), out->length()),
+            std::bind(&Client::handleSend, this, _1, _2, out));
     }
 }
 
 void Client::readHead()
 {
-    boost::asio::async_read(socket_, boost::asio::buffer(&head_, sizeof(head_)),
+    boost::asio::async_read(socket_, 
+        boost::asio::buffer(&head_, sizeof(head_)),
         std::bind(&Client::handleReadHead, this, _1, _2));
 }
 
@@ -82,7 +95,8 @@ void Client::handleReadHead(const boost::system::error_code& ec, size_t bytes)
         if (head_.size > 0)
         {
             buffer_.resize(head_.size);
-            boost::asio::async_read(socket_, boost::asio::buffer(buffer_.data(), head_.size),
+            boost::asio::async_read(socket_, 
+                boost::asio::buffer(buffer_.data(), head_.size),
                 std::bind(&Client::handleReadBody, this, _1, _2));
         }
     }
@@ -98,7 +112,8 @@ void Client::handleReadBody(const boost::system::error_code& ec, size_t bytes)
     {
         if (head_.more == 0 && buffer_more_.size() == 0) // hot path
         {
-            auto buf = uncompressPacketFrame((CodecType)head_.codec, ByteRange(buffer_.data(), bytes));
+            auto buf = uncompressPacketFrame((CodecType)head_.codec, 
+                ByteRange(buffer_.data(), bytes));
             if (buf)
             {
                 on_read_(buf->byteRange());
@@ -106,7 +121,8 @@ void Client::handleReadBody(const boost::system::error_code& ec, size_t bytes)
         }
         else // framed packet
         {
-            auto buf = uncompressPacketFrame((CodecType)head_.codec, ByteRange(buffer_.data(), bytes));
+            auto buf = uncompressPacketFrame((CodecType)head_.codec, 
+                ByteRange(buffer_.data(), bytes));
             if (buf)
             {
                 auto range = buf->byteRange();
@@ -128,7 +144,9 @@ void Client::handleReadBody(const boost::system::error_code& ec, size_t bytes)
     }
 }
 
-void Client::handleSend(const boost::system::error_code& ec, size_t bytes, std::shared_ptr<IOBuf> buf)
+void Client::handleSend(const boost::system::error_code& ec, 
+                        size_t bytes, 
+                        std::shared_ptr<IOBuf> buf)
 {
     if (!ec)
     {

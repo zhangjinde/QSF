@@ -78,55 +78,67 @@ inline std::shared_ptr<IOBuf> zlibUnCompress(ByteRange data)
 } // anounymouse namespace
 
 
-std::shared_ptr<IOBuf> compressServerPacket(ByteRange frame, bool more)
+std::shared_ptr<IOBuf> compressServerPacket(CodecType codec, ByteRange frame, bool more)
 {
     assert(frame.size() <= UINT16_MAX);
     const auto head_size = sizeof(ServerHeader);
-    if (frame.size() <= NO_COMPRESSION_SIZE)
+    switch (codec)
     {
-        auto out = IOBuf::create(head_size + frame.size());
-        memcpy(out->buffer() + head_size, frame.data(), frame.size());
-        out->append(head_size + frame.size());
-        ServerHeader* head = reinterpret_cast<ServerHeader*>(out->buffer());
-        head->size = static_cast<uint16_t>(out->length() - head_size);
-        head->codec = NO_COMPRESSION;
-        head->more = more;
-        return out;
-    }
-    else
-    {
-        auto out = zlibCompress(frame, head_size);
-        ServerHeader* head = reinterpret_cast<ServerHeader*>(out->buffer());
-        head->size = static_cast<uint16_t>(out->length() - head_size);
-        head->codec = ZLIB;
-        head->more = more;
-        return out;
+    case NO_COMPRESSION:
+        {
+            auto out = IOBuf::create(head_size + frame.size());
+            memcpy(out->buffer() + head_size, frame.data(), frame.size());
+            out->append(head_size + frame.size());
+            ServerHeader* head = reinterpret_cast<ServerHeader*>(out->buffer());
+            head->size = static_cast<uint16_t>(out->length() - head_size);
+            head->codec = NO_COMPRESSION;
+            head->more = more;
+            return out;
+        }
+    case ZLIB:
+        {
+            auto out = zlibCompress(frame, head_size);
+            ServerHeader* head = reinterpret_cast<ServerHeader*>(out->buffer());
+            head->size = static_cast<uint16_t>(out->length() - head_size);
+            head->codec = ZLIB;
+            head->more = more;
+            return out;
+        }
+    default:
+        throw std::invalid_argument(to<std::string>(
+            "Compression type ", codec, " not supported"));
     }
 }
 
-std::shared_ptr<IOBuf> compressClientPacket(ByteRange frame)
+std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame)
 {
     assert(frame.size() <= UINT16_MAX);
     const auto head_size = sizeof(ClientHeader);
-    if (frame.size() <= NO_COMPRESSION_SIZE)
+    switch (codec)
     {
-        auto out = IOBuf::create(head_size + frame.size());
-        memcpy(out->buffer() + head_size, frame.data(), frame.size());
-        out->append(head_size + frame.size());
-        ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
-        head->size = static_cast<uint16_t>(out->length() - head_size);
-        head->codec = NO_COMPRESSION;
-        head->checksum = crc32c(out->buffer() + head_size, frame.size());
-        return out;
-    }
-    else
-    {
-        auto out = zlibCompress(frame, head_size);
-        ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
-        head->size = static_cast<uint16_t>(out->length() - head_size);
-        head->codec = ZLIB;
-        head->checksum = crc16(out->buffer()+head_size, frame.size());
-        return out;
+    case NO_COMPRESSION:
+        {
+            auto out = IOBuf::create(head_size + frame.size());
+            memcpy(out->buffer() + head_size, frame.data(), frame.size());
+            out->append(head_size + frame.size());
+            ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
+            head->size = static_cast<uint16_t>(out->length() - head_size);
+            head->codec = NO_COMPRESSION;
+            head->checksum = crc32c(out->buffer() + head_size, frame.size());
+            return out;
+        }
+    case ZLIB:
+        {
+            auto out = zlibCompress(frame, head_size);
+            ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
+            head->size = static_cast<uint16_t>(out->length() - head_size);
+            head->codec = ZLIB;
+            head->checksum = crc16(out->buffer() + head_size, frame.size());
+            return out;
+        }
+    default:
+        throw std::invalid_argument(to<std::string>(
+            "Compression type ", codec, " not supported"));
     }
 }
 

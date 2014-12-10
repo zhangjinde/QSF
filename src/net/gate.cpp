@@ -41,13 +41,15 @@ struct Gate::Session : boost::noncopyable
 Gate::Gate(boost::asio::io_service& io_service, 
            uint32_t max_connections, 
            uint32_t heart_beat_sec,
-           uint32_t heart_beat_check_sec)
+           uint32_t heart_beat_check_sec,
+           uint16_t max_no_compress_size)
     : io_service_(io_service), 
       acceptor_(io_service), 
       drop_timer_(io_service),
       max_connections_(max_connections),
       heart_beat_sec_(heart_beat_sec),
-      heart_beat_check_sec_(heart_beat_check_sec)
+      heart_beat_check_sec_(heart_beat_check_sec),
+      max_no_compress_size_(max_no_compress_size)
 {
 }
 
@@ -268,7 +270,12 @@ bool Gate::sessionWritePacket(SessionPtr session, ByteRange data)
 void Gate::sessionWriteFrame(SessionPtr session, ByteRange frame, bool more)
 {
     assert(frame.size() <= UINT16_MAX);
-    auto out = compressServerPacket(frame, more);
+    CodecType codec = NO_COMPRESSION;
+    if (frame.size() > max_no_compress_size_)
+    {
+        codec = ZLIB;
+    }
+    auto out = compressServerPacket(codec, frame, more);
     if (out && !out->empty())
     {
         boost::asio::async_write(session->socket_, 
