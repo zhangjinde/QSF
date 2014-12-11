@@ -133,7 +133,7 @@ std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame)
             ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
             head->size = static_cast<uint16_t>(out->length() - head_size);
             head->codec = ZLIB;
-            head->checksum = crc16(out->buffer() + head_size, frame.size());
+            head->checksum = crc32c(out->buffer() + head_size, frame.size());
             return out;
         }
     default:
