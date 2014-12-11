@@ -37,28 +37,29 @@ struct Client
 
 //////////////////////////////////////////////////////////////////////////
 //  gate interface
-//
+
 static int gate_create(lua_State* L)
 {
+    using namespace net;
     Gateway* ptr = new Gateway;
     assert(ptr);
-    uint32_t max_connections = net::DEFAULT_MAX_CONNECTIONS;
-    uint32_t heart_beat_sec = net::DEFAULT_MAX_HEARTBEAT_SEC;
-    uint32_t heart_beat_check_sec = net::DEFAULT_HEARTBEAT_CHECK_SEC;
-    uint16_t no_compression_size = net::DEFAULT_NO_COMPRESSION_SIZE;
-    if (lua_gettop(L) > 0 && lua_istable(L, -1))
-    {
-        lua_getfield(L, 1, "heart_beat");
-        heart_beat_sec = (uint32_t)luaL_checkinteger(L, -1);
-        lua_getfield(L, 1, "heart_beat_check");
-        heart_beat_check_sec = (uint32_t)luaL_checkinteger(L, -1);
-        lua_getfield(L, 1, "max_connection");
-        max_connections = (uint32_t)luaL_checkinteger(L, -1);
-        lua_getfield(L, 1, "no_compression_size");
-        no_compression_size = (uint16_t)luaL_checkinteger(L, -1);
-        lua_pop(L, 4);
-    }
-    ptr->server.reset(new net::Gate(*global_io_service, 
+    int top = lua_gettop(L);
+    luaL_argcheck(L, top > 0 && lua_istable(L, 1), 1, "parameter must be table");
+    lua_getfield(L, 1, "heart_beat");
+    uint32_t heart_beat_sec = (uint32_t)luaL_optinteger(L, -1, 
+        DEFAULT_MAX_HEARTBEAT_SEC);
+    lua_getfield(L, 1, "heart_beat_check");
+    uint32_t heart_beat_check_sec = (uint32_t)luaL_optinteger(L, -1, 
+        DEFAULT_HEARTBEAT_CHECK_SEC);
+    lua_getfield(L, 1, "max_connection");
+    uint32_t max_connections = (uint32_t)luaL_optinteger(L, -1,
+        DEFAULT_MAX_CONNECTIONS);
+    lua_getfield(L, 1, "no_compression_size");
+    uint32_t no_compression_size = (uint16_t)luaL_optinteger(L, -1,
+        DEFAULT_NO_COMPRESSION_SIZE);
+    lua_pop(L, lua_gettop(L) - top);
+
+    ptr->server.reset(new Gate(*global_io_service, 
         max_connections, heart_beat_sec, heart_beat_check_sec, 
         no_compression_size));
     ptr->ref = LUA_NOREF;
@@ -186,11 +187,9 @@ static int gate_allow(lua_State* L)
 static int client_create(lua_State* L)
 {
     Client* ptr = new Client;
-    uint32_t heart_beat = net::DEFAULT_MAX_HEARTBEAT_SEC;
-    if (lua_gettop(L) > 0)
-    {
-        heart_beat = lua_tointeger(L, 1);
-    }
+    luaL_argcheck(L, lua_gettop(L) > 0, 1, "arguments must be integer");
+    uint32_t heart_beat = heart_beat = luaL_optinteger(L, 1,
+        net::DEFAULT_MAX_HEARTBEAT_SEC);
     ptr->client.reset(new net::Client(*global_io_service, heart_beat));
     ptr->ref = LUA_NOREF;
     void* udata = lua_newuserdata(L, sizeof(ptr));
