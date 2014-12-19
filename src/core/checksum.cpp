@@ -12,6 +12,7 @@
 
 #include "checksum.h"
 #include <cstring>
+#include "platform.h"
 #include "cpuid.h"
 
 #ifdef _WIN32
@@ -293,7 +294,7 @@ static inline uint32_t LE_LOAD32(const uint8_t *ptr) {
     return result;
 }
 
-#ifdef PLAT_X64
+#if PLAT_X64
 static inline uint64_t LE_LOAD64(const uint8_t *p) {
     // Load the raw bytes
     uint64_t result;
