@@ -37,6 +37,8 @@ public:
     bool hasSymbol(const std::string& name);
     void* getSymbol(const std::string& name);
 
+    const std::string& path() { return path_; }
+
 private:
     std::string     path_;
     void*           handle_;
