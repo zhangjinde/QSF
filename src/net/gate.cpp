@@ -1,6 +1,5 @@
 #include "gate.h"
 #include <ctime>
-#include <cinttypes>
 #include <functional>
 #include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
@@ -32,6 +31,7 @@ struct Gate::Session : boost::noncopyable
         : socket_(io_service), serial_(serial)
     {
         recv_buf_.reserve(kSessionRecvBufReserveSize);
+        memset(&head_, 0, sizeof(head_));
     }
 };
 
@@ -182,8 +182,8 @@ void Gate::handleAccept(const boost::system::error_code& err, SessionPtr session
     }
     else
     {
-        auto errmsg = stringPrintf("too many connections now, current is: %" PRIu64, 
-            sessions_.size());
+        auto errmsg = stringPrintf("too many connections now, current is: %u", 
+            (uint32_t)sessions_.size());
         on_read_(ERR_MAX_CONN_LIMIT, serial, StringPiece(errmsg));
     }
     if (acceptor_.is_open())
@@ -302,7 +302,7 @@ void Gate::handleReadHead(uint32_t serial, const boost::system::error_code& ec, 
     if (head.size > MAX_PACKET_SIZE)
     {
         kick(session);
-        auto errmsg = stringPrintf("invalid body size: %" PRIu64, bytes);
+        auto errmsg = stringPrintf("invalid body size: %u", head.size);
         on_read_(ERR_INVALID_BODY_SIZE, serial, StringPiece(errmsg));
         return;
     }

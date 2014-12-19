@@ -125,6 +125,7 @@ std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame)
             head->size = static_cast<uint16_t>(out->length() - head_size);
             head->codec = NO_COMPRESSION;
             head->checksum = crc32c(out->buffer() + head_size, frame.size());
+            head->reserved = 0;
             return out;
         }
     case ZLIB:
@@ -134,6 +135,7 @@ std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame)
             head->size = static_cast<uint16_t>(out->length() - head_size);
             head->codec = ZLIB;
             head->checksum = crc32c(out->buffer() + head_size, frame.size());
+            head->reserved = 0;
             return out;
         }
     default:

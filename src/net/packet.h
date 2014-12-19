@@ -81,7 +81,7 @@ struct ClientHeader
 {
     uint16_t    size;       // body size
     uint8_t     codec;      // compression type
-    uint8_t     flag;       // reserved
+    uint8_t     reserved;   // reserved
     uint32_t    checksum;   // checksum value of content
 };
 
