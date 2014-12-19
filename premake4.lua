@@ -59,6 +59,7 @@ solution 'qsf'
         {
             'z',
             'rt',
+            'dl',
             'pthread',
             'boost_system',
         }
