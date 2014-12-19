@@ -3,15 +3,20 @@
 // See accompanying files LICENSE.
 
 #include "service.h"
-#include "lua_sandbox.h"
+#include "lua_service.h"
+#include "shared_service.h"
 
 
 ServicePtr createService(const std::string& type, Context& ctx)
 {
     assert(!type.empty());
-    if (type == "luasandbox")
+    if (type == "LuaService")
     {
-        return std::move(ServicePtr(new LuaSandBox(ctx)));
+        return ServicePtr(new LuaService(ctx));
+    }
+    else (type == "SharedService")
+    {
+        return ServicePtr(new SharedService(ctx));
     }
     return ServicePtr();
 }

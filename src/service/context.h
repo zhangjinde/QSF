@@ -28,6 +28,8 @@ public:
     // Send message to other context
     void    send(StringPiece name, StringPiece data);
 
+    zmq::socket_t& socket() { return *socket_; }
+
 private:
     // 0mq socket object
     std::unique_ptr<zmq::socket_t>  socket_;

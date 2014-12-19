@@ -2,7 +2,7 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "lua_sandbox.h"
+#include "lua_service.h"
 #include <lua.hpp>
 #include "core/strings.h"
 #include "core/logging.h"
@@ -27,8 +27,8 @@ static int lua_traceback(lua_State *L)
 
 //////////////////////////////////////////////////////////////////////////
 
-LuaSandBox::LuaSandBox(Context& ctx)
-    : Service("luasandbox", ctx)
+LuaService::LuaService(Context& ctx)
+    : Service("LuaSandbox", ctx)
 {
     L = luaL_newstate();
     CHECK_NOTNULL(L);
@@ -36,7 +36,7 @@ LuaSandBox::LuaSandBox(Context& ctx)
 }
 
 
-LuaSandBox::~LuaSandBox()
+LuaService::~LuaService()
 {
     if (L)
     {
@@ -45,7 +45,7 @@ LuaSandBox::~LuaSandBox()
     }
 }
 
-void LuaSandBox::initialize()
+void LuaService::initialize()
 {
     auto& ctx = this->context();
     luaL_checkversion(L);
@@ -58,7 +58,7 @@ void LuaSandBox::initialize()
     lua_gc(L, LUA_GCRESTART, 0);
 }
 
-void LuaSandBox::loadLibPath()
+void LuaService::loadLibPath()
 {
     string path = Env::get("lua_path");
     if (!path.empty())
@@ -78,7 +78,7 @@ void LuaSandBox::loadLibPath()
     }
 }
 
-int LuaSandBox::run(const std::vector<string>& args)
+int LuaService::run(const std::vector<string>& args)
 {
     assert(!args.empty());
     

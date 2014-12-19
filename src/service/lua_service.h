@@ -9,11 +9,11 @@
 struct lua_State;
 
 // Lua sand box service
-class LuaSandBox : public Service
+class LuaService : public Service
 {
 public:
-    explicit LuaSandBox(Context& ctx);
-    virtual ~LuaSandBox();
+    explicit LuaService(Context& ctx);
+    virtual ~LuaService();
 
     // First argument is the main chunk file name
     virtual int run(const std::vector<std::string>& args);

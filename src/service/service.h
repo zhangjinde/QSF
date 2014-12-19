@@ -10,7 +10,6 @@
 #include <vector>
 #include "context.h"
 
-
 // A service is an execution unit scheduled to an individual OS thread
 class Service
 {
@@ -43,5 +42,5 @@ private:
 
 typedef std::shared_ptr<Service>    ServicePtr;
 
-// Create a new service and bind a context to it, name must be unique.
-ServicePtr createService(const std::string& name, Context& ctx);
+// Create a new service and bind a context to it, `type` must be unique.
+ServicePtr createService(const std::string& type, Context& ctx);
