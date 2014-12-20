@@ -25,6 +25,13 @@ using std::lock_guard;
 static const char*  QSF_ROUTER = "inproc://qsf.router";
 static const char*  DUMMY_NAME = "#S$ZD@B";
 
+enum
+{
+    QSF_OK,
+    QSF_CLOSING,
+    QSF_CLOSED,
+};
+
 namespace {
 
 // IPC zmq context, do not need thread pool for I/O operations
@@ -35,7 +42,8 @@ static std::unique_ptr<zmq::socket_t>   s_router;
 
 static std::unordered_map<std::string, ServicePtr> s_services;
 static std::mutex  s_mutex;  // service guard
-static std::atomic<int> s_stopped;
+static std::atomic<int> s_close_flag;
+
 
 void checkLibraryVersion()
 {
@@ -68,15 +76,11 @@ bool onSysMessage(StringPiece from, StringPiece command)
             s_router->send(name.c_str(), name.size(), ZMQ_SNDMORE);
             s_router->send("sys", 3, ZMQ_SNDMORE);
             s_router->send("exit", 4);
+
+            zmq::message_t response;
+            s_router->recv(&response);
         }
-    }
-    else
-    {
-        // force quit
-        if (command == "shutdown")
-        {
-            return false;
-        }
+        return false;
     }
     return true;
 }
@@ -113,14 +117,6 @@ void onServiceCleanup(const std::string& name)
 {
     fprintf(stdout, "service [%s] exit.\n", name.c_str());
     Random::release();
-    {
-        lock_guard<mutex> guard(s_mutex);
-        if (s_services.size() == 1) // this is the last service object
-        {
-            systemCommand("shutdown");
-        }
-        s_services.erase(name);
-    }
 }
 
 // Callback function for service thread
@@ -164,7 +160,7 @@ bool initialize(const char* filename)
         return false;
     }
 
-    s_stopped = 0;
+    s_close_flag = QSF_OK;
 
     s_router.reset(new zmq::socket_t(s_context, ZMQ_ROUTER));
     int linger = 0;
@@ -215,8 +211,17 @@ std::unique_ptr<zmq::socket_t> createDealer(const std::string& identity)
 
 void stop()
 {
-    systemCommand("exit");
-    while (!s_stopped) // wait for any exist service
+    std::string command = "exit";
+    {
+        lock_guard<mutex> guard(s_mutex);
+        if (s_services.empty())
+        {
+            command = "shutdown";
+        }
+    }
+    s_close_flag = QSF_CLOSING;
+    systemCommand(command);
+    while (s_close_flag != QSF_CLOSED) // wait for any exist service
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
@@ -264,8 +269,7 @@ int start(const char* filename)
         while (dispatchMessage())
             ;
 
-        release();
-        s_stopped = 1;
+        s_close_flag = QSF_CLOSED; // finished
 
         return 0;
     }

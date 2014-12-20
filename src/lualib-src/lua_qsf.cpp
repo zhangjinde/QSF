@@ -50,16 +50,17 @@ static int qsf_recv(lua_State* L)
 // launch a new service
 static int qsf_launch(lua_State* L)
 {
-    std::string ident = luaL_checkstring(L, 1);
-    std::string args = luaL_checkstring(L, 2); // first argument must be main script file
+    std::string type = luaL_checkstring(L, 1);
+    std::string ident = luaL_checkstring(L, 2);
+    std::string args = luaL_checkstring(L, 3);
     int top = lua_gettop(L);
-    for (int i = 3; i <= top; i++)
+    for (int i = 4; i <= top; i++)
     {
         const char* value = luaL_checkstring(L, i);
         args.append(" ");
         args.append(value);
     }
-    bool r = qsf::createService("luasandbox", ident, args);
+    bool r = qsf::createService(type, ident, args);
     lua_pushboolean(L, r);
     return 1;
 }
@@ -67,9 +68,7 @@ static int qsf_launch(lua_State* L)
 // stop all services
 static int qsf_shutdown(lua_State* L)
 {
-    Context* self = (Context*)lua_touserdata(L, lua_upvalueindex(1));
-    assert(self);
-    self->send("sys", "shutdown");
+    qsf::stop();
     return 0;
 }
 
