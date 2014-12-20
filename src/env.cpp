@@ -15,11 +15,7 @@ std::mutex  Env::mutex_;
 
 bool Env::initialize(const char* file)
 {
-    if (file == nullptr)
-    {
-        return false;
-    }
-    assert(L_ == nullptr);
+    CHECK(L_ == nullptr);
     L_ = luaL_newstate();
     assert(L_);
     int err = luaL_dofile(L_, file);
@@ -50,7 +46,7 @@ bool Env::load(lua_State* L)
     while (lua_next(L, -2) != 0) 
     {
         int keyt = lua_type(L, -2);
-        if (keyt != LUA_TSTRING) 
+        if (keyt != LUA_TSTRING)
         {
             fprintf(stderr, "invalid config table\n");
             return false;
@@ -99,14 +95,28 @@ std::string Env::get(const char* key)
     assert(key);
     std::lock_guard<std::mutex> guard(mutex_);
     lua_getglobal(L_, key);
-    const char* r = lua_tostring(L_, -1);
+    size_t len = 0;
+    const char* r = luaL_optlstring(L_, -1, "", &len);
     lua_pop(L_, -1);
-    return r ? r : "";
+    return std::string(r, len);
 }
 
 int64_t Env::getInt(const char* key)
 {
     assert(key);
-    std::string str = get(key);
-    return (!str.empty() ? to<int64_t>(str) : 0);
+    std::lock_guard<std::mutex> guard(mutex_);
+    lua_getglobal(L_, key);
+    lua_Number num = luaL_optnumber(L_, -1, 0);
+    lua_pop(L_, -1);
+    return static_cast<int64_t>(num);
+}
+
+bool Env::getBoolean(const char* key)
+{
+    assert(key);
+    std::lock_guard<std::mutex> guard(mutex_);
+    lua_getglobal(L_, key);
+    int b = lua_toboolean(L_, -1);
+    lua_pop(L_, -1);
+    return b != 0;
 }

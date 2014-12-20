@@ -21,6 +21,7 @@ public:
     static bool set(const char* key, const char* value);
     static std::string get(const char* key);
     static int64_t getInt(const char* key);
+    static bool getBoolean(const char* key);
 
 private:
     static bool load(lua_State* L);
