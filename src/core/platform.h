@@ -69,7 +69,11 @@ struct MaxAlign { char c; } __attribute__((aligned));
 # error cannot define platform specific thread local storage
 #endif
 
-
+#ifdef _MSC_VER
+# define QSF_EXPORT     __declspec(dllexport)
+#else
+# define QSF_EXPORT
+#endif
 
 // MSVC specific defines, mainly for posix compatibility
 #ifdef _MSC_VER
