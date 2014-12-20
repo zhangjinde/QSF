@@ -14,7 +14,7 @@ ServicePtr createService(const std::string& type, Context& ctx)
     {
         return ServicePtr(new LuaService(ctx));
     }
-    else (type == "SharedService")
+    else if (type == "SharedService")
     {
         return ServicePtr(new SharedService(ctx));
     }
