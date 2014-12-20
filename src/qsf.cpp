@@ -117,6 +117,8 @@ void onServiceCleanup(const std::string& name)
 {
     fprintf(stdout, "service [%s] exit.\n", name.c_str());
     Random::release();
+    lock_guard<mutex> guard(s_mutex);
+    s_services.erase(name);
 }
 
 // Callback function for service thread
@@ -211,16 +213,8 @@ std::unique_ptr<zmq::socket_t> createDealer(const std::string& identity)
 
 void stop()
 {
-    std::string command = "exit";
-    {
-        lock_guard<mutex> guard(s_mutex);
-        if (s_services.empty())
-        {
-            command = "shutdown";
-        }
-    }
     s_close_flag = QSF_CLOSING;
-    systemCommand(command);
+    systemCommand("exit");
     while (s_close_flag != QSF_CLOSED) // wait for any exist service
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
