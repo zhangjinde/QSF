@@ -80,7 +80,10 @@ void LuaService::loadLibPath()
 
 int LuaService::run(const std::vector<string>& args)
 {
-    assert(!args.empty());
+    if (args.empty())
+    {
+        return 1;
+    }
     
     const string& id = this->context().name();
     const string& filename = args[0];
