@@ -5,7 +5,7 @@
 using namespace std;
 
 #ifdef _WIN32
-const char* libname = "lua52.dll";
+const char* libname = "lua5.2.dll";
 #else
 const char* libname = "liblua5.2.so";
 #endif
