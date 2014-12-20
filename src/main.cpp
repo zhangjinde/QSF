@@ -12,10 +12,10 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    const char* file = "config";
-    if (argc > 2)
+    const char* default_file = "config";
+    if (argc >= 2)
     {
-        file = argv[1];
+        default_file = argv[1];
     }
     
     // Ctrl + C interrupt signal
@@ -25,14 +25,15 @@ int main(int argc, char* argv[])
         exit(1);
     });
 
-    int r = 0;
+    int r = EXIT_SUCCESS;
     try
     {
-        r = qsf::start(file);
+        r = qsf::start(default_file);
     }
     catch (std::exception& ex)
     {
         LOG(ERROR) << typeid(ex).name() << ": " << ex.what();
+        r = EXIT_FAILURE;
     }
-    return 0;
+    return r;
 }

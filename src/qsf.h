@@ -11,9 +11,6 @@
 
 enum
 {
-    // Max size for each single inproc message, 32M
-    MAX_MSG_SIZE = (1024 * 1024 * 32),
-
     // Max size for identity of each dealer
     MAX_NAME_SIZE = 16,
 };
