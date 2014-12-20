@@ -82,6 +82,7 @@ solution 'qsf'
         }
         excludes
         {
+            'src/module/**.*',
             'src/test/*.*',
             'src/core/test/*.*',
             'src/net/test/*.*',
