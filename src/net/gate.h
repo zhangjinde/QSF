@@ -11,7 +11,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/noncopyable.hpp>
 #include "packet.h"
 #include "iobuf.h"
 
@@ -19,7 +18,7 @@ namespace net {
 
 typedef std::function<void(int, uint32_t, ByteRange)>   ReadCallback;
 
-class Gate : boost::noncopyable
+class Gate
 {
     struct Session;
     typedef std::shared_ptr<Session> SessionPtr;
@@ -31,6 +30,9 @@ public:
                   uint32_t heart_beat_check_sec = DEFAULT_HEARTBEAT_CHECK_SEC,
                   uint16_t max_no_compress_size = DEFAULT_NO_COMPRESSION_SIZE);
     ~Gate();
+
+    Gate(const Gate&) = delete;
+    Gate& operator = (const Gate&) = delete;
 
     void start(const std::string& host, uint16_t port, ReadCallback callback);
 

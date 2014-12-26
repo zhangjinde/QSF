@@ -3,12 +3,11 @@
 #include <cstdint>
 #include <memory>
 #include <functional>
-#include <boost/noncopyable.hpp>
 #include "core/range.h"
 
 namespace net {
 
-class IOBuf : boost::noncopyable
+class IOBuf
 {
 public:
     enum CreateOp { CREATE };
@@ -27,6 +26,9 @@ public:
     IOBuf(TakeOwnershipOp, void* data, size_t capacity, FreeFunction fn);
 
     ~IOBuf();
+
+    IOBuf(IOBuf& other) = delete;
+    IOBuf& operator=(IOBuf& other) = delete;
 
     IOBuf(IOBuf&& other) noexcept;
     IOBuf& operator=(IOBuf&& other) noexcept;
