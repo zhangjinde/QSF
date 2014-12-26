@@ -4,8 +4,6 @@
 
 assert(os.get() == 'windows' or os.get() == 'linux')
 
-local BOOST_ROOT = os.getenv('BOOST_ROOT') or ''
-
 solution 'qsf'
     configurations {'Debug', 'Release'}
     language 'C++'
@@ -37,9 +35,7 @@ solution 'qsf'
             'deps/zlib',
             'deps/lua/src',
             'deps/libzmq/include',
-            BOOST_ROOT,
         }
-        libdirs { BOOST_ROOT .. '/stage/lib' }
         links
         {
             'ws2_32',
@@ -72,7 +68,10 @@ solution 'qsf'
         defines
         {
             '_ELPP_THREAD_SAFE',
-            'BOOST_ASIO_SEPARATE_COMPILATION',
+            'ASIO_STANDALONE',
+            'ASIO_SEPARATE_COMPILATION',
+            'ASIO_DISABLE_THREADS',
+            'BOOST_DATE_TIME_NO_LIB',
             'BOOST_REGEX_NO_LIB',
         }
         files
@@ -90,14 +89,15 @@ solution 'qsf'
         includedirs
         {
             'src',
+            'deps/asio/include',
         }
         libdirs 'bin'
         links
         {
             'zmq',
+            'asio',
             'lua5.2',
         }
-
 
     project 'test-core'
         location 'build'
@@ -130,7 +130,10 @@ solution 'qsf'
         defines
         {
             '_ELPP_THREAD_SAFE',
-            'BOOST_ASIO_SEPARATE_COMPILATION',
+            'ASIO_STANDALONE',
+            'ASIO_SEPARATE_COMPILATION',
+            'ASIO_DISABLE_THREADS',
+            'BOOST_DATE_TIME_NO_LIB',
             'BOOST_REGEX_NO_LIB',
         }
         files
@@ -142,6 +145,7 @@ solution 'qsf'
         includedirs
         {
             'src',
+            'deps/asio/include',
             'deps/gtest',
             'deps/gtest/include',
         }
@@ -149,3 +153,4 @@ solution 'qsf'
         {
             'bin',
         }
+        links 'asio'
