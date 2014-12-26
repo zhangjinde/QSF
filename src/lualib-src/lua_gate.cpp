@@ -127,7 +127,14 @@ static int gate_start(lua_State* L)
     {
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
         luaL_argcheck(L, lua_isfunction(L, -1), 1, "callback must be function");
-        lua_pushinteger(L, err);
+        if (err == 0)
+        {
+            lua_pushnil(L);
+        }
+        else
+        {
+            lua_pushinteger(L, err);
+        }
         lua_pushnumber(L, serial);
         lua_pushlstring(L, (const char*)data.data(), data.size());
         if (lua_pcall(L, 3, LUA_MULTRET, 0) != 0)
@@ -299,7 +306,7 @@ static int client_send(lua_State* L)
     size_t size;
     const char* data = luaL_checklstring(L, 2, &size);
     luaL_argcheck(L, data && size > 0, 2, "invalid data");
-    ptr->client->send(data, size);
+    ptr->client->write(data, size);
     return 0;
 }
 
