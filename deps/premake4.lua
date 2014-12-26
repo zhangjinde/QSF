@@ -104,6 +104,7 @@ solution '3rdlibs'
             'zlib/*.c',
         } 
         
+    --[[
     project 'asio'
         language 'C++'
         kind 'StaticLib'
@@ -133,4 +134,6 @@ solution '3rdlibs'
             'asio/src/asio.cpp',
             'asio/include/**.hpp',
         }
+    --]]
+    
         
