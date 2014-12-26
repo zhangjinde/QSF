@@ -25,6 +25,7 @@ solution '3rdlibs'
             '_WIN32_WINNT=0x0600',
             '_CRT_SECURE_NO_WARNINGS',
             '_SCL_SECURE_NO_WARNINGS',
+            '_WINSOCK_DEPRECATED_NO_WARNINGS',
             'NOMINMAX',
         }
 
@@ -102,3 +103,34 @@ solution '3rdlibs'
             'zlib/*.h',
             'zlib/*.c',
         } 
+        
+    project 'asio'
+        language 'C++'
+        kind 'StaticLib'
+        location 'build'
+        uuid 'AD196AB0-62EA-456A-8F61-E128CFC058D2'
+        defines 
+        {
+            'ASIO_STANDALONE',
+            'ASIO_SEPARATE_COMPILATION',
+            'ASIO_DISABLE_THREADS',
+            'BOOST_DATE_TIME_NO_LIB',
+            'BOOST_REGEX_NO_LIB',
+            'ASIO_HAS_MOVE',
+            'ASIO_HAS_STD_ARRAY',
+            'ASIO_HAS_STD_ATOMIC',
+            'ASIO_HAS_STD_SHARED_PTR',
+            'ASIO_HAS_STD_CHRONO',
+            'ASIO_HAS_VARIADIC_TEMPLATES',
+            'ASIO_HAS_STD_SYSTEM_ERROR',
+        }
+        includedirs 
+        {
+            'asio/include'
+        }
+        files
+        {
+            'asio/src/asio.cpp',
+            'asio/include/**.hpp',
+        }
+        
