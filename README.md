@@ -10,11 +10,8 @@ To build the library and test suits:
 
 ### Build on Windows (Windows 7 x64)
 
-1. Obtain boost library(http://boost.org) 
-2. Set environment variable `BOOST_ROOT` as directory path of boost library.
-3. Type `bootstrap.bat && ./bjam --with-system` to build `boost.system` library binaries.
-4. Run `build-msvc2013.bat` to generate Visual C++ 2013 solution files.
-
+1. Run `build-msvc2013.bat` to generate Visual C++ 2013 solution files.
+2. Use Visual Studio 2013 to compile executable binary.
 
 ### Build on Linux (Ubuntu 12.04 x64)
 
