@@ -129,7 +129,7 @@ void serviceThreadCallback(std::string type,
     try
     {
         assert(!type.empty() && !args.empty());
-        Context ctx(name);
+        Context ctx(qsf::createDealer(name), name);
         auto service = createService(type, ctx);
         if (service)
         {
