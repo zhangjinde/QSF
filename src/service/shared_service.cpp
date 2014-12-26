@@ -20,7 +20,7 @@ SharedService::~SharedService()
 void SharedService::initialize(const std::string& path)
 {
     this_lib_.reset(new SharedLibrary(path));
-    string name = this_lib_->path() + "_run";
+    string name = this_lib_->path() + "_service_run";
     on_run_ = (decltype(on_run_))this_lib_->getSymbol(name);
     if (on_run_ == nullptr)
     {
@@ -36,12 +36,11 @@ int SharedService::run(const std::vector<std::string>& args)
     }
     std::string argument = join(" ", args);
     auto& ctx = this->context();
-    auto& socket = ctx.socket();
     initialize(args[0]);
     int r = 0;
     try
     {
-        r = on_run_(&socket, argument.c_str());
+        r = on_run_(&ctx, argument.c_str());
     }
     catch (std::exception& ex)
     {

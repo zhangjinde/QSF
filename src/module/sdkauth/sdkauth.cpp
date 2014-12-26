@@ -4,36 +4,36 @@
 #include <zmq.hpp>
 #include "core/platform.h"
 #include "core/range.h"
+#include "service/context.h"
 
 using std::cout;
 using std::endl;
 
-static zmq::socket_t* self_socket = nullptr;
+static Context* self_ctx = nullptr;
 
 bool internal_poll()
 {
-    zmq::message_t from;
-    zmq::message_t msg;
-    self_socket->recv(&from);
-    self_socket->recv(&msg);
-    StringPiece name((const char*)from.data(), from.size());
-    StringPiece data((const char*)msg.data(), msg.size());
-    if (name == "sys" && data == "exit")
+    bool res = true;
+    self_ctx->recv([&](StringPiece name, StringPiece data)
     {
-        return false;
-    }
-    else
-    {
-        cout << name << ": " << data << endl;
-        return true;
-    }
+        if (name == "sys" && data == "exit")
+        {
+            self_ctx->send("sys", "OK");
+            res = false;
+        }
+        else
+        {
+            cout << name << ": " << data << endl;
+        }
+    });
+    return res;
 }
 
 extern "C"
-QSF_EXPORT int sdkauth_run(zmq::socket_t* socket, const char* args)
+QSF_EXPORT int sdkauth_service_run(Context* ctx, const char* args)
 {
-    assert(socket);
-    self_socket = socket;
+    assert(ctx);
+    self_ctx = ctx;
     try
     {
         while (internal_poll())
