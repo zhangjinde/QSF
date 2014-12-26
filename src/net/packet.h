@@ -52,39 +52,22 @@ enum
     ERR_HEARTBEAT_TIMEOUT = 100007,    // timeout issue
 };
 
-const int kRecvBufReserveSize = 256;
-
 // Compression / decompression
 enum CodecType
 {
     // no compression
     NO_COMPRESSION = 0,
 
-    // Use LZ4 compression.
-    LZ4 = 1,
-
-    // Use Snappy compression
-    SNAPPY = 2,
-
     // Use zlib compression
-    ZLIB = 3,
-
-    // Use LZMA2 compression.
-    LZMA2 = 4,
+    ZLIB = 1,
 };
 
-
-#pragma pack(push) 
-#pragma pack(4)
 
 struct ClientHeader
 {
     uint16_t    size;       // body size
-    uint8_t     codec;      // compression type
-    uint8_t     reserved;   // reserved
-    uint32_t    checksum;   // checksum value of content
+    uint16_t    checksum;   // checksum value of content
 };
-
 
 struct ServerHeader
 {
@@ -92,10 +75,5 @@ struct ServerHeader
     uint8_t     codec;      // compression type
     uint8_t     more;       // more data
 };
-
-static_assert(sizeof(ClientHeader) % 4 == 0, "must be 4 bytes packed");
-static_assert(sizeof(ServerHeader) % 4 == 0, "must be 4 bytes packed");
-
-#pragma pack(pop)
 
 } // namespace net
