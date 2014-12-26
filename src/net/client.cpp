@@ -10,7 +10,11 @@
 
 using namespace std::placeholders;
 
-const int kHeartBeatCheckingSec = 3;
+enum
+{
+    DEFAULT_RECV_BUF_SIZE = 128,
+    DEFAULT_HEATBEAT_CHECK_SEC = 5,
+};
 
 namespace net {
 
@@ -19,12 +23,12 @@ Client::Client(boost::asio::io_service& io_service,
                uint16_t no_compress_size)
     : socket_(io_service), 
       heart_beat_sec_(heart_beat_sec_),
-      heart_beat_(io_service, std::chrono::seconds(kHeartBeatCheckingSec)),
+      heart_beat_(io_service, std::chrono::seconds(DEFAULT_HEATBEAT_CHECK_SEC)),
       no_compress_size_(no_compress_size)
 
 {
-    buffer_.reserve(kRecvBufReserveSize);
-    buffer_more_.reserve(kRecvBufReserveSize);
+    buffer_.reserve(DEFAULT_RECV_BUF_SIZE);
+    buffer_more_.reserve(DEFAULT_RECV_BUF_SIZE);
 }
 
 Client::~Client()
@@ -60,20 +64,15 @@ void Client::startRead(ReadCallback callback)
     readHead();
 }
 
-void Client::send(ByteRange data)
+void Client::write(ByteRange data)
 {
     if (data.size() > MAX_PACKET_SIZE)
     {
         LOG(ERROR) << "too big size to send: " << prettyPrint(data.size(), PRETTY_BYTES);
         return;
     }
-    CodecType codec = NO_COMPRESSION;
-    if (data.size() > no_compress_size_)
-    {
-        codec = ZLIB;
-    }
-    auto out = compressClientPacket(codec, data);
-    if (out && !out->empty())
+    auto out = compressClientPacket(NO_COMPRESSION, data);
+    if (out)
     {
         boost::asio::async_write(socket_, 
             boost::asio::buffer(out->buffer(), out->length()),
@@ -168,7 +167,8 @@ void Client::heartBeating()
         head->size = 0;
         head->checksum = 0;
         out->append(sizeof(*head));
-        boost::asio::async_write(socket_, boost::asio::buffer(out->buffer(), out->length()),
+        boost::asio::async_write(socket_, 
+            boost::asio::buffer(out->buffer(), out->length()),
             std::bind(&Client::handleSend, this, _1, _2, out));
     }
     heart_beat_.expires_from_now(std::chrono::seconds(heart_beat_sec_/2));

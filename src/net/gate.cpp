@@ -341,28 +341,26 @@ void Gate::handleReadBody(uint32_t serial, const boost::system::error_code& ec, 
     auto& head = session->head_;
     auto& buffer = session->recv_buf_;
     const uint8_t* data = buffer.data();
-    auto checksum = crc32c(data, bytes);
+    auto checksum = crc16(data, bytes);
     if (head.checksum == checksum)
     {
         session->last_recv_time_ = time(NULL);
-        auto out = uncompressPacketFrame((CodecType)head.codec, ByteRange(data, bytes));
-        if (out)
-        {
-            on_read_(0, serial, out->byteRange());
-        }
+        on_read_(0, serial, ByteRange(data, bytes));
         sessionStartRead(session); // waiting for another packet
     }
     else
     {
         kick(session);
-        auto errmsg = stringPrintf("invalid body checksum, expect %x, but get %x",
+        auto errmsg = stringPrintf("invalid body checksum, expect 0x%x, but get 0x%x",
             checksum, head.checksum);
         on_read_(ERR_INVALID_CHECKSUM, serial, StringPiece(errmsg));
     }
 }
 
-void Gate::handleWrite(uint32_t serial, const boost::system::error_code& ec,
-                       size_t bytes, std::shared_ptr<IOBuf> buf)
+void Gate::handleWrite(uint32_t serial, 
+                       const boost::system::error_code& ec,
+                       size_t bytes, 
+                       std::shared_ptr<IOBuf> buf)
 {
     if (ec)
     {

@@ -9,14 +9,13 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/noncopyable.hpp>
 #include "core/range.h"
 #include "packet.h"
 #include "iobuf.h"
 
 namespace net {
 
-class Client : boost::noncopyable
+class Client
 {
 public:
     typedef std::function<void(const boost::system::error_code& ec)> ConnectCallback;
@@ -28,16 +27,19 @@ public:
                     uint16_t no_compress_size = DEFAULT_NO_COMPRESSION_SIZE);
     ~Client();
 
+    Client(const Client&) = delete;
+    Client& operator = (const Client&) = delete;
+
     void connect(const std::string& host, uint16_t port);
     void connect(const std::string& host, uint16_t port, ConnectCallback callback);
 
     void startRead(ReadCallback callback);
-    void send(ByteRange data);
-    void send(const std::string& str) { send(ByteRange(StringPiece(str))); }
-    void send(const void* data, size_t size)
+    void write(ByteRange data);
+    void write(const std::string& str) { write(ByteRange(StringPiece(str))); }
+    void write(const void* data, size_t size)
     {
         assert(data && size > 0);
-        send(ByteRange(reinterpret_cast<const uint8_t*>(data), size));
+        write(ByteRange(reinterpret_cast<const uint8_t*>(data), size));
     }
 
     void stop();

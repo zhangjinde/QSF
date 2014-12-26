@@ -8,8 +8,6 @@
 namespace net {
 namespace {
 
-static void freeFn(void* data) {}
-
 inline std::shared_ptr<IOBuf> zlibCompress(ByteRange data, size_t reserved)
 {
     z_stream stream;
@@ -45,7 +43,7 @@ inline std::shared_ptr<IOBuf> zlibCompress(ByteRange data, size_t reserved)
 
 inline std::shared_ptr<IOBuf> zlibUnCompress(ByteRange data)
 {
-    static THREAD_LOCAL uint8_t buffer[MAX_PACKET_SIZE*2];
+    static THREAD_LOCAL uint8_t uncompBuffer[MAX_PACKET_SIZE*2];
 
     z_stream stream;
     stream.zalloc = nullptr;
@@ -66,13 +64,13 @@ inline std::shared_ptr<IOBuf> zlibUnCompress(ByteRange data)
     }
     stream.next_in = const_cast<uint8_t*>(data.data());
     stream.avail_in = static_cast<uint32_t>(data.size());
-    stream.next_out = buffer;
-    stream.avail_out = sizeof(buffer);
+    stream.next_out = uncompBuffer;
+    stream.avail_out = sizeof(uncompBuffer);
 
     rc = inflate(&stream, Z_FINISH);
     CHECK_EQ(rc, Z_STREAM_END) << stream.msg;
 
-    return IOBuf::takeOwnership(buffer, stream.total_out, freeFn);
+    return IOBuf::takeOwnership(uncompBuffer, stream.total_out, [](void*){});
 }
 
 } // anounymouse namespace
@@ -114,34 +112,13 @@ std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame)
 {
     assert(frame.size() <= UINT16_MAX);
     const auto head_size = sizeof(ClientHeader);
-    switch (codec)
-    {
-    case NO_COMPRESSION:
-        {
-            auto out = IOBuf::create(head_size + frame.size());
-            memcpy(out->buffer() + head_size, frame.data(), frame.size());
-            out->append(head_size + frame.size());
-            ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
-            head->size = static_cast<uint16_t>(out->length() - head_size);
-            head->codec = NO_COMPRESSION;
-            head->checksum = crc32c(out->buffer() + head_size, frame.size());
-            head->reserved = 0;
-            return out;
-        }
-    case ZLIB:
-        {
-            auto out = zlibCompress(frame, head_size);
-            ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
-            head->size = static_cast<uint16_t>(out->length() - head_size);
-            head->codec = ZLIB;
-            head->checksum = crc32c(out->buffer() + head_size, frame.size());
-            head->reserved = 0;
-            return out;
-        }
-    default:
-        throw std::invalid_argument(to<std::string>(
-            "Compression type ", codec, " not supported"));
-    }
+    auto out = IOBuf::create(head_size + frame.size());
+    memcpy(out->buffer() + head_size, frame.data(), frame.size());
+    out->append(head_size + frame.size());
+    ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
+    head->size = static_cast<uint16_t>(out->length() - head_size);
+    head->checksum = crc16(out->buffer() + head_size, frame.size());
+    return out;
 }
 
 std::shared_ptr<IOBuf> uncompressPacketFrame(CodecType codec, ByteRange frame)
