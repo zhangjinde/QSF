@@ -30,24 +30,11 @@ TEST(compression, compressClientPacket)
     {
         auto str = randString(size);
         ByteRange origin = StringPiece(str);
-        net::CodecType codec = NO_COMPRESSION;
-        if (origin.size() > DEFAULT_NO_COMPRESSION_SIZE)
-            codec = ZLIB;
-        auto buf = compressClientPacket(codec, origin);
+        auto buf = compressClientPacket(NO_COMPRESSION, origin);
         EXPECT_FALSE(buf->empty());
         const ClientHeader* head = reinterpret_cast<const ClientHeader*>(buf->buffer());
         const size_t head_size = sizeof(*head);
-        if (size <= DEFAULT_NO_COMPRESSION_SIZE)
-        {
-            EXPECT_EQ(head->codec, NO_COMPRESSION);
-            EXPECT_EQ(head->size, origin.size());
-        }
-        else
-        {
-            EXPECT_EQ(head->codec, ZLIB);
-        }
-        auto compressed_frame = ByteRange(buf->buffer() + head_size, buf->length() - head_size);
-        auto buf_out = uncompressPacketFrame((CodecType)head->codec, compressed_frame);
+        auto buf_out = uncompressPacketFrame(NO_COMPRESSION, buf->byteRange());
         EXPECT_EQ(origin, buf_out->byteRange());
     }
 }

@@ -5,12 +5,12 @@
 #include <cassert>
 #include <string>
 #include <memory>
+#include <system_error>
 #include <unordered_set>
 #include <unordered_map>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/system/error_code.hpp>
+#include <asio/io_service.hpp>
+#include <asio/ip/tcp.hpp>
+#include <asio/steady_timer.hpp>
 #include "packet.h"
 #include "iobuf.h"
 
@@ -24,7 +24,7 @@ class Gate
     typedef std::shared_ptr<Session> SessionPtr;
 
 public:
-    explicit Gate(boost::asio::io_service& io_service, 
+    explicit Gate(asio::io_service& io_service, 
                   uint32_t max_connections = DEFAULT_MAX_CONNECTIONS,
                   uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC,
                   uint32_t heart_beat_check_sec = DEFAULT_HEARTBEAT_CHECK_SEC,
@@ -68,16 +68,16 @@ private:
     bool sessionWritePacket(SessionPtr session, ByteRange data);
     void sessionWriteFrame(SessionPtr session, ByteRange frame, bool more);
 
-    void handleAccept(const boost::system::error_code& err, SessionPtr ptr);
-    void handleReadHead(uint32_t serial, const boost::system::error_code& ec, size_t bytes);
-    void handleReadBody(uint32_t serial, const boost::system::error_code& ec, size_t bytes);
-    void handleWrite(uint32_t serial, const boost::system::error_code& ec, size_t bytes, 
+    void handleAccept(const std::error_code& err, SessionPtr ptr);
+    void handleReadHead(uint32_t serial, const std::error_code& ec, size_t bytes);
+    void handleReadBody(uint32_t serial, const std::error_code& ec, size_t bytes);
+    void handleWrite(uint32_t serial, const std::error_code& ec, size_t bytes, 
                      std::shared_ptr<IOBuf> buf);
 
 private:
-    boost::asio::io_service&        io_service_;
-    boost::asio::ip::tcp::acceptor  acceptor_;
-    boost::asio::steady_timer       drop_timer_;
+    asio::io_service&        io_service_;
+    asio::ip::tcp::acceptor  acceptor_;
+    asio::steady_timer       drop_timer_;
 
     ReadCallback    on_read_;
     

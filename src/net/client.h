@@ -5,10 +5,10 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/system/error_code.hpp>
+#include <system_error>
+#include <asio/ip/tcp.hpp>
+#include <asio/io_service.hpp>
+#include <asio/steady_timer.hpp>
 #include "core/range.h"
 #include "packet.h"
 #include "iobuf.h"
@@ -18,11 +18,11 @@ namespace net {
 class Client
 {
 public:
-    typedef std::function<void(const boost::system::error_code& ec)> ConnectCallback;
+    typedef std::function<void(const std::error_code& ec)> ConnectCallback;
     typedef std::function<void(ByteRange)>  ReadCallback;
 
 public:
-    explicit Client(boost::asio::io_service& io_service, 
+    explicit Client(asio::io_service& io_service, 
                     uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC,
                     uint16_t no_compress_size = DEFAULT_NO_COMPRESSION_SIZE);
     ~Client();
@@ -46,16 +46,16 @@ public:
 
 private:
     void readHead();
-    void handleReadHead(const boost::system::error_code& ec, size_t bytes);
-    void handleReadBody(const boost::system::error_code& ec, size_t bytes);
-    void handleSend(const boost::system::error_code& ec, 
+    void handleReadHead(const std::error_code& ec, size_t bytes);
+    void handleReadBody(const std::error_code& ec, size_t bytes);
+    void handleSend(const std::error_code& ec, 
                     size_t bytes, 
                     std::shared_ptr<IOBuf> buf);
     void heartBeating();
 
 private:
-    boost::asio::ip::tcp::socket    socket_;
-    boost::asio::steady_timer       heart_beat_;
+    asio::ip::tcp::socket    socket_;
+    asio::steady_timer       heart_beat_;
 
     ServerHeader            head_;
     std::vector<uint8_t>    buffer_;

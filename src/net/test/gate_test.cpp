@@ -15,7 +15,7 @@ const static uint16_t DEFAULT_PORT = 10086;
 
 TEST(Gate, start)
 {
-    boost::asio::io_service io_service;
+    asio::io_service io_service;
     net::Gate gate(io_service);
     gate.start(DEFAULT_HOST, DEFAULT_PORT, 
         [&](int err, uint32_t serial, ByteRange data)
@@ -32,7 +32,7 @@ TEST(Gate, connect)
 {
     string msg = "hello";
 
-    boost::asio::io_service io_service;
+    asio::io_service io_service;
     net::Gate gate(io_service);
     gate.start(DEFAULT_HOST, DEFAULT_PORT,
         [&](int err, uint32_t serial, ByteRange data)
@@ -46,14 +46,14 @@ TEST(Gate, connect)
 
     net::Client client(io_service);
     client.connect(DEFAULT_HOST, DEFAULT_PORT,
-        [&](const boost::system::error_code& ec)
+        [&](const std::error_code& ec)
     {
         EXPECT_TRUE(!ec);
     });
 
     net::Client client2(io_service);
     EXPECT_NO_THROW(client2.connect(DEFAULT_HOST, DEFAULT_PORT));
-    client2.send(msg);
+    client2.write(msg);
 
     io_service.run();
 }
@@ -61,7 +61,7 @@ TEST(Gate, connect)
 TEST(Gate, denyAddress)
 {
     string msg = "hello";
-    boost::asio::io_service io_service;
+    asio::io_service io_service;
     net::Gate gate(io_service);
     gate.start(DEFAULT_HOST, DEFAULT_PORT,
         [&](int err, uint32_t serial, ByteRange data)
@@ -72,11 +72,11 @@ TEST(Gate, denyAddress)
 
     net::Client client(io_service);
     client.connect(DEFAULT_HOST, DEFAULT_PORT,
-        [&](const boost::system::error_code& ec)
+        [&](const std::error_code& ec)
     {
         if (!ec)
         {
-            client.send(msg);
+            client.write(msg);
             io_service.stop();
         }
     });
@@ -92,7 +92,7 @@ static void test_send(const string& msg)
     ByteRange bytes = StringPiece(msg);
     std::string request = stringPrintf("request msg size %" PRIu64, msg.size());
 
-    boost::asio::io_service io_service;
+    asio::io_service io_service;
     net::Gate gate(io_service);
     gate.start(DEFAULT_HOST, DEFAULT_PORT,
         [&](int err, uint32_t serial, ByteRange data)
@@ -107,12 +107,12 @@ static void test_send(const string& msg)
 
     net::Client client(io_service);
     client.connect(DEFAULT_HOST, DEFAULT_PORT,
-        [&](const boost::system::error_code& ec)
+        [&](const std::error_code& ec)
     {
         EXPECT_TRUE(!ec);
         if (!ec)
         {
-            client.send(request);
+            client.write(request);
             client.startRead([&](ByteRange response)
             {
                 EXPECT_EQ(bytes, response);

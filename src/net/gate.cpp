@@ -1,8 +1,8 @@
 #include "gate.h"
 #include <ctime>
 #include <functional>
-#include <boost/asio.hpp>
-#include <boost/system/error_code.hpp>
+#include <system_error>
+#include <asio.hpp>
 #include "core/logging.h"
 #include "core/strings.h"
 #include "core/checksum.h"
@@ -12,11 +12,14 @@ using namespace std::placeholders;
 
 namespace net {
 
-const int kDeadConnectionReserveSize = 8;
-const int kSessionRecvBufReserveSize = 64;
+enum
+{
+    DEFAULT_DEAD_CONN_SIZE = 8,
+    DEFAULT_SESSION_RECV_BUF = 64,
+};
 
 // Connection session object
-struct Gate::Session : boost::noncopyable
+struct Gate::Session
 {
     uint32_t        serial_ = 0;
     bool            closed_ = false;
@@ -25,12 +28,12 @@ struct Gate::Session : boost::noncopyable
 
     std::vector<uint8_t>            recv_buf_;
     std::string                     remote_addr_;
-    boost::asio::ip::tcp::socket    socket_;
+    asio::ip::tcp::socket    socket_;
 
-    Session(boost::asio::io_service& io_service, uint32_t serial)
+    Session(asio::io_service& io_service, uint32_t serial)
         : socket_(io_service), serial_(serial)
     {
-        recv_buf_.reserve(kSessionRecvBufReserveSize);
+        recv_buf_.reserve(DEFAULT_SESSION_RECV_BUF);
         memset(&head_, 0, sizeof(head_));
     }
 };
@@ -38,7 +41,7 @@ struct Gate::Session : boost::noncopyable
 
 //////////////////////////////////////////////////////////////////////////
 
-Gate::Gate(boost::asio::io_service& io_service, 
+Gate::Gate(asio::io_service& io_service, 
            uint32_t max_connections, 
            uint32_t heart_beat_sec,
            uint32_t heart_beat_check_sec,
@@ -60,7 +63,7 @@ Gate::~Gate()
 
 void Gate::start(const std::string& host, uint16_t port, ReadCallback callback)
 {
-    using namespace boost::asio::ip;
+    using namespace asio::ip;
     assert(callback);
     on_read_ = callback;
 
@@ -98,7 +101,7 @@ void Gate::kick(SessionPtr session)
 {
     if (!session->closed_ && session->socket_.is_open())
     {
-        session->socket_.shutdown(boost::asio::socket_base::shutdown_both);
+        session->socket_.shutdown(asio::socket_base::shutdown_both);
         session->socket_.close();
         session->closed_ = true;
     }
@@ -156,7 +159,7 @@ void Gate::startAccept()
         this, _1, session));
 }
 
-void Gate::handleAccept(const boost::system::error_code& err, SessionPtr session)
+void Gate::handleAccept(const std::error_code& err, SessionPtr session)
 {
     auto serial = session->serial_;
     if (err)
@@ -206,7 +209,7 @@ void Gate::allowAddress(const std::string& address)
 void Gate::checkHeartBeat()
 {
     std::vector<uint32_t> dead_connections;
-    dead_connections.reserve(kDeadConnectionReserveSize);
+    dead_connections.reserve(DEFAULT_DEAD_CONN_SIZE);
 
     // garbage collecting
     for (auto& item : sessions_)
@@ -243,8 +246,8 @@ void Gate::checkHeartBeat()
 void Gate::sessionStartRead(SessionPtr session)
 {
     auto& head = session->head_;
-    boost::asio::async_read(session->socket_, 
-        boost::asio::buffer(&head, sizeof(head)),
+    asio::async_read(session->socket_, 
+        asio::buffer(&head, sizeof(head)),
         std::bind(&Gate::handleReadHead, this, session->serial_, _1, _2));
 }
 
@@ -278,13 +281,13 @@ void Gate::sessionWriteFrame(SessionPtr session, ByteRange frame, bool more)
     auto out = compressServerPacket(codec, frame, more);
     if (out && !out->empty())
     {
-        boost::asio::async_write(session->socket_, 
-            boost::asio::buffer(out->buffer(), out->length()), 
+        asio::async_write(session->socket_, 
+            asio::buffer(out->buffer(), out->length()), 
             std::bind(&Gate::handleWrite, this, session->serial_, _1, _2, out));
     }
 }
 
-void Gate::handleReadHead(uint32_t serial, const boost::system::error_code& ec, size_t bytes)
+void Gate::handleReadHead(uint32_t serial, const std::error_code& ec, size_t bytes)
 {
     auto session = getSession(serial);
     if (!session)
@@ -318,13 +321,13 @@ void Gate::handleReadHead(uint32_t serial, const boost::system::error_code& ec, 
         {
             buffer.resize(head.size);
         }
-        boost::asio::async_read(session->socket_, 
-            boost::asio::buffer(buffer.data(), head.size),
+        asio::async_read(session->socket_, 
+            asio::buffer(buffer.data(), head.size),
             std::bind(&Gate::handleReadBody, this, serial, _1, _2));
     }
 }
 
-void Gate::handleReadBody(uint32_t serial, const boost::system::error_code& ec, size_t bytes)
+void Gate::handleReadBody(uint32_t serial, const std::error_code& ec, size_t bytes)
 {
     auto session = getSession(serial);
     if (!session)
@@ -358,7 +361,7 @@ void Gate::handleReadBody(uint32_t serial, const boost::system::error_code& ec, 
 }
 
 void Gate::handleWrite(uint32_t serial, 
-                       const boost::system::error_code& ec,
+                       const std::error_code& ec,
                        size_t bytes, 
                        std::shared_ptr<IOBuf> buf)
 {

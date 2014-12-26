@@ -13,7 +13,7 @@
 #include "net/client.h"
 
 
-static std::unique_ptr<boost::asio::io_service>   global_io_service;
+static std::unique_ptr<asio::io_service>   global_io_service;
 
 struct Gateway
 {
@@ -275,7 +275,7 @@ static int client_asyn_connect(lua_State* L)
     uint16_t port = (uint16_t)luaL_checkint(L, 3);
     luaL_argcheck(L, lua_isfunction(L, -1), 4, "connect callback must be function");
     int ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    ptr->client->connect(host, port, [=](const boost::system::error_code& ec)
+    ptr->client->connect(host, port, [=](const std::error_code& ec)
     {
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
         luaL_argcheck(L, lua_isfunction(L, -1), 1, "callback must be function");
@@ -402,7 +402,7 @@ static void make_meta_client(lua_State* L)
 extern "C" 
 int luaopen_gate(lua_State* L)
 {
-    global_io_service.reset(new boost::asio::io_service());
+    global_io_service.reset(new asio::io_service());
 
     static const luaL_Reg lib[] = 
     {
