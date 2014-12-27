@@ -69,7 +69,6 @@ solution 'qsf'
         {
             '_ELPP_THREAD_SAFE',
             'ASIO_STANDALONE',
-            'ASIO_DISABLE_THREADS',
             'BOOST_DATE_TIME_NO_LIB',
             'BOOST_REGEX_NO_LIB',
         }
@@ -129,7 +128,6 @@ solution 'qsf'
         {
             '_ELPP_THREAD_SAFE',
             'ASIO_STANDALONE',
-            'ASIO_DISABLE_THREADS',
             'BOOST_DATE_TIME_NO_LIB',
             'BOOST_REGEX_NO_LIB',
         }
