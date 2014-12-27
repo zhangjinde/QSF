@@ -78,7 +78,7 @@ inline std::shared_ptr<IOBuf> zlibUnCompress(ByteRange data)
 
 std::shared_ptr<IOBuf> compressServerPacket(CodecType codec, ByteRange frame, bool more)
 {
-    assert(frame.size() <= UINT16_MAX);
+    assert(frame.size() > 0 && frame.size() <= UINT16_MAX);
     const auto head_size = sizeof(ServerHeader);
     switch (codec)
     {
@@ -110,7 +110,7 @@ std::shared_ptr<IOBuf> compressServerPacket(CodecType codec, ByteRange frame, bo
 
 std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame)
 {
-    assert(frame.size() <= UINT16_MAX);
+    assert(frame.size() > 0 && frame.size() <= UINT16_MAX);
     const auto head_size = sizeof(ClientHeader);
     auto out = IOBuf::create(head_size + frame.size());
     memcpy(out->buffer() + head_size, frame.data(), frame.size());
