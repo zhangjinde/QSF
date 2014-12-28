@@ -365,9 +365,9 @@ toDelim(const Delim& delim, const Src & value)
 }
 
 /**
-* toDelim<SomeString>(delim, v1, v2, ...) uses toAppendDelim() as
-* back-end for all types.
-*/
+ * toDelim<SomeString>(delim, v1, v2, ...) uses toAppendDelim() as
+ * back-end for all types.
+ */
 template <class Tgt, class Delim, class... Ts>
 typename std::enable_if<
     IsSomeString<Tgt>::value && sizeof...(Ts) >= 1,
