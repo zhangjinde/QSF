@@ -9,6 +9,8 @@ int luaopen_qsf_c(lua_State* L);
 int luaopen_utils(lua_State* L);
 int luaopen_luazmq(lua_State* L);
 int luaopen_gate(lua_State* L);
+int luaopen_cmsgpack(lua_State* L);
+int luaopen_cmsgpack_safe(lua_State* L);
 }
 
 void lua_initlibs(lua_State* L)
@@ -19,6 +21,8 @@ void lua_initlibs(lua_State* L)
         { "utils", luaopen_utils },
         { "zmq", luaopen_luazmq },
         { "gate", luaopen_gate },
+        { "cmsgpack", luaopen_cmsgpack },
+        { "cmsgpack_safe", luaopen_cmsgpack_safe },
         { NULL, NULL },
     };
 
