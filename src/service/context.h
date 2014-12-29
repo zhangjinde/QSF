@@ -18,7 +18,7 @@ public:
     typedef std::function<void(StringPiece, StringPiece)> HandlerType;
 
 public:
-    explicit Context(std::unique_ptr<zmq::socket_t>& socket,
+    explicit Context(std::unique_ptr<zmq::socket_t> socket,
         const std::string& name)
         : socket_(std::move(socket)), name_(name)
     {
