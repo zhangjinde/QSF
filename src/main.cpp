@@ -5,10 +5,7 @@
 #include "qsf.h"
 #include "core/logging.h"
 
-
-
 using namespace std;
-
 
 int main(int argc, char* argv[])
 {
