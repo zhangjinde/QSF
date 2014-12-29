@@ -4,6 +4,7 @@
 
 assert(os.get() == 'windows' or os.get() == 'linux')
 
+
 solution 'qsf'
     configurations {'Debug', 'Release'}
     language 'C++'
@@ -36,11 +37,6 @@ solution 'qsf'
             'deps/lua/src',
             'deps/libzmq/include',
         }
-        links
-        {
-            'ws2_32',
-            'zlib',
-        }
 
     configuration 'gmake'
         buildoptions '-std=c++11 -mcrc32 -msse4.2 -rdynamic'
@@ -53,13 +49,10 @@ solution 'qsf'
         includedirs '/usr/include/lua5.2'
         links
         {
-            'z',
             'rt',
             'dl',
             'pthread',
-            'boost_system',
         }
-
 
     project 'qsf'
         location 'build'
@@ -76,6 +69,7 @@ solution 'qsf'
         {
             'src/**.h',
             'src/**.cpp',
+            'src/**.c',
         }
         excludes
         {
@@ -90,11 +84,12 @@ solution 'qsf'
             'deps/asio/include',
         }
         libdirs 'bin'
-        links
-        {
-            'zmq',
-            'lua5.2',
-        }
+        
+        if os.get() == 'windows' then
+        links {'libzmq', 'zlib', 'lua5.2'}
+        else
+        links {'zmq', 'z', 'lua5.2'}
+        end
 
     project 'test-core'
         location 'build'
@@ -148,4 +143,9 @@ solution 'qsf'
         {
             'bin',
         }
-
+        if os.get() == 'windows' then
+        links 'zlib'
+        else
+        links 'z'
+        end
+        
