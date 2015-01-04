@@ -2,19 +2,18 @@
 -- Configurations
 --
 
--- Max size of an inproc message, limited to 32M
-max_ipc_msg_size = 32 * 1024 * 1024
-router_mandatory = true
-
 -- start-up service
 start_type = 'LuaService'
-start_name = 'game'
-start_file = '../example/game.lua'
+start_name = 'test'
+start_file = '../test/run.lua'
 
 -- lua module searching path
 lua_path = './?.lua;../lib/?.lua;../test/?.lua'
 lua_cpath = '../lib/?.so;../lib/?.dll'
 
+-- Max size of an inproc message, limited to 32M
+max_ipc_msg_size = 32 * 1024 * 1024
+router_mandatory = true
 
 -- easylogging configuration
 logconf = [[
