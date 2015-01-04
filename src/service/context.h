@@ -9,7 +9,6 @@
 #include <functional>
 #include <zmq.hpp>
 #include "core/range.h"
-#include "qsf.h"
 
 
 class Context
@@ -39,7 +38,7 @@ public:
         int flag = dont_wait ? ZMQ_DONTWAIT : 0;
         if (socket_->recv(&from, flag))
         {
-            assert(from.size() <= MAX_NAME_SIZE);
+            assert(from.size() <= 16);
             zmq::message_t msg;
             if (socket_->recv(&msg, flag))
             {
