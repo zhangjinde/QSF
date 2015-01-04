@@ -9,6 +9,7 @@ int luaopen_qsf(lua_State* L);
 int luaopen_utils(lua_State* L);
 int luaopen_luazmq(lua_State* L);
 int luaopen_gate(lua_State* L);
+int luaopen_uuid(lua_State* L);
 int luaopen_cmsgpack(lua_State* L);
 int luaopen_cmsgpack_safe(lua_State* L);
 }
@@ -18,9 +19,10 @@ void lua_initlibs(lua_State* L)
     static const luaL_Reg libs[] =
     {
         { "qsf", luaopen_qsf },
-        { "utils", luaopen_utils },
+        { "qsf.utils", luaopen_utils },
         { "zmq", luaopen_luazmq },
         { "gate", luaopen_gate },
+        { "uuid", luaopen_uuid },
         { "cmsgpack", luaopen_cmsgpack },
         { "cmsgpack.safe", luaopen_cmsgpack_safe },
         { NULL, NULL },
