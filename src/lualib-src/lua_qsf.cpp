@@ -31,7 +31,7 @@ static int qsf_recv(lua_State* L)
     if (lua_gettop(L) > 0)
     {
         const char* option = luaL_checkstring(L, -1);
-        dontwait = (strcmp(option, "dontwait") == 0);
+        dontwait = (strcmp(option, "nowait") == 0);
     }
     int r = 0;
     self->recv([&](StringPiece name, StringPiece data)
