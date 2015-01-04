@@ -16,6 +16,7 @@
 #include "service/context.h"
 #include "service/service.h"
 #include "env.h"
+#include "initializer.h"
 
 
 using std::mutex;
@@ -137,6 +138,7 @@ void serviceThreadCallback(std::string type,
                 lock_guard<mutex> guard(s_mutex);
                 s_services[name] = service;
             }
+            Initializer init;
             service->run(args);
         }
     }
@@ -255,6 +257,7 @@ int start(const char* filename)
 {
     if (initialize(filename))
     {
+        Initializer init;
         auto type = Env::get("start_type");
         auto name = Env::get("start_name");
         auto args = Env::get("start_file");
