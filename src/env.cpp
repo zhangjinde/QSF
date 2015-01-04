@@ -17,6 +17,7 @@ bool Env::initialize(const char* file)
 {
     CHECK(L_ == nullptr);
     L_ = luaL_newstate();
+    luaL_openlibs(L_);
     assert(L_);
     int err = luaL_dofile(L_, file);
     if (err)
