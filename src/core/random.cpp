@@ -25,7 +25,7 @@
 #include "logging.h"
 
 
-static inline std::default_random_engine* get_tls_rng()
+static std::default_random_engine* get_tls_rng()
 {
     static THREAD_LOCAL std::default_random_engine* rng = nullptr;
     if (rng == nullptr)
@@ -100,19 +100,4 @@ bool Random::oneIn(uint32_t n)
         return false;
     }
     return rand32(n) == 0;
-}
-
-double Random::randDouble01()
-{
-    return std::generate_canonical<double, std::numeric_limits<double>::digits>
-        (*get_tls_rng());
-}
-
-double Random::randDouble(double min, double max)
-{
-    if (std::fabs(max - min) < std::numeric_limits<double>::epsilon())
-    {
-        return 0;
-    }
-    return std::uniform_real_distribution<double>(min, max)(*get_tls_rng());
 }

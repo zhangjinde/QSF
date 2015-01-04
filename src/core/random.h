@@ -73,15 +73,5 @@ public:
      * Returns true 1/n of the time. If n == 0, always returns false
      */
     static bool oneIn(uint32_t n);
-
-    /**
-     * Returns a double in [0, 1)
-     */
-    static double randDouble01();
-
-    /**
-     * Returns a double in [min, max), if min == max, returns 0.
-     */
-    static double randDouble(double min, double max);
 };
 
