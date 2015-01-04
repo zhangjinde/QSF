@@ -1,15 +1,19 @@
-local C = require 'qsf.c'
+local qsf = require 'qsf'
+
+local function handle_message(from, msg)
+    local from, msg = qsf.recv()
+    if from == 'sys' and msg == 'exit' then
+        qsf.send(from, 'roger')
+        return false
+    end
+    return true
+end
 
 local function main(args)
     print(args[1] .. ' started')
-    --C.launch('SharedService', 'sdkauth', 'sdkauth')
     while true do
-        local from, msg = C.recv()
-        if from == 'sys' then
-            if msg == 'exit' then 
-                C.send(from, 'ok')
-                break 
-            end
+        if not handle_message() then
+            break
         end
     end
 end
