@@ -94,7 +94,7 @@ static int qsf_concurrency(lua_State* L)
 }
 
 extern "C" 
-int luaopen_qsf_c(lua_State* L)
+int luaopen_qsf(lua_State* L)
 {
     static const luaL_Reg lib[] = 
     {
