@@ -22,7 +22,7 @@ void lua_initlibs(lua_State* L)
         { "zmq", luaopen_luazmq },
         { "gate", luaopen_gate },
         { "cmsgpack", luaopen_cmsgpack },
-        { "cmsgpack_safe", luaopen_cmsgpack_safe },
+        { "cmsgpack.safe", luaopen_cmsgpack_safe },
         { NULL, NULL },
     };
 
