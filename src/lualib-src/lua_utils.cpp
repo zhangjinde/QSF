@@ -1,4 +1,3 @@
-#include <thread>
 #include <lua.hpp>
 #include "core/random.h"
 
@@ -8,11 +7,6 @@ static int utils_random(lua_State *L)
 {
     switch (lua_gettop(L))   /* check number of arguments */
     {
-    case 0:   /* no arguments */
-    {
-        lua_pushnumber(L, Random::randDouble01());  /* Number between 0 and 1 */
-        break;
-    }
     case 1:   /* only upper limit */
     {
         lua_Integer upper = luaL_checkinteger(L, 1);
