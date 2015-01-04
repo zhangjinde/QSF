@@ -164,7 +164,7 @@ static int zsocket_recv(lua_State* L)
     if (rc == -1)
     {
         zmq_msg_close(&msg);
-        return lzmq_throw_error(L);
+        return 0;
     }
     size_t len = zmq_msg_size(&msg);
     void* data = zmq_msg_data(&msg);
