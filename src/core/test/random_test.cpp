@@ -29,17 +29,6 @@ TEST(Random, rand64)
     }
 }
 
-TEST(Random, randDouble)
-{
-    double prev = 0, seed = 0;
-    Random::seed();
-    for (int i = 0; i < 1024; ++i)
-    {
-        EXPECT_NE(seed = Random::randDouble01(), prev);
-        prev = seed;
-    }
-}
-
 TEST(Random, MultiThreaded) 
 {
     const int n = 1024;
