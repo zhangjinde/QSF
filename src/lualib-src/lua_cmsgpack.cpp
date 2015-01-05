@@ -3,9 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-
-#include "lua.h"
-#include "lauxlib.h"
+#include <lua.hpp>
 
 #define LUACMSGPACK_NAME        "cmsgpack"
 #define LUACMSGPACK_SAFE_NAME   "cmsgpack_safe"
@@ -900,6 +898,7 @@ int luaopen_create(lua_State *L) {
     return 1;
 }
 
+extern "C"
 LUALIB_API int luaopen_cmsgpack(lua_State *L) {
     luaopen_create(L);
 
@@ -912,6 +911,7 @@ LUALIB_API int luaopen_cmsgpack(lua_State *L) {
     return 1;
 }
 
+extern "C"
 LUALIB_API int luaopen_cmsgpack_safe(lua_State *L) {
     int i;
 
