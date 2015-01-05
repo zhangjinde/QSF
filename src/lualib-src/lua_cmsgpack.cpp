@@ -899,7 +899,7 @@ int luaopen_create(lua_State *L) {
 }
 
 extern "C"
-LUALIB_API int luaopen_cmsgpack(lua_State *L) {
+int luaopen_cmsgpack(lua_State *L) {
     luaopen_create(L);
 
 #if LUA_VERSION_NUM < 502
@@ -912,7 +912,7 @@ LUALIB_API int luaopen_cmsgpack(lua_State *L) {
 }
 
 extern "C"
-LUALIB_API int luaopen_cmsgpack_safe(lua_State *L) {
+int luaopen_cmsgpack_safe(lua_State *L) {
     int i;
 
     luaopen_cmsgpack(L);
