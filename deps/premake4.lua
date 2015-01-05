@@ -29,7 +29,7 @@ solution '3rdlibs'
             'NOMINMAX',
         }
 
-    project 'zmq'
+    project 'libzmq'
         language 'C++'
         kind 'SharedLib'
         location 'build'
