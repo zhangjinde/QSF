@@ -88,7 +88,7 @@ solution 'qsf'
         if os.get() == 'windows' then
         links {'libzmq', 'zlib', 'lua5.2'}
         else
-        links {'zmq', 'z', 'lua5.2'}
+        links {'zmq', 'z', 'lua5.2', 'uuid'}
         end
 
     project 'test-core'
