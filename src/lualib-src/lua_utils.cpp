@@ -1,7 +1,17 @@
 #include <lua.hpp>
-#include "md5.h"
 #include "core/random.h"
+#include "utils/md5.h"
+#include "utils/utf.h"
 
+static int utils_os(lua_State* L)
+{
+#ifdef _WIN32
+    lua_pushliteral(L, "windows");
+#else
+    lua_pushliteral(L, "linux");
+#endif
+    return 1;
+}
 
 // a drop-in replacement for `math.random`
 static int utils_random(lua_State *L)
@@ -39,13 +49,29 @@ static int utils_md5(lua_State* L)
     return 1;
 }
 
+static int utils_as_gbk(lua_State* L)
+{
+#ifdef _WIN32
+    size_t len;
+    const char* str = luaL_checklstring(L, 1, &len);
+    std::string u8str(str, len);
+    std::string strgkb = U8toA(u8str);
+    lua_pushlstring(L, strgkb.c_str(), strgkb.length());
+    return 1;
+#else
+    return 0;
+#endif
+}
+
 extern "C"
 int luaopen_utils(lua_State* L)
 {
     static const luaL_Reg lib[] =
-    {        
+    {
+        { "os", utils_os },
         { "random", utils_random },
         { "md5", utils_md5 },
+        { "as_gbk", utils_as_gbk },
         { NULL, NULL },
     };
     luaL_newlib(L, lib);
