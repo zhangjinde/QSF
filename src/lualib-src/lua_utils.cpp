@@ -1,4 +1,5 @@
 #include <lua.hpp>
+#include "md5.h"
 #include "core/random.h"
 
 
@@ -28,12 +29,23 @@ static int utils_random(lua_State *L)
     return 1;
 }
 
+static int utils_md5(lua_State* L)
+{
+    size_t len;
+    const char* data = luaL_checklstring(L, 1, &len);
+    char buffer[HASHSIZE];
+    md5(data, len, buffer);
+    lua_pushlstring(L, buffer, HASHSIZE);
+    return 1;
+}
+
 extern "C"
 int luaopen_utils(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {        
         { "random", utils_random },
+        { "md5", utils_md5 },
         { NULL, NULL },
     };
     luaL_newlib(L, lib);
