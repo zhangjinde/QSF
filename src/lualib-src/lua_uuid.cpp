@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdint.h>
 #include <lua.hpp>
 #include "core/logging.h"
 
@@ -14,7 +15,7 @@ inline void uuid_create(void* buf)
 #ifdef _WIN32
     CoCreateGuid((GUID*)buf);
 #else
-    uuid_generate(buf);
+    uuid_generate((uint8_t*)buf);
 #endif
 }
 
@@ -24,7 +25,7 @@ inline int uuid_compare(const void* uuid1, const void* uuid2)
 #ifdef _WIN32
     return memcmp(uuid1, uuid2, sizeof(GUID));
 #else
-    return uuid_compare((uuid_t)uuid1, (uuid_t)uuid2);
+    return uuid_compare((uint8_t*)uuid1, (uint8_t*)uuid2);
 #endif
 }
 
@@ -37,7 +38,7 @@ inline void uuid_tostring(const void* uuid, char* out, int len)
         guid->Data4[0], guid->Data4[1], guid->Data4[2], guid->Data4[3],
         guid->Data4[4], guid->Data4[5], guid->Data4[6], guid->Data4[7]);
 #else
-    uuid_unparse((uuid_t)uuid, out);
+    uuid_unparse((uint8_t*)uuid, out);
 #endif
 }
 
