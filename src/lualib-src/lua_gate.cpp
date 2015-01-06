@@ -369,7 +369,9 @@ static void make_meta_gate(lua_State* L)
         { "send", gate_send },
         { "sendall", gate_sendall },
         { "kick", gate_kick },
+        { "kickall", gate_kickall },
         { "deny", gate_deny },
+        { "allow", gate_allow },
         { NULL, NULL },
     };
     luaL_newmetatable(L, GATE_HANDLE);
