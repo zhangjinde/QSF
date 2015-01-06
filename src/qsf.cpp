@@ -181,11 +181,6 @@ bool initialize(const char* filename)
     s_router->setsockopt(ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
     s_router->bind(QSF_ROUTER);
 
-    // config easylogging++
-    auto conf_text = Env::get("logconf");
-    el::Configurations conf;
-    conf.setToDefault();
-    conf.parseFromText(conf_text);
     return true;
 }
 

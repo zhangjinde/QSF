@@ -35,6 +35,10 @@
 #include "logging.h"
 #include "cmdlineflags.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 using namespace std;
 
 DEFINE_bool(benchmark, true, "Run benchmarks.");
