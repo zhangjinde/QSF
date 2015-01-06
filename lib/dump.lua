@@ -106,7 +106,7 @@ local function stack_trace(start_level, need_upvalue)
         while true do 
             local name, value = debug.getlocal(level, i)
             if not name or name == '(*temporary)' then break end
-            res = res..name..' = '..dumpstring(value))
+            res = res .. name .. ' = ' .. dumpstring(value)
             i = i + 1
         end
         
@@ -117,7 +117,7 @@ local function stack_trace(start_level, need_upvalue)
             while true do 
                 local name, value = debug.getupvalue(func, i)
                 if not name or name == '(*temporary)' then break end
-                res .. res .. name .. ' = ' .. dumpstring(value))
+                res = res .. name .. ' = ' .. dumpstring(value)
                 i = i + 1
             end
         end

@@ -66,7 +66,7 @@ local function dispatch_rpc_message(from, data, service)
         local co = co_create(session_id)
         coroutine_session_id[co] = session_id
         session_id_coroutine[session_id] = co
-        local ok, response = coroutine.resume(co, service, msg.method, msg.params))
+        local ok, response = coroutine.resume(co, service, msg.method, msg.params)
         if ok then
             if response and msg.id then
                 qsf.send(from, cmsgpack.pack(response))
