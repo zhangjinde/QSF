@@ -43,7 +43,6 @@ solution 'qsf'
         defines
         {
             '__STDC_LIMIT_MACROS',
-            '_ELPP_STACKTRACE_ON_CRASH',
             'HAVE_UNISTD_H',
         }
         includedirs '/usr/include/lua5.2'
@@ -60,7 +59,6 @@ solution 'qsf'
         uuid '65BCF1EB-A936-4688-B1F4-7073B4ACE736'
         defines
         {
-            '_ELPP_THREAD_SAFE',
             'ASIO_STANDALONE',
             'BOOST_DATE_TIME_NO_LIB',
             'BOOST_REGEX_NO_LIB',
@@ -95,10 +93,6 @@ solution 'qsf'
         location 'build'
         kind 'ConsoleApp'
         uuid '9E30CCC3-DA13-47FB-9902-7BF6D4792380'
-        defines
-        {
-            '_ELPP_THREAD_SAFE',
-        }
         files
         {
             'src/core/**.*',
@@ -121,7 +115,6 @@ solution 'qsf'
         uuid '7EAB00F8-E324-45FC-83FA-3ADD6439BB89'
         defines
         {
-            '_ELPP_THREAD_SAFE',
             'ASIO_STANDALONE',
             'BOOST_DATE_TIME_NO_LIB',
             'BOOST_REGEX_NO_LIB',
