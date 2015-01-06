@@ -3,16 +3,6 @@
 #include "utils/md5.h"
 #include "utils/utf.h"
 
-static int utils_os(lua_State* L)
-{
-#ifdef _WIN32
-    lua_pushliteral(L, "windows");
-#else
-    lua_pushliteral(L, "linux");
-#endif
-    return 1;
-}
-
 // a drop-in replacement for `math.random`
 static int utils_random(lua_State *L)
 {
@@ -68,7 +58,6 @@ int luaopen_utils(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
-        { "os", utils_os },
         { "random", utils_random },
         { "md5", utils_md5 },
         { "as_gbk", utils_as_gbk },

@@ -79,7 +79,7 @@ static int qsf_sleep(lua_State* L)
     return 0;
 }
 
-static int qsf_tickcount(lua_State* L)
+static int qsf_gettick(lua_State* L)
 {
     uint64_t ticks = getNowTickCount() / 100000UL;
     lua_pushnumber(L, (lua_Number)ticks);
@@ -93,6 +93,18 @@ static int qsf_concurrency(lua_State* L)
     return 1;
 }
 
+static int qsf_os(lua_State* L)
+{
+#ifdef _WIN32
+    lua_pushliteral(L, "windows");
+#elif defined(__linux__)
+    lua_pushliteral(L, "linux");
+#else
+#error platform not supported
+#endif
+    return 1;
+}
+
 extern "C" 
 int luaopen_qsf(lua_State* L)
 {
@@ -103,8 +115,9 @@ int luaopen_qsf(lua_State* L)
         { "launch", qsf_launch },
         { "shutdown", qsf_shutdown },
         { "sleep", qsf_sleep },
-        { "tickcount", qsf_tickcount },
+        { "gettick", qsf_gettick },
         { "concurrency", qsf_concurrency },
+        { "os", qsf_os },
         {NULL, NULL},
     };
     luaL_newlibtable(L, lib);
