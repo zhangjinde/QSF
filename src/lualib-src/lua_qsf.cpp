@@ -28,9 +28,9 @@ static int qsf_recv(lua_State* L)
     Context* self = (Context*)lua_touserdata(L, lua_upvalueindex(1));
     assert(self);
     bool dontwait = false;
-    if (lua_gettop(L) > 0)
+    const char* option = lua_tostring(L, -1);
+    if (option)
     {
-        const char* option = luaL_checkstring(L, -1);
         dontwait = (strcmp(option, "nowait") == 0);
     }
     int r = 0;
