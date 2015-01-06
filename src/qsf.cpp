@@ -170,12 +170,6 @@ bool initialize(const char* filename)
     s_router.reset(new zmq::socket_t(s_context, ZMQ_ROUTER));
     int linger = 0;
     s_router->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
-    bool is_mandatory = Env::getBoolean("router_mandatory");
-    if (is_mandatory)
-    {
-        int mandatory = 1;
-        s_router->setsockopt(ZMQ_ROUTER_MANDATORY, &mandatory, sizeof(mandatory));
-    }
     int64_t max_msg_size = Env::getInt("max_ipc_msg_size");
     CHECK(max_msg_size > 0);
     s_router->setsockopt(ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
@@ -251,22 +245,35 @@ bool createService(const std::string& type,
 
 int start(const char* filename)
 {
-    if (initialize(filename))
+    if (!initialize(filename))
     {
-        Initializer init;
-        auto type = Env::get("start_type");
-        auto name = Env::get("start_name");
-        auto args = Env::get("start_file");
-        CHECK(createService(type, name, args));
-
-        while (dispatchMessage())
-            ;
-
-        s_close_flag = QSF_CLOSED; // finished
-
-        return 0;
+        return 1;
     }
-    return 1;
+
+    Initializer init;
+    auto type = Env::get("start_type");
+    auto name = Env::get("start_name");
+    auto args = Env::get("start_file");
+    CHECK(createService(type, name, args));
+
+    while (true)
+    {
+        try
+        {
+            if (!dispatchMessage())
+            {
+                break;
+            }
+        }
+        catch (zmq::error_t& ex)
+        {
+            LOG(ERROR) << "zmq error [" << ex.num() << "]: " << ex.what();
+        }
+    }
+
+    s_close_flag = QSF_CLOSED; // finished
+
+    return 0;
 }
 
 } // namespace qsf
