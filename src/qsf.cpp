@@ -170,6 +170,8 @@ bool initialize(const char* filename)
     s_router.reset(new zmq::socket_t(s_context, ZMQ_ROUTER));
     int linger = 0;
     s_router->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
+    int mandatory = 1;
+    s_router->setsockopt(ZMQ_ROUTER_MANDATORY, &mandatory, sizeof(mandatory));
     int64_t max_msg_size = Env::getInt("max_ipc_msg_size");
     CHECK(max_msg_size > 0);
     s_router->setsockopt(ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
@@ -267,7 +269,7 @@ int start(const char* filename)
         }
         catch (zmq::error_t& ex)
         {
-            LOG(ERROR) << "zmq error [" << ex.num() << "]: " << ex.what();
+            LOG(ERROR) << "zmq error[" << ex.num() << "]: " << ex.what();
         }
     }
 
