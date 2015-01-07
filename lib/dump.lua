@@ -9,6 +9,13 @@ local M = {}
 -- Renders Metalua table tag fields specially {tag=X, ...} --> "`X{...}".
 -- On first call, only pass parameter o.
 -- CATEGORY: AST debug
+
+local type = type
+local ipairs = ipairs
+local tostring = tostring
+local string = string
+local table = table
+
 local ignore_keys_ = {lineinfo=true}
 local norecurse_keys_ = {parent=true, ast=true}
 local function dumpstring_key_(k, isseen, newindent)
@@ -16,7 +23,6 @@ local function dumpstring_key_(k, isseen, newindent)
              '[' .. M.dumpstring(k, isseen, newindent) .. ']'
   return ks
 end
-
 local function sort_keys_(a, b)
   if type(a) == 'number' and type(b) == 'number' then
     return a < b
@@ -30,7 +36,6 @@ local function sort_keys_(a, b)
     return tostring(a) < tostring(b) -- arbitrary
   end
 end
-
 function M.dumpstring(o, isseen, indent, key)
   isseen = isseen or {}
   indent = indent or ''
@@ -88,50 +93,4 @@ function M.dumpstring(o, isseen, indent, key)
   end
 end
 
--- Stack object dumper, usaged in xpcall
-local function stack_trace(start_level, need_upvalue)
-    local res = ''
-    for level = start_level, start_level+10 do
-        local info = debug.getinfo(level)
-        if not info or info.name and info.name == 'xpcall' then 
-            break 
-        end 
-        if info.name  then 
-            local fmt = '\n%s:%d: in function %s'
-            local desc = string.format(fmt, info.short_src, info.lastlinedefined, info.name or '')
-            res = res .. desc
-        end
-        res = res ..'Local:'
-        local i = 1
-        while true do 
-            local name, value = debug.getlocal(level, i)
-            if not name or name == '(*temporary)' then break end
-            res = res .. name .. ' = ' .. dumpstring(value)
-            i = i + 1
-        end
-        
-        if need_upvalue then
-            res = res .. '\nUpvalue:'
-            local func = debug.getinfo(i).func --func
-            i = 1
-            while true do 
-                local name, value = debug.getupvalue(func, i)
-                if not name or name == '(*temporary)' then break end
-                res = res .. name .. ' = ' .. dumpstring(value)
-                i = i + 1
-            end
-        end
-        res = res .. '\n'
-    end
-    return res
-end
-
-function M.dump_stack(err)
-    local str = err .. '\n' .. debug.traceback()
-    local stack_str = stack_trace(3)
-    print(str)
-    print(stack_str)
-end
-
 return M
-
