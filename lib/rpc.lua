@@ -1,12 +1,13 @@
 local qsf = require 'qsf'
 local cmsgpack = require 'cmsgpack'
-local dump = require 'dump'
+local trace = require 'trace'
 
 local type = type
-local table = table
 local pcall = pcall
 local print = print
+local error = error
 local assert = assert
+local table = table
 local coroutine = coroutine
 
 local rpc = {}
@@ -31,49 +32,73 @@ function rpc.notify(node, method, ...)
     qsf.send(node, cmsgpack.pack(request))
 end
 
--- create a coroutine
-local function co_create(session_id)
-    local co = coroutine.create(function (service, method, params)
-        local func = service[method]
-        if func then
-            local result = {func(table.unpack(params))}
-            if #result > 0 then
-                return {id=session_id, result=result}
+-- reuse coroutine
+local coroutine_pool = {}
+local coroutine_count = 0
+
+local function co_create(f)
+    local co = table.remove(coroutine_pool)
+    if co == nil then
+        co = coroutine.create(function(...)
+            f(...)
+            while true do
+                f = nil
+                coroutine_pool[#coroutine_pool+1] = co
+                f = coroutine.yield('EXIT')
+                f(coroutine.yield())
             end
-        else
-            error('rpc method not found: ', method)
+        end)
+        coroutine_count = coroutine_count + 1
+        if coroutine_count > 1024 then
+            error("coroutine more than 1024 may overload")
+            coroutine_count = 0
         end
-    end)
+    else
+        coroutine.resume(co, f)
+    end
     return co
 end
 
-local function unknown_response(response)
-    print('unknown response', response.id)
+local function suspend(co, ok, command)
+    local session = coroutine_session_id[co]
+    if not ok then
+        coroutine_session_id[co] = nil
+        session_id_coroutine[session_id] = nil
+        error('session not found')
+    end
+    if command == 'EXIT' then
+        coroutine_session_id[co] = nil
+        session_id_coroutine[session_id] = nil        
+    end
 end
 
 -- dispatch inproc message
 local function dispatch_rpc_message(from, data, service)
+    print('co num', table.size(coroutine_session_id), table.size(session_id_coroutine))
     local msg = cmsgpack.unpack(data)
-    if msg.method == nil then -- response
-        local co = session_id_coroutine[msg.id]
-        if co then
-            coroutine.resume(co, table.unpack(msg.params))
-        else
-            unknown_response(msg)
-        end
-    else -- request
+    if msg.method then --request from other service
         session_id = session_id + 1
-        local co = co_create(session_id)
+        local co = co_create(function ()
+            local func = service[msg.method]
+            if func then
+                local result = {func(table.unpack(msg.params))}
+                if #result > 0 then
+                    qsf.send(from, cmsgpack.pack({id=session_id, result=result}))
+                end
+            else
+                qsf.send(from, cmsgpack.pack({id=session_id, error='method not found'}))
+            end
+        end)
         coroutine_session_id[co] = session_id
         session_id_coroutine[session_id] = co
-        local ok, response = coroutine.resume(co, service, msg.method, msg.params)
-        if ok then
-            if response and msg.id then
-                qsf.send(from, cmsgpack.pack(response))
-            end
+        suspend(co, coroutine.resume(co))
+    else --response for this service
+        local co = session_id_coroutine[msg.id]
+        if co then
+            coroutine.resume(co, table.unpack(msg.result))
+        else
+            print('unknown response:', msg.id)
         end
-        session_id_coroutine[session_id] = nil
-        coroutine_session_id[co] = nil        
     end
 end
 
@@ -102,7 +127,7 @@ function rpc.run(service, func)
     local elapsed_tick = 0
     while true do
         local start_tick = qsf.gettick()
-        local ok, result = xpcall(dispatch_message, dump.dump_stack, service, func)
+        local ok, result = xpcall(dispatch_message, trace.dump_stack, service, func)
         if ok then 
             if not result then break end
         else
