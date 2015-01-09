@@ -45,10 +45,9 @@ local function trace_level(level, dumper)
     return true
 end
 
-function M.dump_stack(err)
-    local desc = err .. '\n' .. debug.traceback()
+function M.dump_stack(...)
     local dumper = M.dumper
-    dumper(desc)
+    dumper(debug.traceback())
     dumper('stack variables:\n')
     for level=MIN_LEVEL, MAX_LEVEL do
         if not trace_level(level, dumper) then
