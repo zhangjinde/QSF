@@ -23,6 +23,7 @@
 #include "Benchmark.h"
 #include <cmath>
 #include <ctime>
+#include <cstring>
 #include <cassert>
 #include <cstring>
 #include <limits>
