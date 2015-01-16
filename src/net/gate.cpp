@@ -1,12 +1,12 @@
-#include "gate.h"
+#include "Gate.h"
 #include <ctime>
 #include <functional>
 #include <system_error>
 #include <asio.hpp>
-#include "core/logging.h"
-#include "core/strings.h"
-#include "core/checksum.h"
-#include "compression.h"
+#include "core/Logging.h"
+#include "core/Strings.h"
+#include "core/Checksum.h"
+#include "Compression.h"
 
 using namespace std::placeholders;
 

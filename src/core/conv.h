@@ -31,9 +31,9 @@
 #include <string>
 #include <stdexcept>
 #include <type_traits>
-#include "platform.h"
-#include "logging.h"
-#include "range.h"
+#include "Platform.h"
+#include "Logging.h"
+#include "Range.h"
 #include "dtoa.h"
 
 #define FOLLY_RANGE_CHECK(condition, message)                           \

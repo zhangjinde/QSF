@@ -3,9 +3,9 @@
 #include <thread>
 #include <chrono>
 #include <lua.hpp>
-#include "core/benchmark.h"     // getNowTickCount()
-#include "service/context.h"
-#include "qsf.h"
+#include "core/Benchmark.h"     // getNowTickCount()
+#include "service/Context.h"
+#include "QSF.h"
 
 
 // send message to a named service

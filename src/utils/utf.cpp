@@ -2,7 +2,7 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "utf.h"
+#include "UTF.h"
 
 #ifdef _WIN32
 #include <assert.h>

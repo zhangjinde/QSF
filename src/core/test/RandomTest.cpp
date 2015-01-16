@@ -2,8 +2,8 @@
 #include <algorithm>
 #include <thread>
 #include <vector>
-#include "core/random.h"
-#include "core/logging.h"
+#include "core/Random.h"
+#include "core/Logging.h"
 
 using namespace std;
 

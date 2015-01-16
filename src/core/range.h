@@ -26,8 +26,8 @@
 #include <string>
 #include <type_traits>
 #include <algorithm>
-#include "platform.h"
-#include "logging.h"
+#include "Platform.h"
+#include "Logging.h"
 
 template <class T> class Range;
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "iobuf.h"
-#include "packet.h"
+#include "IOBuf.h"
+#include "Packet.h"
 
 namespace net {
 

@@ -1,7 +1,7 @@
 #include <lua.hpp>
-#include "core/random.h"
-#include "utils/md5.h"
-#include "utils/utf.h"
+#include "core/Random.h"
+#include "utils/MD5.h"
+#include "utils/UTF.h"
 
 // a drop-in replacement for `math.random`
 static int utils_random(lua_State *L)

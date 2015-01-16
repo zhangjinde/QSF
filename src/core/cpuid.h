@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "platform.h"
+#include "Platform.h"
 #include <cstdint>
 
 #ifdef _MSC_VER

@@ -19,11 +19,11 @@ namespace net {
 
 enum
 {
-    // max content size, size of a packet is limited to 16K
-    MAX_PACKET_SIZE = 16 * 1024,
+    // max content size, size of a packet is limited to 8K
+    MAX_PACKET_SIZE = 8 * 1024,
 
-    // max 512K
-    MAX_SEND_BYTES = 32 * MAX_PACKET_SIZE,
+    // max 128K
+    MAX_SEND_BYTES = 128 * 1024,
 
     DEFAULT_NO_COMPRESSION_SIZE = 128,
 

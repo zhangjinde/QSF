@@ -1,8 +1,8 @@
-#include "compression.h"
-#include "core/conv.h"
-#include "core/logging.h"
-#include "core/scope_guard.h"
-#include "core/checksum.h"
+#include "Compression.h"
+#include "core/Conv.h"
+#include "core/Logging.h"
+#include "core/ScopeGuard.h"
+#include "core/Checksum.h"
 #include <zlib.h>
 
 namespace net {

@@ -2,11 +2,11 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "initializer.h"
+#include "Initializer.h"
 #include <time.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "core/logging.h"
+#include "core/Logging.h"
 
 #ifdef _WIN32
 #include <Objbase.h>

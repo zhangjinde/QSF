@@ -2,8 +2,8 @@
 #include <csignal>
 #include <exception>
 #include <typeinfo>
-#include "qsf.h"
-#include "core/logging.h"
+#include "QSF.h"
+#include "core/Logging.h"
 
 using namespace std;
 

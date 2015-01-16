@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "service.h"
+#include "Service.h"
 
 struct lua_State;
 

@@ -2,9 +2,9 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "shared_service.h"
-#include "core/conv.h"
-#include "core/strings.h"
+#include "SharedService.h"
+#include "core/Conv.h"
+#include "core/Strings.h"
 
 using std::string;
 

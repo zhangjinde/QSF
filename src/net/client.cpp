@@ -1,12 +1,11 @@
-#include "client.h"
+#include "Client.h"
 #include <malloc.h>
 #include <ctime>
 #include <chrono>
 #include <asio.hpp>
-#include "core/strings.h"
-#include "core/logging.h"
-
-#include "compression.h"
+#include "core/Strings.h"
+#include "core/Logging.h"
+#include "Compression.h"
 
 using namespace std::placeholders;
 

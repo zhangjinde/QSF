@@ -19,9 +19,9 @@
 #include <string>
 #include <vector>
 #include <type_traits>
-#include "platform.h"
-#include "range.h"
-#include "conv.h"
+#include "Platform.h"
+#include "Range.h"
+#include "Conv.h"
 
 
 /**
@@ -244,4 +244,4 @@ double prettyToDouble(StringPiece *const prettyString,
  */
 double prettyToDouble(StringPiece prettyString, const PrettyType type);
 
-#include "strings-inl.h"
+#include "Strings-inl.h"

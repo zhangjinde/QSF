@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include "core/benchmark.h"
-#include "core/logging.h"
-#include "core/cpuid.h"
-#include "core/checksum.h"
+#include "core/Benchmark.h"
+#include "core/Logging.h"
+#include "core/CpuId.h"
+#include "core/Checksum.h"
 
 namespace detail {
 

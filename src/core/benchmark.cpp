@@ -20,10 +20,11 @@
 
 // @author Andrei Alexandrescu (andrei.alexandrescu@fb.com)
 
-#include "benchmark.h"
+#include "Benchmark.h"
 #include <cmath>
 #include <ctime>
 #include <cassert>
+#include <cstring>
 #include <limits>
 #include <vector>
 #include <tuple>
@@ -31,9 +32,9 @@
 #include <regex>
 #include <algorithm>
 #include <iostream>
-#include "platform.h"
-#include "logging.h"
-#include "cmdlineflags.h"
+#include "Platform.h"
+#include "Logging.h"
+#include "CmdLineFlags.h"
 
 #ifdef _WIN32
 #include <Windows.h>

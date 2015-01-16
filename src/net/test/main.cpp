@@ -2,7 +2,7 @@
 #include <iostream>
 #include <random>
 #include <gtest/gtest.h>
-#include "core/benchmark.h"
+#include "core/Benchmark.h"
 
 
 using namespace std;

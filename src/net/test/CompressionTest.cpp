@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <random>
-#include "rand_string.h"
-#include "net/compression.h"
+#include "RandString.h"
+#include "net/Compression.h"
 
 using namespace std;
 using namespace net;

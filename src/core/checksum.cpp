@@ -10,10 +10,10 @@
 // A portable implementation of crc32c, optimized to handle
 // four bytes at a time.
 
-#include "checksum.h"
+#include "Checksum.h"
 #include <cstring>
-#include "platform.h"
-#include "cpuid.h"
+#include "Platform.h"
+#include "CpuId.h"
 
 #ifdef _WIN32
 #include <nmmintrin.h>

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "service.h"
-#include "core/shared_library.h"
+#include "Service.h"
+#include "core/SharedLibrary.h"
 
 
 class SharedService : public Service

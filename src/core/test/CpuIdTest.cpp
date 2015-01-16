@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "core/cpuid.h"
+#include "core/CpuId.h"
 #include <gtest/gtest.h>
 #include <iostream>
 

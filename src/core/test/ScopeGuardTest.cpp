@@ -17,8 +17,8 @@
 #include <functional>
 #include <stdexcept>
 #include <gtest/gtest.h>
-#include "core/scope_guard.h"
-#include "core/logging.h"
+#include "core/ScopeGuard.h"
+#include "core/Logging.h"
 
 
 using std::vector;

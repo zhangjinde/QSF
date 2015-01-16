@@ -2,12 +2,12 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "lua_service.h"
+#include "LuaService.h"
 #include <lua.hpp>
-#include "core/strings.h"
-#include "core/logging.h"
-#include "env.h"
-#include "lualib-src/lua_init.h"
+#include "Env.h"
+#include "core/Strings.h"
+#include "core/Logging.h"
+#include "lualib/lua_init.h"
 
 using std::string;
 

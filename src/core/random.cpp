@@ -18,11 +18,11 @@
  * limitations under the License.
  */
 
-#include "random.h"
+#include "Random.h"
 #include <random>
 #include <cassert>
-#include "platform.h"
-#include "logging.h"
+#include "Platform.h"
+#include "Logging.h"
 
 
 static std::default_random_engine* get_tls_rng()

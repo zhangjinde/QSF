@@ -9,9 +9,9 @@
 #include <asio/ip/tcp.hpp>
 #include <asio/io_service.hpp>
 #include <asio/steady_timer.hpp>
-#include "core/range.h"
-#include "packet.h"
-#include "iobuf.h"
+#include "core/Range.h"
+#include "Packet.h"
+#include "IOBuf.h"
 
 namespace net {
 

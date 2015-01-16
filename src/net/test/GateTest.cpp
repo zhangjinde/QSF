@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 #include <cinttypes>
 #include <string>
-#include "rand_string.h"
-#include "net/gate.h"
-#include "net/client.h"
-#include "core/strings.h"
+#include "RandString.h"
+#include "net/Gate.h"
+#include "net/Client.h"
+#include "core/Strings.h"
 
 using namespace std;
 using namespace net;

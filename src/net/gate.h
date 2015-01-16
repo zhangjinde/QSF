@@ -11,8 +11,8 @@
 #include <asio/io_service.hpp>
 #include <asio/ip/tcp.hpp>
 #include <asio/steady_timer.hpp>
-#include "packet.h"
-#include "iobuf.h"
+#include "Packet.h"
+#include "IOBuf.h"
 
 namespace net {
 

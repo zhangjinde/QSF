@@ -9,8 +9,8 @@
 #include <typeinfo>
 #include <exception>
 #include <lua.hpp>
-#include "net/gate.h"
-#include "net/client.h"
+#include "net/Gate.h"
+#include "net/Client.h"
 
 
 static std::unique_ptr<asio::io_service>   global_io_service;

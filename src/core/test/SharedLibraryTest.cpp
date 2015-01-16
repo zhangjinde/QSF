@@ -1,4 +1,4 @@
-#include "core/shared_library.h"
+#include "core/SharedLibrary.h"
 #include <gtest/gtest.h>
 #include <iostream>
 

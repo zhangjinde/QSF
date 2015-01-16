@@ -19,11 +19,11 @@
 #include <random>
 #include <vector>
 #include <gtest/gtest.h>
-#include "core/logging.h"
-#include "core/benchmark.h"
-#include "core/random.h"
-#include "core/range.h"
-#include "core/varint.h"
+#include "core/Logging.h"
+#include "core/Benchmark.h"
+#include "core/Random.h"
+#include "core/Range.h"
+#include "core/Varint.h"
 
 
 using namespace std;

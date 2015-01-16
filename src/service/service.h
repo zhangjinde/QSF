@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "context.h"
+#include "Context.h"
 
 // A service is an execution unit scheduled to an individual OS thread
 class Service

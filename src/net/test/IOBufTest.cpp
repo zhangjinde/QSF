@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <string>
-#include "net/iobuf.h"
+#include "net/IOBuf.h"
 
 using namespace std;
 using namespace net;

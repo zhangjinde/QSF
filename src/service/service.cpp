@@ -2,9 +2,9 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "service.h"
-#include "lua_service.h"
-#include "shared_service.h"
+#include "Service.h"
+#include "LuaService.h"
+#include "SharedService.h"
 
 
 ServicePtr createService(const std::string& type, Context& ctx)

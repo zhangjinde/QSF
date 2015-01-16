@@ -2,17 +2,18 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "shared_library.h"
-#include "platform.h"
-#include "logging.h"
-#include <stdexcept>
+#include "SharedLibrary.h"
+#include "Platform.h"
+#include "Logging.h"
 #include <errno.h>
+#include <stdexcept>
+
 
 #ifdef _WIN32
 #include <windows.h>
-static const char* lastErrorMessage(int err)
+inline std::string lastErrorMessage(int err)
 {
-    static __declspec(thread) char buffer[512];
+    char buffer[512] = {};
     FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, err, 
         0, buffer, 511, nullptr);
     return buffer;

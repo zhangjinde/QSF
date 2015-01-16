@@ -1,7 +1,8 @@
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include <lua.hpp>
-#include "core/logging.h"
+#include "core/Logging.h"
 
 #ifdef _WIN32
 #include <Objbase.h>
