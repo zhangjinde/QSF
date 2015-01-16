@@ -14,10 +14,10 @@ public:
     explicit SharedService(Context& ctx);
     ~SharedService();
 
-    virtual int run(const std::vector<std::string>& args);
+    virtual int Run(const std::vector<std::string>& args);
 
 private:
-    void initialize(const std::string& path);
+    void Initialize(const std::string& path);
 
 private:
     int (*on_run_)(void*, const char*) = nullptr;

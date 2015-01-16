@@ -18,19 +18,17 @@ int main(int argc, char* argv[])
     // Ctrl + C interrupt signal
     signal(SIGINT, [](int sig)
     {
-        qsf::stop();
+        qsf::Stop();
         exit(1);
     });
 
-    int r = EXIT_SUCCESS;
     try
     {
-        r = qsf::start(default_file);
+        return qsf::Start(default_file);
     }
     catch (std::exception& ex)
     {
         LOG(ERROR) << typeid(ex).name() << ": " << ex.what();
-        r = EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
-    return r;
 }

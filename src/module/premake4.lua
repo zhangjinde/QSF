@@ -55,7 +55,7 @@ solution 'SharedService'
             'pthread',
         }
 
-    project 'sdkauth'
+    project 'SDKAuth'
         location 'build'
         kind 'SharedLib'
         uuid 'C29D5D99-B285-455E-8987-CB96C81EB68A'

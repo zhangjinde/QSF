@@ -30,37 +30,39 @@ static int lua_traceback(lua_State *L)
 LuaService::LuaService(Context& ctx)
     : Service("LuaSandbox", ctx)
 {
-    L = luaL_newstate();
-    CHECK_NOTNULL(L);
-    initialize();
+    luaVM_ = luaL_newstate();
+    CHECK_NOTNULL(luaVM_);
+    Initialize();
 }
 
 
 LuaService::~LuaService()
 {
-    if (L)
+    if (luaVM_)
     {
-        lua_close(L);
-        L = nullptr;
+        lua_close(luaVM_);
+        luaVM_ = nullptr;
     }
 }
 
-void LuaService::initialize()
+void LuaService::Initialize()
 {
-    auto& ctx = this->context();
+    lua_State* L = luaVM_;
+    auto& ctx = this->GetCtx();
     luaL_checkversion(L);
     lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
     luaL_openlibs(L);
     lua_initlibs(L);
-    loadLibPath();
+    LoadLibPath();
     lua_pushlightuserdata(L, &ctx);
     lua_setfield(L, LUA_REGISTRYINDEX, "qsf_ctx");
     lua_gc(L, LUA_GCRESTART, 0);
 }
 
-void LuaService::loadLibPath()
+void LuaService::LoadLibPath()
 {
-    string path = Env::get("lua_path");
+    lua_State* L = luaVM_;
+    string path = Env::Get("lua_path");
     if (!path.empty())
     {
         auto chunk = stringPrintf("package.path = package.path .. ';' .. '%s'", 
@@ -68,7 +70,7 @@ void LuaService::loadLibPath()
         int err = luaL_dostring(L, chunk.c_str());
         CHECK(!err) << lua_tostring(L, -1);
     }
-    string cpath = Env::get("lua_cpath");
+    string cpath = Env::Get("lua_cpath");
     if (!cpath.empty())
     {
         auto chunk = stringPrintf("package.cpath = package.cpath .. ';' .. '%s'", 
@@ -78,16 +80,16 @@ void LuaService::loadLibPath()
     }
 }
 
-int LuaService::run(const std::vector<string>& args)
+int LuaService::Run(const std::vector<string>& args)
 {
     if (args.empty())
     {
         return 1;
     }
     
-    const string& id = this->context().name();
+    const string& id = this->GetCtx().name();
     const string& filename = args[0];
-
+    lua_State* L = luaVM_;
     int r = luaL_loadfile(L, filename.c_str());
     if (r != LUA_OK)
     {

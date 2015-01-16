@@ -16,15 +16,15 @@ public:
     virtual ~LuaService();
 
     // First argument is the main chunk file name
-    virtual int run(const std::vector<std::string>& args);
+    virtual int Run(const std::vector<std::string>& args);
 
 private:
     // Pre-load modules
-    void initialize();
+    void Initialize();
 
     // Load lua module searching path
-    void loadLibPath();
+    void LoadLibPath();
 
 private:
-    lua_State*  L = nullptr;
+    lua_State*  luaVM_ = nullptr;
 };

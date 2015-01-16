@@ -60,7 +60,7 @@ static int qsf_launch(lua_State* L)
         args.append(" ");
         args.append(value);
     }
-    bool r = qsf::createService(type, ident, args);
+    bool r = qsf::CreateService(type, ident, args);
     lua_pushboolean(L, r);
     return 1;
 }
@@ -68,7 +68,7 @@ static int qsf_launch(lua_State* L)
 // stop all services
 static int qsf_shutdown(lua_State* L)
 {
-    qsf::stop();
+    qsf::Stop();
     return 0;
 }
 

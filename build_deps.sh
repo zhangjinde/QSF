@@ -7,15 +7,12 @@ sh ./autogen.sh
 make
 sudo make install
 make clean
-cd ../
 
 # zmq from ubuntu repo is version 2.2, which is too old for us
-cd deps/libzmq
+cd ../libzmq
 chmod +x ./configure
 ./configure
 make
 sudo make install
 sudo cp include/zmq.hpp /usr/local/include/
 make clean
-cd ../
-

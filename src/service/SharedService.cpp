@@ -5,6 +5,7 @@
 #include "SharedService.h"
 #include "core/Conv.h"
 #include "core/Strings.h"
+#include "core/Logging.h"
 
 using std::string;
 
@@ -17,7 +18,7 @@ SharedService::~SharedService()
 {
 }
 
-void SharedService::initialize(const std::string& path)
+void SharedService::Initialize(const std::string& path)
 {
     this_lib_.reset(new SharedLibrary(path));
     string name = this_lib_->path() + "_service_run";
@@ -28,15 +29,15 @@ void SharedService::initialize(const std::string& path)
     }
 }
 
-int SharedService::run(const std::vector<std::string>& args)
+int SharedService::Run(const std::vector<std::string>& args)
 {
     if (args.empty())
     {
         return 1;
     }
     std::string argument = join(" ", args);
-    auto& ctx = this->context();
-    initialize(args[0]);
+    auto& ctx = this->GetCtx();
+    Initialize(args[0]);
     int r = 0;
     try
     {
@@ -45,6 +46,7 @@ int SharedService::run(const std::vector<std::string>& args)
     catch (std::exception& ex)
     {
         r = 1;
+        LOG(ERROR) << typeid(ex).name() << ": " << ex.what();
     }
     return r;
 }
