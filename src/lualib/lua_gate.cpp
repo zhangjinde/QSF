@@ -101,7 +101,6 @@ static int gate_stop(lua_State* L)
 static int gate_gc(lua_State* L)
 {
     Gateway* gate = check_gate(L);
-    gate_stop(L);
     luaL_unref(L, LUA_REGISTRYINDEX, gate->ref);
     delete gate;
     return 0;

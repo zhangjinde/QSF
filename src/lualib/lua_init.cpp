@@ -5,8 +5,8 @@
 // declarations
 extern "C" {
 
-int luaopen_qsf(lua_State* L);
-int luaopen_utils(lua_State* L);
+int luaopen_mq(lua_State* L);
+int luaopen_process(lua_State* L);
 int luaopen_luazmq(lua_State* L);
 int luaopen_gate(lua_State* L);
 int luaopen_uuid(lua_State* L);
@@ -18,8 +18,8 @@ void lua_initlibs(lua_State* L)
 {
     static const luaL_Reg libs[] =
     {
-        { "qsf", luaopen_qsf },
-        { "qsf.utils", luaopen_utils },
+        { "mq", luaopen_mq },
+        { "process", luaopen_process },
         { "luazmq", luaopen_luazmq },
         { "gate", luaopen_gate },
         { "uuid", luaopen_uuid },

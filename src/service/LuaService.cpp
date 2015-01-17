@@ -55,7 +55,7 @@ void LuaService::Initialize()
     lua_initlibs(L);
     LoadLibPath();
     lua_pushlightuserdata(L, &ctx);
-    lua_setfield(L, LUA_REGISTRYINDEX, "qsf_ctx");
+    lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
     lua_gc(L, LUA_GCRESTART, 0);
 }
 
