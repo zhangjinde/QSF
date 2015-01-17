@@ -1,4 +1,5 @@
-local qsf = require 'qsf'
+local mq = require 'mq'
+local process = require 'process'
 local cmsgpack = require 'cmsgpack'
 local trace = require 'trace'
 
@@ -10,7 +11,7 @@ local assert = assert
 local table = table
 local coroutine = coroutine
 
-local rpc = {}
+local qsf = {}
 
 local MIN_FRAME_TIME = 10 --ms
 
@@ -19,17 +20,25 @@ local session_id_coroutine = {}
 local coroutine_session_id = {}
 
 -- remote procedure call, current coroutine will be suspend
-function rpc.call(node, method, ...)
+function qsf.call(node, method, ...)
     local session_id = coroutine_session_id[coroutine.running()]
     local request = {method=method, id=session_id, params={...}}
-    qsf.send(node, cmsgpack.pack(request))
+    mq.send(node, cmsgpack.pack(request))
     return coroutine.yield()
 end
 
 -- send notify message
-function rpc.notify(node, method, ...)
+function qsf.notify(node, method, ...)
     local request = {method=method, params={...}}
-    qsf.send(node, cmsgpack.pack(request))
+    mq.send(node, cmsgpack.pack(request))
+end
+
+function qsf.launch(name, path, ...)
+    mq.launch('LuaService', name, path, ...)
+end
+
+function qsf.launch_native(name, path, ...)
+    mq.launch('SharedService', name, path, ...)
 end
 
 -- reuse coroutine
@@ -74,7 +83,6 @@ end
 
 -- dispatch inproc message
 local function dispatch_rpc_message(from, data, service)
-    print('co num', table.size(coroutine_session_id), table.size(session_id_coroutine))
     local msg = cmsgpack.unpack(data)
     if msg.method then --request from other service
         session_id = session_id + 1
@@ -83,10 +91,10 @@ local function dispatch_rpc_message(from, data, service)
             if func then
                 local result = {func(table.unpack(msg.params))}
                 if #result > 0 then
-                    qsf.send(from, cmsgpack.pack({id=session_id, result=result}))
+                    mq.send(from, cmsgpack.pack({id=session_id, result=result}))
                 end
             else
-                qsf.send(from, cmsgpack.pack({id=session_id, error='method not found'}))
+                mq.send(from, cmsgpack.pack({id=session_id, error='method not found'}))
             end
         end)
         coroutine_session_id[co] = session_id
@@ -104,11 +112,11 @@ end
 
 local function dispatch_message(service, func)
     local opt = (func ~= nil and 'nowait' or nil)
-    local from, data = qsf.recv(opt)
+    local from, data = mq.recv(opt)
     if from and data then
         -- exit signal
         if from == 'sys' and data == 'exit' then
-            qsf.send(from, 'roger')
+            mq.send(from, 'roger')
             return false
         else
             dispatch_rpc_message(from, data, service)
@@ -122,24 +130,22 @@ local function dispatch_message(service, func)
     return true
 end
 
-function rpc.run(service, func)
+function qsf.run(service, func)
     assert(func == nil or type(func) == 'function')
-    local elapsed_tick = 0
     while true do
-        local start_tick = qsf.gettick()
+        local tick_start = process.gettick()
         local ok, result = xpcall(dispatch_message, trace.dump_stack, service, func)
         if ok then 
             if not result then break end
         else
             print(result) -- error message
         end
-        local over_tick = qsf.gettick()
-        local frame_tick = over_tick - start_tick
-        if frame_tick < MIN_FRAME_TIME then
-            qsf.sleep(1) -- yield OS thread context
+        local tick_end = process.gettick()
+        local tick_frame = tick_start - tick_end
+        if tick_frame < MIN_FRAME_TIME then
+            process.sleep(3000) -- yield OS thread context
         end
-        elapsed_tick = elapsed_tick + frame_tick
     end
 end
 
-return rpc
+return qsf
