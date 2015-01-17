@@ -5,7 +5,7 @@
 assert(os.get() == 'windows' or os.get() == 'linux')
 
 
-solution 'qsf'
+solution 'QSF'
     configurations {'Debug', 'Release'}
     language 'C++'
     --flags {'ExtraWarnings'}
@@ -53,7 +53,7 @@ solution 'qsf'
             'pthread',
         }
 
-    project 'qsf'
+    project 'QSF'
         location 'build'
         kind 'ConsoleApp'
         uuid '65BCF1EB-A936-4688-B1F4-7073B4ACE736'
@@ -89,7 +89,7 @@ solution 'qsf'
         links {'zmq', 'z', 'lua5.2', 'uuid'}
         end
 
-    project 'test-core'
+    project 'TestCore'
         location 'build'
         kind 'ConsoleApp'
         uuid '9E30CCC3-DA13-47FB-9902-7BF6D4792380'
@@ -109,7 +109,7 @@ solution 'qsf'
             'bin',
         }
 
-    project 'test-net'
+    project 'TestNet'
         location 'build'
         kind 'ConsoleApp'
         uuid '7EAB00F8-E324-45FC-83FA-3ADD6439BB89'
