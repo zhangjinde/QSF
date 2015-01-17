@@ -190,7 +190,7 @@ void Release()
 //////////////////////////////////////////////////////////////////////////
 namespace qsf {
 
-std::unique_ptr<zmq::socket_t> createDealer(const std::string& identity)
+std::unique_ptr<zmq::socket_t> CreateDealer(const std::string& identity)
 {
     std::unique_ptr<zmq::socket_t> dealer(new zmq::socket_t(s_context, ZMQ_DEALER));
     int linger = 0;
@@ -202,7 +202,7 @@ std::unique_ptr<zmq::socket_t> createDealer(const std::string& identity)
     return std::move(dealer);
 }
 
-void stop()
+void Stop()
 {
     s_close_flag = QSF_CLOSING;
     SystemCommand("exit");
@@ -212,7 +212,7 @@ void stop()
     }
 }
 
-bool createService(const std::string& type, 
+bool CreateService(const std::string& type, 
                    const std::string& name, 
                    const std::string& str)
 {
@@ -242,7 +242,7 @@ bool createService(const std::string& type,
     return true;
 }
 
-int start(const char* filename)
+int Start(const char* filename)
 {
     if (!Initialize(filename))
     {
@@ -253,7 +253,7 @@ int start(const char* filename)
     auto type = Env::Get("start_type");
     auto name = Env::Get("start_name");
     auto args = Env::Get("start_file");
-    CHECK(createService(type, name, args));
+    CHECK(CreateService(type, name, args));
 
     while (true)
     {

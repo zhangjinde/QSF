@@ -15,15 +15,26 @@ enum
     DEFAULT_HEATBEAT_CHECK_SEC = 5,
 };
 
+inline void XORHeader(void* data, size_t size, uint8_t key)
+{
+    uint8_t* p = reinterpret_cast<uint8_t*>(data);
+    for (size_t i = 0; i < size; i++)
+    {
+        *(p + i) = *(p + i) ^ key;
+    }
+}
+
 namespace net {
 
 Client::Client(asio::io_service& io_service, 
                uint32_t heart_beat_sec_,
-               uint16_t no_compress_size)
+               uint16_t no_compress_size,
+               uint8_t xor_key)
     : socket_(io_service), 
       heart_beat_sec_(heart_beat_sec_),
       heart_beat_(io_service, std::chrono::seconds(DEFAULT_HEATBEAT_CHECK_SEC)),
-      no_compress_size_(no_compress_size)
+      no_compress_size_(no_compress_size),
+      xor_key_(xor_key)
 
 {
     buffer_.reserve(DEFAULT_RECV_BUF_SIZE);
@@ -32,22 +43,22 @@ Client::Client(asio::io_service& io_service,
 
 Client::~Client()
 {
-    stop();
+    Stop();
 }
 
-void Client::stop()
+void Client::Stop()
 {
     socket_.close();
 }
 
-void Client::connect(const std::string& host, uint16_t port)
+void Client::Connect(const std::string& host, uint16_t port)
 {
     using namespace asio::ip;
     tcp::endpoint endpoint(address::from_string(host), port);
     socket_.connect(endpoint);
 }
 
-void Client::connect(const std::string& host,
+void Client::Connect(const std::string& host,
                      uint16_t port, 
                      ConnectCallback callback)
 {
@@ -56,46 +67,47 @@ void Client::connect(const std::string& host,
     socket_.async_connect(endpoint, callback);
 }
 
-void Client::startRead(ReadCallback callback)
+void Client::StartRead(ReadCallback callback)
 {
     on_read_ = callback;
-    heart_beat_.async_wait(std::bind(&Client::heartBeating, this));
-    readHead();
+    heart_beat_.async_wait(std::bind(&Client::HeartBeating, this));
+    ReadHead();
 }
 
-void Client::write(ByteRange data)
+void Client::Write(ByteRange data)
 {
     if (data.size() > MAX_PACKET_SIZE)
     {
         LOG(ERROR) << "too big size to send: " << prettyPrint(data.size(), PRETTY_BYTES);
         return;
     }
-    auto out = compressClientPacket(NO_COMPRESSION, data);
+    auto out = compressClientPacket(NO_COMPRESSION, data, xor_key_);
     if (out)
     {
         asio::async_write(socket_, 
             asio::buffer(out->buffer(), out->length()),
-            std::bind(&Client::handleSend, this, _1, _2, out));
+            std::bind(&Client::HandleSend, this, _1, _2, out));
     }
 }
 
-void Client::readHead()
+void Client::ReadHead()
 {
     asio::async_read(socket_, 
         asio::buffer(&head_, sizeof(head_)),
-        std::bind(&Client::handleReadHead, this, _1, _2));
+        std::bind(&Client::HandleReadHead, this, _1, _2));
 }
 
-void Client::handleReadHead(const std::error_code& ec, size_t bytes)
+void Client::HandleReadHead(const std::error_code& ec, size_t bytes)
 {
     if (!ec)
     {
+        XORHeader(&head_, sizeof(head_), xor_key_);
         if (head_.size > 0)
         {
             buffer_.resize(head_.size);
             asio::async_read(socket_, 
                 asio::buffer(buffer_.data(), head_.size),
-                std::bind(&Client::handleReadBody, this, _1, _2));
+                std::bind(&Client::HandleReadBody, this, _1, _2));
         }
     }
     else
@@ -104,23 +116,23 @@ void Client::handleReadHead(const std::error_code& ec, size_t bytes)
     }
 }
 
-void Client::handleReadBody(const std::error_code& ec, size_t bytes)
+void Client::HandleReadBody(const std::error_code& ec, size_t bytes)
 {
     if (!ec)
     {
-        if (head_.more == 0 && buffer_more_.size() == 0) // hot path
+        if (head_.more == PACKET_FRAME_MSG && buffer_more_.size() == 0) // hot path
         {
             auto buf = uncompressPacketFrame((CodecType)head_.codec, 
-                ByteRange(buffer_.data(), bytes));
+                ByteRange(buffer_.data(), bytes), xor_key_);
             if (buf)
             {
                 on_read_(buf->byteRange());
             }
         }
-        else // framed packet
+        else // PACKET_FRAME_PART, part of a msg
         {
             auto buf = uncompressPacketFrame((CodecType)head_.codec, 
-                ByteRange(buffer_.data(), bytes));
+                ByteRange(buffer_.data(), bytes), xor_key_);
             if (buf)
             {
                 auto range = buf->byteRange();
@@ -128,13 +140,13 @@ void Client::handleReadBody(const std::error_code& ec, size_t bytes)
                 buffer_more_.resize(oldsize + range.size());
                 memcpy(buffer_more_.data() + oldsize, range.data(), range.size());
             }
-            if (head_.more == 0)
+            if (head_.more == PACKET_FRAME_MSG)
             {
                 on_read_(ByteRange(buffer_more_.data(), buffer_more_.size()));
                 buffer_more_.resize(0);
             }
         }
-        readHead();
+        ReadHead();
     }
     else
     {
@@ -142,7 +154,7 @@ void Client::handleReadBody(const std::error_code& ec, size_t bytes)
     }
 }
 
-void Client::handleSend(const std::error_code& ec, 
+void Client::HandleSend(const std::error_code& ec, 
                         size_t bytes, 
                         std::shared_ptr<IOBuf> buf)
 {
@@ -156,7 +168,7 @@ void Client::handleSend(const std::error_code& ec,
     }
 }
 
-void Client::heartBeating()
+void Client::HeartBeating()
 {
     time_t now = time(NULL);
     if (now - last_send_time_ >= heart_beat_sec_)
@@ -168,10 +180,10 @@ void Client::heartBeating()
         out->append(sizeof(*head));
         asio::async_write(socket_, 
             asio::buffer(out->buffer(), out->length()),
-            std::bind(&Client::handleSend, this, _1, _2, out));
+            std::bind(&Client::HandleSend, this, _1, _2, out));
     }
     heart_beat_.expires_from_now(std::chrono::seconds(heart_beat_sec_/2));
-    heart_beat_.async_wait(std::bind(&Client::heartBeating, this));
+    heart_beat_.async_wait(std::bind(&Client::HeartBeating, this));
 }
 
 } // namespace net

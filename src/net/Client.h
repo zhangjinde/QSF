@@ -24,34 +24,35 @@ public:
 public:
     explicit Client(asio::io_service& io_service, 
                     uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC,
-                    uint16_t no_compress_size = DEFAULT_NO_COMPRESSION_SIZE);
+                    uint16_t no_compress_size = DEFAULT_NO_COMPRESSION_SIZE,
+                    uint8_t xor_key = DEFAULT_XOR_KEY);
     ~Client();
 
     Client(const Client&) = delete;
     Client& operator = (const Client&) = delete;
 
-    void connect(const std::string& host, uint16_t port);
-    void connect(const std::string& host, uint16_t port, ConnectCallback callback);
+    void Connect(const std::string& host, uint16_t port);
+    void Connect(const std::string& host, uint16_t port, ConnectCallback callback);
 
-    void startRead(ReadCallback callback);
-    void write(ByteRange data);
-    void write(const std::string& str) { write(ByteRange(StringPiece(str))); }
-    void write(const void* data, size_t size)
+    void StartRead(ReadCallback callback);
+    void Write(ByteRange data);
+    void Write(const std::string& str) { Write(ByteRange(StringPiece(str))); }
+    void Write(const void* data, size_t size)
     {
         assert(data && size > 0);
-        write(ByteRange(reinterpret_cast<const uint8_t*>(data), size));
+        Write(ByteRange(reinterpret_cast<const uint8_t*>(data), size));
     }
 
-    void stop();
+    void Stop();
 
 private:
-    void readHead();
-    void handleReadHead(const std::error_code& ec, size_t bytes);
-    void handleReadBody(const std::error_code& ec, size_t bytes);
-    void handleSend(const std::error_code& ec, 
+    void ReadHead();
+    void HandleReadHead(const std::error_code& ec, size_t bytes);
+    void HandleReadBody(const std::error_code& ec, size_t bytes);
+    void HandleSend(const std::error_code& ec, 
                     size_t bytes, 
                     std::shared_ptr<IOBuf> buf);
-    void heartBeating();
+    void HeartBeating();
 
 private:
     asio::ip::tcp::socket    socket_;
@@ -62,10 +63,11 @@ private:
     std::vector<uint8_t>    buffer_more_;
     ReadCallback            on_read_;
 
-    time_t  last_send_time_ = 0;
+    time_t      last_send_time_ = 0;
+    uint8_t     xor_key_;
 
-    const uint32_t heart_beat_sec_;
-    const uint16_t no_compress_size_;
+    const uint16_t  no_compress_size_;
+    const uint32_t  heart_beat_sec_;
 };
 
 typedef std::shared_ptr<Client> ClientPtr;

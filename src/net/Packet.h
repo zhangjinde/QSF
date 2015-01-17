@@ -20,10 +20,12 @@ namespace net {
 enum
 {
     // max content size, size of a packet is limited to 8K
-    MAX_PACKET_SIZE = 8 * 1024,
+    MAX_PACKET_SIZE = 8192,
 
     // max 128K
     MAX_SEND_BYTES = 128 * 1024,
+
+    DEFAULT_XOR_KEY = 0x11,
 
     DEFAULT_NO_COMPRESSION_SIZE = 128,
 
@@ -62,6 +64,11 @@ enum CodecType
     ZLIB = 1,
 };
 
+enum PacketType
+{
+    PACKET_FRAME_PART = 1,
+    PACKET_FRAME_MSG = 2,
+};
 
 struct ClientHeader
 {

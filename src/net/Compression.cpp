@@ -73,10 +73,21 @@ inline std::shared_ptr<IOBuf> zlibUnCompress(ByteRange data)
     return IOBuf::takeOwnership(uncompBuffer, stream.total_out, [](void*){});
 }
 
+inline void XORKey(ByteRange data, uint8_t key)
+{
+    uint8_t* pos = const_cast<uint8_t*>(data.data());
+    for (size_t n = 0; n < data.size(); ++n)
+    {
+        uint8_t* p = pos + n;
+        *p = *p ^ key;
+    }
+}
+
 } // anounymouse namespace
 
 
-std::shared_ptr<IOBuf> compressServerPacket(CodecType codec, ByteRange frame, bool more)
+std::shared_ptr<IOBuf> compressServerPacket(CodecType codec, ByteRange frame, uint8_t key, 
+    uint8_t more)
 {
     assert(frame.size() > 0 && frame.size() <= UINT16_MAX);
     const auto head_size = sizeof(ServerHeader);
@@ -91,6 +102,7 @@ std::shared_ptr<IOBuf> compressServerPacket(CodecType codec, ByteRange frame, bo
             head->size = static_cast<uint16_t>(out->length() - head_size);
             head->codec = NO_COMPRESSION;
             head->more = more;
+            XORKey(out->byteRange(), key);
             return out;
         }
     case ZLIB:
@@ -100,6 +112,7 @@ std::shared_ptr<IOBuf> compressServerPacket(CodecType codec, ByteRange frame, bo
             head->size = static_cast<uint16_t>(out->length() - head_size);
             head->codec = ZLIB;
             head->more = more;
+            XORKey(out->byteRange(), key);
             return out;
         }
     default:
@@ -108,7 +121,7 @@ std::shared_ptr<IOBuf> compressServerPacket(CodecType codec, ByteRange frame, bo
     }
 }
 
-std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame)
+std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame, uint8_t key)
 {
     assert(frame.size() > 0 && frame.size() <= UINT16_MAX);
     const auto head_size = sizeof(ClientHeader);
@@ -118,12 +131,14 @@ std::shared_ptr<IOBuf> compressClientPacket(CodecType codec, ByteRange frame)
     ClientHeader* head = reinterpret_cast<ClientHeader*>(out->buffer());
     head->size = static_cast<uint16_t>(out->length() - head_size);
     head->checksum = crc16(out->buffer() + head_size, frame.size());
+    XORKey(out->byteRange(), key);
     return out;
 }
 
-std::shared_ptr<IOBuf> uncompressPacketFrame(CodecType codec, ByteRange frame)
+std::shared_ptr<IOBuf> uncompressPacketFrame(CodecType codec, ByteRange frame, uint8_t key)
 {
     assert(frame.size() <= UINT16_MAX);
+    XORKey(frame, key);
     switch (codec)
     {
     case NO_COMPRESSION:
@@ -132,7 +147,9 @@ std::shared_ptr<IOBuf> uncompressPacketFrame(CodecType codec, ByteRange frame)
             return IOBuf::takeOwnership((void*)data, frame.size(), [](void*){});
         }
     case ZLIB:
-        return zlibUnCompress(frame);
+        {
+            return zlibUnCompress(frame);
+        }
     default:
         throw std::invalid_argument(to<std::string>(
             "Compression type ", codec, " not supported"));

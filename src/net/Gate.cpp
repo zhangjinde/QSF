@@ -26,9 +26,9 @@ struct Gate::Session
     time_t          last_recv_time_ = 0;
     ClientHeader    head_;
 
-    std::vector<uint8_t>            recv_buf_;
-    std::string                     remote_addr_;
-    asio::ip::tcp::socket    socket_;
+    std::vector<uint8_t>    recv_buf_;
+    std::string             remote_addr_;
+    asio::ip::tcp::socket   socket_;
 
     Session(asio::io_service& io_service, uint32_t serial)
         : socket_(io_service), serial_(serial)
@@ -38,6 +38,14 @@ struct Gate::Session
     }
 };
 
+inline void XORBuffer(void* data, size_t size, uint8_t key)
+{
+    uint8_t* p = reinterpret_cast<uint8_t*>(data);
+    for (size_t i = 0; i < size; i++)
+    {
+        *(p + i) = *(p + i) ^ key;
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -45,23 +53,25 @@ Gate::Gate(asio::io_service& io_service,
            uint32_t max_connections, 
            uint32_t heart_beat_sec,
            uint32_t heart_beat_check_sec,
-           uint16_t max_no_compress_size)
+           uint16_t max_no_compress_size,
+           uint8_t xor_key)
     : io_service_(io_service), 
       acceptor_(io_service), 
       drop_timer_(io_service),
       max_connections_(max_connections),
       heart_beat_sec_(heart_beat_sec),
       heart_beat_check_sec_(heart_beat_check_sec),
-      max_no_compress_size_(max_no_compress_size)
+      max_no_compress_size_(max_no_compress_size),
+      xor_key_(xor_key)
 {
 }
 
 Gate::~Gate()
 {
-    stop();
+    Stop();
 }
 
-void Gate::start(const std::string& host, uint16_t port, ReadCallback callback)
+void Gate::Start(const std::string& host, uint16_t port, ReadCallback callback)
 {
     using namespace asio::ip;
     assert(callback);
@@ -74,12 +84,12 @@ void Gate::start(const std::string& host, uint16_t port, ReadCallback callback)
     acceptor_.listen();
 
     drop_timer_.expires_from_now(std::chrono::seconds(heart_beat_check_sec_));
-    drop_timer_.async_wait(std::bind(&Gate::checkHeartBeat, this));
+    drop_timer_.async_wait(std::bind(&Gate::CheckHeartBeat, this));
 
-    startAccept();
+    StartAccept();
 }
 
-void Gate::stop()
+void Gate::Stop()
 {
     drop_timer_.cancel();
     acceptor_.close();
@@ -87,7 +97,7 @@ void Gate::stop()
     sessions_.clear();
 }
 
-Gate::SessionPtr Gate::getSession(uint32_t serial)
+Gate::SessionPtr Gate::GetSession(uint32_t serial)
 {
     auto iter = sessions_.find(serial);
     if (iter != sessions_.end())
@@ -97,7 +107,7 @@ Gate::SessionPtr Gate::getSession(uint32_t serial)
     return SessionPtr();
 }
 
-void Gate::kick(SessionPtr session)
+void Gate::Kick(SessionPtr session)
 {
     if (!session->closed_ && session->socket_.is_open())
     {
@@ -107,59 +117,59 @@ void Gate::kick(SessionPtr session)
     }
 }
 
-bool Gate::kick(uint32_t serial)
+bool Gate::Kick(uint32_t serial)
 {
-    auto session = getSession(serial);
+    auto session = GetSession(serial);
     if (session)
     {
-        kick(session);
+        Kick(session);
         return true;
     }
     return false;
 }
 
-void Gate::kickAll()
+void Gate::KickAll()
 {
     sessions_.clear();
 }
 
-bool Gate::send(uint32_t serial, ByteRange data)
+bool Gate::Send(uint32_t serial, ByteRange data)
 {
-    auto session = getSession(serial);
+    auto session = GetSession(serial);
     if (session)
     {
-        return sessionWritePacket(session, data);
+        return SessionWritePacket(session, data);
     }
     return false;
 }
 
-void Gate::sendAll(const void* buf, size_t size)
+void Gate::SendAll(const void* buf, size_t size)
 {
     assert(buf && size > 0);
     for (auto& item : sessions_)
     {
         auto& session = item.second;
         ByteRange data(reinterpret_cast<const uint8_t*>(buf), size);
-        sessionWritePacket(session, data);
+        SessionWritePacket(session, data);
     }
 }
 
-uint32_t Gate::nextSerial()
+uint32_t Gate::NextSerial()
 {
     while (sessions_.count(current_serial_++))
         ;
     return current_serial_;
 }
 
-void Gate::startAccept()
+void Gate::StartAccept()
 {
-    auto serial = nextSerial();
+    auto serial = NextSerial();
     SessionPtr session = std::make_shared<Session>(io_service_, serial);
-    acceptor_.async_accept(session->socket_, std::bind(&Gate::handleAccept,
+    acceptor_.async_accept(session->socket_, std::bind(&Gate::HandleAccept,
         this, _1, session));
 }
 
-void Gate::handleAccept(const std::error_code& err, SessionPtr session)
+void Gate::HandleAccept(const std::error_code& err, SessionPtr session)
 {
     auto serial = session->serial_;
     if (err)
@@ -175,7 +185,7 @@ void Gate::handleAccept(const std::error_code& err, SessionPtr session)
         if (!black_list_.count(address))
         {
             sessions_[serial] = session;
-            sessionStartRead(session);
+            SessionStartRead(session);
         }
         else
         {
@@ -191,22 +201,22 @@ void Gate::handleAccept(const std::error_code& err, SessionPtr session)
     }
     if (acceptor_.is_open())
     {
-        startAccept();
+        StartAccept();
     }
 }
 
-void Gate::denyAddress(const std::string& address)
+void Gate::DenyAddress(const std::string& address)
 {
     black_list_.insert(address);
 }
 
-void Gate::allowAddress(const std::string& address)
+void Gate::AllowAddress(const std::string& address)
 {
     black_list_.erase(address);
 }
 
 
-void Gate::checkHeartBeat()
+void Gate::CheckHeartBeat()
 {
     std::vector<uint32_t> dead_connections;
     dead_connections.reserve(DEFAULT_DEAD_CONN_SIZE);
@@ -233,78 +243,81 @@ void Gate::checkHeartBeat()
         auto elapsed = now - session->last_recv_time_;
         if (elapsed >= heart_beat_sec_)
         {
-            kick(session);
+            Kick(session);
             on_read_(ERR_HEARTBEAT_TIMEOUT, session->serial_, StringPiece("timeout"));
         }
     }
 
     // repeat timer
     drop_timer_.expires_from_now(std::chrono::seconds(heart_beat_check_sec_));
-    drop_timer_.async_wait(std::bind(&Gate::checkHeartBeat, this));
+    drop_timer_.async_wait(std::bind(&Gate::CheckHeartBeat, this));
 }
 
-void Gate::sessionStartRead(SessionPtr session)
+void Gate::SessionStartRead(SessionPtr session)
 {
     auto& head = session->head_;
+    session->last_recv_time_ = time(NULL);
     asio::async_read(session->socket_, 
         asio::buffer(&head, sizeof(head)),
-        std::bind(&Gate::handleReadHead, this, session->serial_, _1, _2));
+        std::bind(&Gate::HandleReadHead, this, session->serial_, _1, _2));
 }
 
-bool Gate::sessionWritePacket(SessionPtr session, ByteRange data)
+bool Gate::SessionWritePacket(SessionPtr session, ByteRange data)
 {
     if (data.size() > 0 && data.size() < MAX_SEND_BYTES)
     {
         while (data.size() > MAX_PACKET_SIZE)
         {
             auto frame = data.subpiece(0, MAX_PACKET_SIZE);
-            sessionWriteFrame(session, frame, true);
+            SessionWriteFrame(session, frame, PACKET_FRAME_PART);
             data.advance(MAX_PACKET_SIZE);
         }
-        sessionWriteFrame(session, data, 0);
+        SessionWriteFrame(session, data, PACKET_FRAME_MSG);
         return true;
     }
     else
     {
+        LOG(WARNING) << "packet too big: " << data.size();
         return false;
     }
 }
 
-void Gate::sessionWriteFrame(SessionPtr session, ByteRange frame, bool more)
+void Gate::SessionWriteFrame(SessionPtr session, ByteRange frame, PacketType type)
 {
     assert(frame.size() <= UINT16_MAX);
     CodecType codec = NO_COMPRESSION;
-    if (frame.size() > max_no_compress_size_)
+    if (frame.size() >= max_no_compress_size_)
     {
         codec = ZLIB;
     }
-    auto out = compressServerPacket(codec, frame, more);
+    auto out = compressServerPacket(codec, frame, xor_key_, type);
     if (out && !out->empty())
     {
         asio::async_write(session->socket_, 
             asio::buffer(out->buffer(), out->length()), 
-            std::bind(&Gate::handleWrite, this, session->serial_, _1, _2, out));
+            std::bind(&Gate::HandleWrite, this, session->serial_, _1, _2, out));
     }
 }
 
-void Gate::handleReadHead(uint32_t serial, const std::error_code& ec, size_t bytes)
+void Gate::HandleReadHead(uint32_t serial, const std::error_code& ec, size_t bytes)
 {
-    auto session = getSession(serial);
+    auto session = GetSession(serial);
     if (!session)
     {
         return;
     }
     if (ec)
     {
-        kick(session);
+        Kick(session);
         on_read_(ec.value(), serial, StringPiece(ec.message()));
         return;
     }
 
     auto& head = session->head_;
+    XORBuffer(&head, sizeof(head), xor_key_);
     if (head.size > MAX_PACKET_SIZE)
     {
-        kick(session);
+        Kick(session);
         auto errmsg = stringPrintf("invalid body size: %u", head.size);
         on_read_(ERR_INVALID_BODY_SIZE, serial, StringPiece(errmsg));
         return;
@@ -312,7 +325,7 @@ void Gate::handleReadHead(uint32_t serial, const std::error_code& ec, size_t byt
     if (head.size == 0) // empty content means heartbeating
     {
         session->last_recv_time_ = time(NULL);
-        sessionStartRead(session); // ready for packet content body
+        SessionStartRead(session); // ready for packet content body
     }
     else
     {
@@ -323,44 +336,45 @@ void Gate::handleReadHead(uint32_t serial, const std::error_code& ec, size_t byt
         }
         asio::async_read(session->socket_, 
             asio::buffer(buffer.data(), head.size),
-            std::bind(&Gate::handleReadBody, this, serial, _1, _2));
+            std::bind(&Gate::HandleReadBody, this, serial, _1, _2));
     }
 }
 
-void Gate::handleReadBody(uint32_t serial, const std::error_code& ec, size_t bytes)
+void Gate::HandleReadBody(uint32_t serial, const std::error_code& ec, size_t bytes)
 {
-    auto session = getSession(serial);
+    auto session = GetSession(serial);
     if (!session)
     {
         return;
     }
     if (ec)
     {
-        kick(session);
+        Kick(session);
         on_read_(ec.value(), serial, StringPiece(ec.message()));
         return;
     }
 
     auto& head = session->head_;
     auto& buffer = session->recv_buf_;
-    const uint8_t* data = buffer.data();
+    uint8_t* data = buffer.data();
+    XORBuffer(data, bytes, xor_key_);
     auto checksum = crc16(data, bytes);
     if (head.checksum == checksum)
     {
         session->last_recv_time_ = time(NULL);
         on_read_(0, serial, ByteRange(data, bytes));
-        sessionStartRead(session); // waiting for another packet
+        SessionStartRead(session); // waiting for another packet
     }
     else
     {
-        kick(session);
+        Kick(session);
         auto errmsg = stringPrintf("invalid body checksum, expect 0x%x, but get 0x%x",
             checksum, head.checksum);
         on_read_(ERR_INVALID_CHECKSUM, serial, StringPiece(errmsg));
     }
 }
 
-void Gate::handleWrite(uint32_t serial, 
+void Gate::HandleWrite(uint32_t serial, 
                        const std::error_code& ec,
                        size_t bytes, 
                        std::shared_ptr<IOBuf> buf)

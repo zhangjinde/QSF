@@ -28,50 +28,51 @@ public:
                   uint32_t max_connections = DEFAULT_MAX_CONNECTIONS,
                   uint32_t heart_beat_sec = DEFAULT_MAX_HEARTBEAT_SEC,
                   uint32_t heart_beat_check_sec = DEFAULT_HEARTBEAT_CHECK_SEC,
-                  uint16_t max_no_compress_size = DEFAULT_NO_COMPRESSION_SIZE);
+                  uint16_t max_no_compress_size = DEFAULT_NO_COMPRESSION_SIZE,
+                  uint8_t xor_key = DEFAULT_XOR_KEY);
     ~Gate();
 
     Gate(const Gate&) = delete;
     Gate& operator = (const Gate&) = delete;
 
-    void start(const std::string& host, uint16_t port, ReadCallback callback);
+    void Start(const std::string& host, uint16_t port, ReadCallback callback);
 
-    void stop();
+    void Stop();
 
-    bool send(uint32_t serial, ByteRange data);
-    bool send(uint32_t serial, const std::string& str)
+    bool Send(uint32_t serial, ByteRange data);
+    bool Send(uint32_t serial, const std::string& str)
     {
-        return send(serial, ByteRange(StringPiece(str)));
+        return Send(serial, ByteRange(StringPiece(str)));
     }
-    bool send(uint32_t serial, const void* buf, size_t size)
+    bool Send(uint32_t serial, const void* buf, size_t size)
     {
         assert(buf && size > 0);
-        return send(serial, ByteRange(reinterpret_cast<const uint8_t*>(buf), size));
+        return Send(serial, ByteRange(reinterpret_cast<const uint8_t*>(buf), size));
     }
-    void sendAll(const void* buf, size_t size);
+    void SendAll(const void* buf, size_t size);
 
-    bool kick(uint32_t serial);
-    void kickAll();
+    bool Kick(uint32_t serial);
+    void KickAll();
 
-    uint32_t size() const { return sessions_.size(); }
+    uint32_t GetSessionCount() const { return sessions_.size(); }
 
-    void denyAddress(const std::string& address);
-    void allowAddress(const std::string& address);
+    void DenyAddress(const std::string& address);
+    void AllowAddress(const std::string& address);
 
 private:
-    uint32_t nextSerial();
-    SessionPtr getSession(uint32_t serial);
-    void kick(SessionPtr session);
-    void checkHeartBeat();
-    void startAccept();
-    void sessionStartRead(SessionPtr session);
-    bool sessionWritePacket(SessionPtr session, ByteRange data);
-    void sessionWriteFrame(SessionPtr session, ByteRange frame, bool more);
+    uint32_t NextSerial();
+    SessionPtr GetSession(uint32_t serial);
+    void Kick(SessionPtr session);
+    void CheckHeartBeat();
+    void StartAccept();
+    void SessionStartRead(SessionPtr session);
+    bool SessionWritePacket(SessionPtr session, ByteRange data);
+    void SessionWriteFrame(SessionPtr session, ByteRange frame, PacketType type);
 
-    void handleAccept(const std::error_code& err, SessionPtr ptr);
-    void handleReadHead(uint32_t serial, const std::error_code& ec, size_t bytes);
-    void handleReadBody(uint32_t serial, const std::error_code& ec, size_t bytes);
-    void handleWrite(uint32_t serial, const std::error_code& ec, size_t bytes, 
+    void HandleAccept(const std::error_code& err, SessionPtr ptr);
+    void HandleReadHead(uint32_t serial, const std::error_code& ec, size_t bytes);
+    void HandleReadBody(uint32_t serial, const std::error_code& ec, size_t bytes);
+    void HandleWrite(uint32_t serial, const std::error_code& ec, size_t bytes, 
                      std::shared_ptr<IOBuf> buf);
 
 private:
@@ -82,14 +83,17 @@ private:
     ReadCallback    on_read_;
     
     uint32_t current_serial_ = 1000;
+
     std::unordered_map<uint32_t, SessionPtr> sessions_;
 
+    std::unordered_set<std::string>  black_list_;
+
+    uint8_t     xor_key_;
+
+    const uint16_t max_no_compress_size_;
     const uint32_t heart_beat_sec_;
     const uint32_t heart_beat_check_sec_;
     const uint32_t max_connections_;
-    const uint16_t max_no_compress_size_;
-
-    std::unordered_set<std::string>  black_list_;
 };
 
 typedef std::shared_ptr<Gate>   GatePtr;
