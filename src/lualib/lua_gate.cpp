@@ -48,7 +48,7 @@ static int gate_create(lua_State* L)
     uint32_t heart_beat_check_sec = DEFAULT_HEARTBEAT_CHECK_SEC;
     uint32_t max_connections = DEFAULT_MAX_CONNECTIONS;
     uint32_t no_compression_size = DEFAULT_NO_COMPRESSION_SIZE;
-
+    uint8_t xor_key = DEFAULT_XOR_KEY;
     int top = lua_gettop(L);
     if (lua_gettop(L) > 0 && lua_istable(L, 1))
     {
@@ -72,11 +72,16 @@ static int gate_create(lua_State* L)
         {
             no_compression_size = (uint32_t)luaL_checkinteger(L, -1);
         }
+        lua_getfield(L, 1, "xor_key");
+        if (lua_isnumber(L, -1))
+        {
+            xor_key = (uint8_t)luaL_checkinteger(L, -1);
+        }
         lua_pop(L, lua_gettop(L) - top);
     }
     ptr->server.reset(new Gate(*global_io_service, 
         max_connections, heart_beat_sec, heart_beat_check_sec, 
-        no_compression_size));
+        no_compression_size, xor_key));
     ptr->ref = LUA_NOREF;
     void* udata = lua_newuserdata(L, sizeof(ptr));
     memcpy(udata, &ptr, sizeof(ptr));
@@ -89,7 +94,7 @@ static int gate_stop(lua_State* L)
 {
     Gateway* gate = check_gate(L);
     assert(gate);
-    gate->server->stop();
+    gate->server->Stop();
     return 0;
 }
 
@@ -123,7 +128,7 @@ static int gate_start(lua_State* L)
         return luaL_error(L, "luaL_ref() failed: %d", ref);
     }
     gate->ref = ref;
-    gate->server->start(host, port, [=](int err, uint32_t serial, ByteRange data)
+    gate->server->Start(host, port, [=](int err, uint32_t serial, ByteRange data)
     {
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
         luaL_argcheck(L, lua_isfunction(L, -1), 1, "callback must be function");
@@ -153,7 +158,7 @@ static int gate_send(lua_State* L)
     size_t size;
     const char* data = luaL_checklstring(L, 3, &size);
     luaL_argcheck(L, data && size > 0, 3, "invalid data");
-    gate->server->send(serial, data, size);
+    gate->server->Send(serial, data, size);
     return 0;
 }
 
@@ -164,7 +169,7 @@ static int gate_sendall(lua_State* L)
     size_t size;
     const char* data = luaL_checklstring(L, 2, &size);
     luaL_argcheck(L, data && size > 0, 2, "invalid data");
-    gate->server->sendAll(data, size);
+    gate->server->SendAll(data, size);
     return 0;
 }
 
@@ -173,7 +178,7 @@ static int gate_kick(lua_State* L)
     Gateway* gate = check_gate(L);
     assert(gate);
     uint32_t serial = (uint32_t)luaL_checknumber(L, 2);
-    gate->server->kick(serial);
+    gate->server->Kick(serial);
     return 0;
 }
 
@@ -181,7 +186,7 @@ static int gate_kickall(lua_State* L)
 {
     Gateway* gate = check_gate(L);
     assert(gate);
-    gate->server->kickAll();
+    gate->server->KickAll();
     return 0;
 }
 
@@ -190,7 +195,7 @@ static int gate_deny(lua_State* L)
     Gateway* gate = check_gate(L);
     assert(gate);
     const std::string& address = luaL_checkstring(L, 2);
-    gate->server->denyAddress(address);
+    gate->server->DenyAddress(address);
     return 0;
 }
 
@@ -199,7 +204,7 @@ static int gate_allow(lua_State* L)
     Gateway* gate = check_gate(L);
     assert(gate);
     const std::string& address = luaL_checkstring(L, 2);
-    gate->server->allowAddress(address);
+    gate->server->AllowAddress(address);
     return 0;
 }
 
@@ -225,7 +230,7 @@ static int client_stop(lua_State* L)
 {
     Client* ptr = check_client(L);
     assert(ptr);
-    ptr->client->stop();
+    ptr->client->Stop();
     return 0;
 }
 
@@ -255,7 +260,7 @@ static int client_connect(lua_State* L)
     uint16_t port = (uint16_t)luaL_checkint(L, 3);
     try
     {
-        ptr->client->connect(host, port);
+        ptr->client->Connect(host, port);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -275,7 +280,7 @@ static int client_asyn_connect(lua_State* L)
     uint16_t port = (uint16_t)luaL_checkint(L, 3);
     luaL_argcheck(L, lua_isfunction(L, -1), 4, "connect callback must be function");
     int ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    ptr->client->connect(host, port, [=](const std::error_code& ec)
+    ptr->client->Connect(host, port, [=](const std::error_code& ec)
     {
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
         luaL_argcheck(L, lua_isfunction(L, -1), 1, "callback must be function");
@@ -306,7 +311,7 @@ static int client_send(lua_State* L)
     size_t size;
     const char* data = luaL_checklstring(L, 2, &size);
     luaL_argcheck(L, data && size > 0, 2, "invalid data");
-    ptr->client->write(data, size);
+    ptr->client->Write(data, size);
     return 0;
 }
 
@@ -321,7 +326,7 @@ static int client_read(lua_State* L)
         return luaL_error(L, "luaL_ref() failed: %d", ref);
     }
     ptr->ref = ref;
-    ptr->client->startRead([=](ByteRange data)
+    ptr->client->StartRead([=](ByteRange data)
     {
         lua_rawgeti(L, LUA_REGISTRYINDEX, ptr->ref);
         luaL_argcheck(L, lua_isfunction(L, -1), 1, "callback should be function");

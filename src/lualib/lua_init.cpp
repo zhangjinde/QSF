@@ -20,7 +20,7 @@ void lua_initlibs(lua_State* L)
     {
         { "qsf", luaopen_qsf },
         { "qsf.utils", luaopen_utils },
-        { "zmq", luaopen_luazmq },
+        { "luazmq", luaopen_luazmq },
         { "gate", luaopen_gate },
         { "uuid", luaopen_uuid },
         { "cmsgpack", luaopen_cmsgpack },

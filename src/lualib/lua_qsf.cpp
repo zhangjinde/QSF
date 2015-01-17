@@ -50,17 +50,33 @@ static int qsf_recv(lua_State* L)
 // launch a new service
 static int qsf_launch(lua_State* L)
 {
-    std::string type = luaL_checkstring(L, 1);
-    std::string ident = luaL_checkstring(L, 2);
-    std::string args = luaL_checkstring(L, 3);
+    std::string ident = luaL_checkstring(L, 1);
+    std::string args = luaL_checkstring(L, 2);
     int top = lua_gettop(L);
-    for (int i = 4; i <= top; i++)
+    for (int i = 3; i <= top; i++)
     {
         const char* value = luaL_checkstring(L, i);
         args.append(" ");
         args.append(value);
     }
-    bool r = qsf::CreateService(type, ident, args);
+    bool r = qsf::CreateService("LuaService", ident, args);
+    lua_pushboolean(L, r);
+    return 1;
+}
+
+// launch a new native service
+static int qsf_launch_native(lua_State* L)
+{
+    std::string ident = luaL_checkstring(L, 1);
+    std::string args = luaL_checkstring(L, 2);
+    int top = lua_gettop(L);
+    for (int i = 3; i <= top; i++)
+    {
+        const char* value = luaL_checkstring(L, i);
+        args.append(" ");
+        args.append(value);
+    }
+    bool r = qsf::CreateService("SharedService", ident, args);
     lua_pushboolean(L, r);
     return 1;
 }
@@ -113,6 +129,7 @@ int luaopen_qsf(lua_State* L)
         { "send", qsf_send },
         { "recv", qsf_recv },
         { "launch", qsf_launch },
+        { "launch_native", qsf_launch_native },
         { "shutdown", qsf_shutdown },
         { "sleep", qsf_sleep },
         { "gettick", qsf_gettick },

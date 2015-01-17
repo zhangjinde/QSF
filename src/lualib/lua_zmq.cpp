@@ -8,26 +8,17 @@
 #include <zmq_utils.h>
 #include <lua.hpp>
 
-
 #ifdef _MSC_VER
-# define snprintf       _snprintf
-# define LZMQ_EXPORT    __declspec(dllexport)
-#else
-# define LZMQ_EXPORT
+#define snprintf        _snprintf
 #endif
 
+#define LZMQ_SOCKET     "socket*"
+#define check_socket(L) (*(void**)luaL_checkudata(L, 1, LZMQ_SOCKET))
+
+#define LZMQ_CHECK_THROW(L, rc)  if (rc != 0)    \
+        return luaL_error(L, "zmq error %d: %s", rc, zmq_strerror(rc));
 
 static void* global_context = NULL;
-
-
-#define ZSOCK_META_HANDLE  "socket*"
-#define check_socket(L)     (*(void**)luaL_checkudata(L, 1, ZSOCK_META_HANDLE))
-
-inline int lzmq_throw_error(lua_State* L)
-{
-    int err = zmq_errno();
-    return luaL_error(L, "zmq error %d: %s", err, zmq_strerror(err));
-}
 
 static int lzmq_create_socket(lua_State* L)
 {
@@ -35,18 +26,18 @@ static int lzmq_create_socket(lua_State* L)
     void* socket = zmq_socket(global_context, type);
     if (socket == NULL)
     {
-        return lzmq_throw_error(L);
+        return luaL_error(L, "create socket failed: %d", zmq_errno());
     }
     void* udata = lua_newuserdata(L, sizeof(socket));
     memcpy(udata, &socket, sizeof(socket));
-    luaL_getmetatable(L, ZSOCK_META_HANDLE);
+    luaL_getmetatable(L, LZMQ_SOCKET);
     lua_setmetatable(L, -2);
     return 1;
 }
 
 static int zsocket_close(lua_State* L)
 {
-    void** udata = (void**)luaL_checkudata(L, 1, ZSOCK_META_HANDLE);
+    void** udata = (void**)luaL_checkudata(L, 1, LZMQ_SOCKET);
     void* socket = *udata;
     if (socket != NULL)
     {
@@ -57,10 +48,7 @@ static int zsocket_close(lua_State* L)
     return 0;
 }
 
-static int zsocket_gc(lua_State* L)
-{
-    return zsocket_close(L);
-}
+#define zsocket_gc  zsocket_close
 
 static int zsocket_tostring(lua_State* L)
 {
@@ -75,10 +63,7 @@ static int zsocket_bind(lua_State* L)
     const char* addr = luaL_checkstring(L, 2);
     assert(socket && addr);
     int rc = zmq_bind(socket, addr);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -88,10 +73,7 @@ static int zsocket_unbind(lua_State* L)
     const char* addr = luaL_checkstring(L, 2);
     assert(socket && addr);
     int rc = zmq_unbind(socket, addr);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -101,10 +83,7 @@ static int zsocket_connect(lua_State* L)
     const char* addr = luaL_checkstring(L, 2);
     assert(socket && addr);
     int rc = zmq_connect(socket, addr);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -114,10 +93,7 @@ static int zsocket_disconnect(lua_State* L)
     const char* addr = luaL_checkstring(L, 2);
     assert(socket && addr);
     int rc = zmq_disconnect(socket, addr);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -140,12 +116,17 @@ static int zsocket_send(lua_State* L)
         }
     }
     int rc = zmq_send(socket, data, len, flag);
-    if (rc == -1)
+    if (rc > 0)
     {
-        return lzmq_throw_error(L);
+        lua_pushinteger(L, rc);
+        return 1;
     }
-    lua_pushinteger(L, rc);
-    return 1;
+    else
+    {
+        lua_pushnil(L);
+        lua_pushinteger(L, zmq_errno());
+        return 2;
+    }
 }
 
 
@@ -161,16 +142,22 @@ static int zsocket_recv(lua_State* L)
     zmq_msg_t msg;
     zmq_msg_init(&msg);
     int rc = zmq_recvmsg(socket, &msg, flag);
-    if (rc == -1)
+    if (rc > 0)
     {
+        size_t len = zmq_msg_size(&msg);
+        void* data = zmq_msg_data(&msg);
+        lua_pushlstring(L, (const char*)data, len);
         zmq_msg_close(&msg);
-        return 0;
+        return 1;
     }
-    size_t len = zmq_msg_size(&msg);
-    void* data = zmq_msg_data(&msg);
-    lua_pushlstring(L, (const char*)data, len);
-    zmq_msg_close(&msg);
-    return 1;
+    else
+    {
+        int err = zmq_errno();
+        zmq_msg_close(&msg);
+        lua_pushnil(L);
+        lua_pushinteger(L, err);
+        return 2;
+    }
 }
 
 static int zsocket_set_sendhwm(lua_State* L)
@@ -179,10 +166,7 @@ static int zsocket_set_sendhwm(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_SNDHWM, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -192,10 +176,7 @@ static int zsocket_set_recvhwm(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_RCVHWM, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -205,10 +186,7 @@ static int zsocket_set_sendbuf(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_SNDBUF, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -218,10 +196,7 @@ static int zsocket_set_recvbuf(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_RCVBUF, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -231,10 +206,7 @@ static int zsocket_set_send_timeout(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_SNDTIMEO, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -244,10 +216,7 @@ static int zsocket_set_recv_timeout(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_RCVTIMEO, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -257,10 +226,7 @@ static int zsocket_set_affinity(lua_State* L)
     assert(socket);
     uint64_t value = (uint64_t)luaL_checknumber(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_AFFINITY, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -271,10 +237,7 @@ static int zsocket_set_subscribe(lua_State* L)
     const char* value = luaL_checklstring(L, 2, &len);
     assert(socket && value);
     int rc = zmq_setsockopt(socket, ZMQ_SUBSCRIBE, value, len);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -285,10 +248,7 @@ static int zsocket_set_unsubscribe(lua_State* L)
     const char* value = luaL_checklstring(L, 2, &len);
     assert(socket && value);
     int rc = zmq_setsockopt(socket, ZMQ_UNSUBSCRIBE, value, len);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -299,10 +259,7 @@ static int zsocket_set_identity(lua_State* L)
     const char* value = luaL_checklstring(L, 2, &len);
     assert(socket && value);
     int rc = zmq_setsockopt(socket, ZMQ_IDENTITY, value, len);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -313,10 +270,7 @@ static int zsocket_set_accept_filter(lua_State* L)
     const char* value = luaL_checklstring(L, 2, &len);
     assert(socket && value);
     int rc = zmq_setsockopt(socket, ZMQ_TCP_ACCEPT_FILTER, value, len);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -326,10 +280,7 @@ static int zsocket_set_linger(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_LINGER, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -339,10 +290,7 @@ static int zsocket_set_immediate(lua_State* L)
     assert(socket);
     int value = lua_toboolean(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_IMMEDIATE, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -353,10 +301,7 @@ static int zsocket_set_mandatory(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_ROUTER_MANDATORY, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -366,10 +311,7 @@ static int zsocket_set_probe_router(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_PROBE_ROUTER, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -379,10 +321,7 @@ static int zsocket_set_xpub_verbose(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_XPUB_VERBOSE, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -392,10 +331,7 @@ static int zsocket_set_req_relaxed(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_REQ_RELAXED, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -405,10 +341,7 @@ static int zsocket_set_req_correlate(lua_State* L)
     assert(socket);
     int value = luaL_checkint(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_REQ_CORRELATE, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -418,10 +351,7 @@ static int zsocket_set_max_msg_size(lua_State* L)
     assert(socket);
     uint64_t value = (uint64_t)luaL_checknumber(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_MAXMSGSIZE, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -431,10 +361,7 @@ static int zsocket_set_conflate(lua_State* L)
     assert(socket);
     int value = lua_toboolean(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_CONFLATE, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -444,10 +371,7 @@ static int zsocket_set_curve_server(lua_State* L)
     assert(socket);
     int value = lua_toboolean(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_CURVE_SERVER, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -459,10 +383,7 @@ static int zsocket_set_curve_secret_key(lua_State* L)
     assert(socket && value);
     luaL_argcheck(L, len == 32, 2, "invalid public key length");
     int rc = zmq_setsockopt(socket, ZMQ_CURVE_SECRETKEY, value, len);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -474,10 +395,7 @@ static int zsocket_set_curve_public_key(lua_State* L)
     assert(socket && value);
     luaL_argcheck(L, len == 32, 2, "invalid public key length");
     int rc = zmq_setsockopt(socket, ZMQ_CURVE_PUBLICKEY, value, len);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -489,10 +407,7 @@ static int zsocket_set_curve_server_key(lua_State* L)
     assert(socket && value);
     luaL_argcheck(L, len == 40, 2, "invalid public key length");
     int rc = zmq_setsockopt(socket, ZMQ_CURVE_SERVERKEY, value, len);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -502,10 +417,7 @@ static int zsocket_set_ipv6(lua_State* L)
     assert(socket);
     int value = lua_toboolean(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_IPV6, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -515,10 +427,7 @@ static int zsocket_set_ipv4only(lua_State* L)
     assert(socket);
     int value = lua_toboolean(L, 2);
     int rc = zmq_setsockopt(socket, ZMQ_IPV4ONLY, &value, sizeof(value));
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
@@ -531,35 +440,23 @@ static int lzmq_init(lua_State* L)
     int io_threads = luaL_optint(L, 1, ZMQ_IO_THREADS_DFLT);
     int max_sockets = luaL_optint(L, 1, ZMQ_MAX_SOCKETS_DFLT);
     int rc = zmq_ctx_set(global_context, ZMQ_IO_THREADS, io_threads);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     rc = zmq_ctx_set(global_context, ZMQ_MAX_SOCKETS, max_sockets);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
 static int lzmq_shutdown(lua_State* L)
 {
     int rc = zmq_ctx_shutdown(global_context);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     return 0;
 }
 
 static int lzmq_terminate(lua_State* L)
 {
     int rc = zmq_ctx_term(global_context);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     global_context = NULL;
     return 0;
 }
@@ -628,10 +525,7 @@ static int lzmq_curve_keypair(lua_State* L)
     char public_key[41];
     char secret_key[41];
     int rc = zmq_curve_keypair(public_key, secret_key);
-    if (rc != 0)
-    {
-        return lzmq_throw_error(L);
-    }
+    LZMQ_CHECK_THROW(L, rc);
     if (option && strcmp(option, "bin") == 0)
     {
         uint8_t public_key_bin[32];
@@ -719,7 +613,7 @@ static void create_metatable(lua_State* L)
         { "set_conflate", zsocket_set_conflate },
         { NULL, NULL },
     };
-    if (luaL_newmetatable(L, ZSOCK_META_HANDLE))
+    if (luaL_newmetatable(L, LZMQ_SOCKET))
     {
         lua_pushvalue(L, -1);
         lua_setfield(L, -2, "__index");
@@ -731,12 +625,11 @@ static void create_metatable(lua_State* L)
     }
     else
     {
-        luaL_error(L, "`%s` already registered.", ZSOCK_META_HANDLE);
+        luaL_error(L, "`%s` already registered.", LZMQ_SOCKET);
     }
 }
 
-extern "C" LZMQ_EXPORT 
-int luaopen_luazmq(lua_State* L)
+extern "C" int luaopen_luazmq(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
