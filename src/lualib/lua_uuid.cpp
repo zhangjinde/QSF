@@ -1,3 +1,7 @@
+// Copyright (C) 2014 ichenq@gmail.com. All rights reserved.
+// Distributed under the terms and conditions of the Apache License.
+// See accompanying files LICENSE.
+
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
@@ -9,6 +13,11 @@
 #else
 #include <uuid/uuid.h>
 #endif
+
+enum
+{
+    UUID_SIZE = 16,
+};
 
 inline void uuid_create(void* buf)
 {
@@ -48,7 +57,7 @@ inline void uuid_tostring(const void* uuid, char* out, int len)
 
 static int new_uuid(lua_State* L)
 {
-    void* udata = lua_newuserdata(L, 16);
+    void* udata = lua_newuserdata(L, UUID_SIZE);
     uuid_create(udata);
     luaL_getmetatable(L, UUID_HANDLE);
     lua_setmetatable(L, -2);
@@ -58,7 +67,7 @@ static int new_uuid(lua_State* L)
 static int uuid_gc(lua_State* L)
 {
     void* uuid = check_uuid(L, 1);
-    memset(uuid, 0, 16);
+    memset(uuid, 0, UUID_SIZE);
     return 0;
 }
 
@@ -73,7 +82,7 @@ static int uuid_tostring(lua_State* L)
 
 static int uuid_len(lua_State* L)
 {
-    lua_pushinteger(L, 16);
+    lua_pushinteger(L, UUID_SIZE);
     return 1;
 }
 

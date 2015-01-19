@@ -1,3 +1,7 @@
+// Copyright (C) 2014 ichenq@gmail.com. All rights reserved.
+// Distributed under the terms and conditions of the Apache License.
+// See accompanying files LICENSE.
+
 #pragma once
 
 #include <cstdint>
@@ -81,6 +85,7 @@ private:
     asio::steady_timer       drop_timer_;
 
     ReadCallback    on_read_;
+
     
     uint32_t current_serial_ = 1000;
 
