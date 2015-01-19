@@ -119,7 +119,7 @@ static int gate_start(lua_State* L)
     Gateway* gate = check_gate(L);
     assert(gate);
     const std::string& host = luaL_checkstring(L, 2);
-    int16_t port = (int16_t)luaL_checkint(L, 3);
+    int16_t port = (int16_t)luaL_checkinteger(L, 3);
     luaL_argcheck(L, lua_isfunction(L, -1), 4, "callback must be function");
     int ref = luaL_ref(L, LUA_REGISTRYINDEX);
     if (ref == LUA_NOREF || ref == LUA_REFNIL)
@@ -214,8 +214,7 @@ static int client_create(lua_State* L)
 {
     Client* ptr = new Client;
     luaL_argcheck(L, lua_gettop(L) > 0, 1, "arguments must be integer");
-    uint32_t heart_beat = heart_beat = luaL_optinteger(L, 1,
-        net::DEFAULT_MAX_HEARTBEAT_SEC);
+    uint32_t heart_beat = (uint32_t)luaL_optinteger(L, 1, net::DEFAULT_MAX_HEARTBEAT_SEC);
     ptr->client.reset(new net::Client(*global_io_service, heart_beat));
     ptr->ref = LUA_NOREF;
     void* udata = lua_newuserdata(L, sizeof(ptr));
@@ -256,7 +255,7 @@ static int client_connect(lua_State* L)
     Client* ptr = check_client(L);
     assert(ptr);
     const std::string& host = luaL_checkstring(L, 2);
-    uint16_t port = (uint16_t)luaL_checkint(L, 3);
+    uint16_t port = (uint16_t)luaL_checkinteger(L, 3);
     try
     {
         ptr->client->Connect(host, port);
@@ -276,7 +275,7 @@ static int client_asyn_connect(lua_State* L)
     Client* ptr = check_client(L);
     assert(ptr);
     const std::string& host = luaL_checkstring(L, 2);
-    uint16_t port = (uint16_t)luaL_checkint(L, 3);
+    uint16_t port = (uint16_t)luaL_checkinteger(L, 3);
     luaL_argcheck(L, lua_isfunction(L, -1), 4, "connect callback must be function");
     int ref = luaL_ref(L, LUA_REGISTRYINDEX);
     ptr->client->Connect(host, port, [=](const std::error_code& ec)

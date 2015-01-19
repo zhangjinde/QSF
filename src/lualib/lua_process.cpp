@@ -13,7 +13,7 @@
 
 static int process_sleep(lua_State* L)
 {
-    int msec = luaL_checkint(L, 1);
+    int msec = (int)luaL_checkinteger(L, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(msec));
     return 0;
 }
