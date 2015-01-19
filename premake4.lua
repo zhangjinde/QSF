@@ -4,6 +4,8 @@
 
 assert(os.get() == 'windows' or os.get() == 'linux')
 
+-- https://github.com/ichenq/PreCompiledWinLib
+local LIB_DIR = 'E:/Library/PreCompiledWinLib/usr'
 
 solution 'QSF'
     configurations {'Debug', 'Release'}
@@ -31,12 +33,7 @@ solution 'QSF'
             '_WINSOCK_DEPRECATED_NO_WARNINGS',
             'NOMINMAX',
         }
-        includedirs
-        {
-            'deps/zlib',
-            'deps/lua/src',
-            'deps/libzmq/include',
-        }
+        includedirs { LIB_DIR .. '/include'}
 
     configuration 'gmake'
         buildoptions '-std=c++11 -mcrc32 -msse4.2 -rdynamic'
@@ -45,7 +42,6 @@ solution 'QSF'
             '__STDC_LIMIT_MACROS',
             'HAVE_UNISTD_H',
         }
-        includedirs '/usr/include/lua5.2'
         links
         {
             'rt',
@@ -79,14 +75,16 @@ solution 'QSF'
         includedirs
         {
             'src',
+            'deps',
             'deps/asio/include',
+            LIB_DIR,
         }
         libdirs 'bin'
         
         if os.get() == 'windows' then
-        links {'libzmq', 'zlib', 'lua5.2'}
+        links {'libzmq', 'zlib', 'lua5.3'}
         else
-        links {'zmq', 'z', 'lua5.2', 'uuid'}
+        links {'zmq', 'z', 'lua5.3', 'uuid'}
         end
 
     project 'TestCore'
