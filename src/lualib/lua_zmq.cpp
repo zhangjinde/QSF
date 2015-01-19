@@ -7,6 +7,7 @@
 #include <zmq.h>
 #include <zmq_utils.h>
 #include <lua.hpp>
+#include "QSF.h"
 
 #ifdef _MSC_VER
 #define snprintf        _snprintf
@@ -15,15 +16,17 @@
 #define LZMQ_SOCKET     "socket*"
 #define check_socket(L) (*(void**)luaL_checkudata(L, 1, LZMQ_SOCKET))
 
-#define LZMQ_CHECK_THROW(L, rc)  if (rc != 0)    \
-        return luaL_error(L, "zmq error %d: %s", rc, zmq_strerror(rc));
-
-static void* global_context = NULL;
+#define LZMQ_CHECK_THROW(L, rc)     \
+        if (rc != 0) {              \
+            int err = zmq_errno();  \
+            return luaL_error(L, "zmq error %d: %s", err, zmq_strerror(err)); \
+        }
 
 static int lzmq_create_socket(lua_State* L)
 {
     int type = luaL_checkint(L, 1);
-    void* socket = zmq_socket(global_context, type);
+    void* context = qsf::GlobalContext();
+    void* socket = zmq_socket(context, type);
     if (socket == NULL)
     {
         return luaL_error(L, "create socket failed: %d", zmq_errno());
@@ -102,18 +105,10 @@ static int zsocket_send(lua_State* L)
     void* socket = check_socket(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
-    const char* option = lua_tostring(L, 3);
     int flag = 0;
-    if (option)
+    if (lua_gettop(L) > 2)
     {
-        if (strcmp(option, "more") == 0)
-        {
-            flag = ZMQ_SNDMORE;
-        }
-        else if (strcmp(option, "nowait") == 0)
-        {
-            flag = ZMQ_DONTWAIT;
-        }
+        flag = luaL_checkint(L, 3);
     }
     int rc = zmq_send(socket, data, len, flag);
     if (rc > 0)
@@ -135,9 +130,9 @@ static int zsocket_recv(lua_State* L)
     void* socket = check_socket(L);
     const char* option = lua_tostring(L, 2);
     int flag = 0;
-    if (option && strcmp(option, "nowait") == 0)
+    if (lua_gettop(L) > 2)
     {
-        flag = ZMQ_DONTWAIT;
+        flag = luaL_checkint(L, 3);
     }
     zmq_msg_t msg;
     zmq_msg_init(&msg);
@@ -431,36 +426,6 @@ static int zsocket_set_ipv4only(lua_State* L)
     return 0;
 }
 
-static int lzmq_init(lua_State* L)
-{
-    if (global_context == NULL)
-    {
-        global_context = zmq_ctx_new();
-    }
-    int io_threads = luaL_optint(L, 1, ZMQ_IO_THREADS_DFLT);
-    int max_sockets = luaL_optint(L, 1, ZMQ_MAX_SOCKETS_DFLT);
-    int rc = zmq_ctx_set(global_context, ZMQ_IO_THREADS, io_threads);
-    LZMQ_CHECK_THROW(L, rc);
-    rc = zmq_ctx_set(global_context, ZMQ_MAX_SOCKETS, max_sockets);
-    LZMQ_CHECK_THROW(L, rc);
-    return 0;
-}
-
-static int lzmq_shutdown(lua_State* L)
-{
-    int rc = zmq_ctx_shutdown(global_context);
-    LZMQ_CHECK_THROW(L, rc);
-    return 0;
-}
-
-static int lzmq_terminate(lua_State* L)
-{
-    int rc = zmq_ctx_term(global_context);
-    LZMQ_CHECK_THROW(L, rc);
-    global_context = NULL;
-    return 0;
-}
-
 static int lzmq_version(lua_State* L)
 {
     const char* option = lua_tostring(L, 1);
@@ -570,6 +535,9 @@ static void push_socket_constant(lua_State* L)
     push_literal(L, "XPUB", ZMQ_XPUB);
     push_literal(L, "XSUB", ZMQ_XSUB);
     push_literal(L, "STREAM", ZMQ_STREAM);
+
+    push_literal(L, "DONTWAIT", ZMQ_DONTWAIT);
+    push_literal(L, "SNDMORE", ZMQ_SNDMORE);
 }
 
 static void create_metatable(lua_State* L)
@@ -633,9 +601,6 @@ extern "C" int luaopen_luazmq(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
-        { "init", lzmq_init },
-        { "shutdown", lzmq_shutdown },
-        { "terminate", lzmq_terminate },
         { "version", lzmq_version },
         { "z85_encode", lzmq_z85_encode },
         { "z85_decode", lzmq_z85_decode },
