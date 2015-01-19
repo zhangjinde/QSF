@@ -33,8 +33,8 @@ enum
 
 namespace {
 
-// IPC zmq context, do not need thread pool for I/O operations
-static zmq::context_t  s_context(0);
+// IPC zmq context
+static zmq::context_t  s_context;
 
 // zmq message router
 static std::unique_ptr<zmq::socket_t>   s_router;
@@ -210,6 +210,11 @@ void Stop()
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+}
+
+zmq::context_t& GlobalContext()
+{
+    return s_context;
 }
 
 bool CreateService(const std::string& type, 

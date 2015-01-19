@@ -31,4 +31,6 @@ int  Start(const char* config);
 // Stop all service
 void Stop();
 
+zmq::context_t& GlobalContext();
+
 };
