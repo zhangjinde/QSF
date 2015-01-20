@@ -20,8 +20,8 @@ static int process_sleep(lua_State* L)
 
 static int process_gettick(lua_State* L)
 {
-    uint64_t ticks = getNowTickCount() / 100000UL;
-    lua_pushnumber(L, (lua_Number)ticks);
+    int64_t ticks = getNowTickCount() / 100000UL;
+    lua_pushinteger(L, (lua_Integer)ticks);
     return 1;
 }
 

@@ -139,7 +139,7 @@ static int gate_start(lua_State* L)
         {
             lua_pushinteger(L, err);
         }
-        lua_pushnumber(L, serial);
+        lua_pushinteger(L, serial);
         lua_pushlstring(L, (const char*)data.data(), data.size());
         if (lua_pcall(L, 3, LUA_MULTRET, 0) != 0)
         {
@@ -153,7 +153,7 @@ static int gate_send(lua_State* L)
 {
     Gateway* gate = check_gate(L);
     assert(gate);
-    uint32_t serial = (uint32_t)luaL_checknumber(L, 2);
+    uint32_t serial = (uint32_t)luaL_checkinteger(L, 2);
     size_t size;
     const char* data = luaL_checklstring(L, 3, &size);
     luaL_argcheck(L, data && size > 0, 3, "invalid data");
@@ -176,7 +176,7 @@ static int gate_kick(lua_State* L)
 {
     Gateway* gate = check_gate(L);
     assert(gate);
-    uint32_t serial = (uint32_t)luaL_checknumber(L, 2);
+    uint32_t serial = (uint32_t)luaL_checkinteger(L, 2);
     gate->server->Kick(serial);
     return 0;
 }

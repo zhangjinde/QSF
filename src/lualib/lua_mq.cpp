@@ -48,6 +48,15 @@ static int mq_recv(lua_State* L)
     return r;
 }
 
+static int mq_name(lua_State* L)
+{
+    Context* self = (Context*)lua_touserdata(L, lua_upvalueindex(1));
+    assert(self);
+    const auto& name = self->name();
+    lua_pushlstring(L, name.c_str(), name.length());
+    return 1;
+}
+
 // launch a new service
 static int mq_launch(lua_State* L)
 {
@@ -79,6 +88,7 @@ extern "C" int luaopen_mq(lua_State* L)
     {
         { "send", mq_send },
         { "recv", mq_recv },
+        { "name", mq_name },
         { "launch", mq_launch },
         { "shutdown", mq_shutdown },
         {NULL, NULL},
