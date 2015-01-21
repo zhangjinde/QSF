@@ -10,6 +10,20 @@
 #include "utils/MD5.h"
 #include "utils/UTF.h"
 
+inline std::string  BinaryToHex(const void* ar, size_t len)
+{
+    static const char dict[] = "0123456789abcdef";
+    std::string result;
+    result.reserve(len * 2);
+    const uint8_t* buf = reinterpret_cast<const uint8_t*>(ar);
+    for (size_t i = 0; i < len; i++)
+    {
+        uint8_t ch = buf[i];
+        result.push_back(dict[(ch & 0xF0) >> 4]);
+        result.push_back(dict[ch & 0x0F]);
+    }
+    return std::move(result);
+}
 
 static int process_sleep(lua_State* L)
 {
@@ -76,7 +90,8 @@ static int process_md5(lua_State* L)
     const char* data = luaL_checklstring(L, 1, &len);
     char buffer[HASHSIZE];
     md5(data, len, buffer);
-    lua_pushlstring(L, buffer, HASHSIZE);
+    std::string hex = BinaryToHex(buffer, HASHSIZE);
+    lua_pushlstring(L, hex.c_str(), hex.size());
     return 1;
 }
 
