@@ -25,7 +25,7 @@ enum
 // Connection session object
 struct Gate::Session
 {
-    uint32_t        serial_ = 0;
+    uint64_t        serial_ = 0;
     bool            closed_ = false;
     time_t          last_recv_time_ = 0;
     ClientHeader    head_;
@@ -34,7 +34,7 @@ struct Gate::Session
     std::string             remote_addr_;
     asio::ip::tcp::socket   socket_;
 
-    Session(asio::io_service& io_service, uint32_t serial)
+    Session(asio::io_service& io_service, uint64_t serial)
         : socket_(io_service), serial_(serial)
     {
         recv_buf_.reserve(DEFAULT_SESSION_RECV_BUF);
@@ -51,14 +51,18 @@ inline void XORBuffer(void* data, size_t size, uint8_t key)
     }
 }
 
+#define MAKE_UINT64(a, b) (((static_cast<uint64_t>(a) << 32) + (b)))
+
 //////////////////////////////////////////////////////////////////////////
 
 Gate::Gate(asio::io_service& io_service, 
+           uint32_t serial_prefix,
            uint32_t max_connections, 
            uint32_t heart_beat_sec,
            uint32_t heart_beat_check_sec,
            uint16_t max_no_compress_size,
-           uint8_t xor_key)
+           uint8_t xor_key
+           )
     : io_service_(io_service), 
       acceptor_(io_service), 
       drop_timer_(io_service),
@@ -66,7 +70,8 @@ Gate::Gate(asio::io_service& io_service,
       heart_beat_sec_(heart_beat_sec),
       heart_beat_check_sec_(heart_beat_check_sec),
       max_no_compress_size_(max_no_compress_size),
-      xor_key_(xor_key)
+      xor_key_(xor_key),
+      serial_prefix_(serial_prefix)
 {
 }
 
@@ -101,7 +106,7 @@ void Gate::Stop()
     sessions_.clear();
 }
 
-Gate::SessionPtr Gate::GetSession(uint32_t serial)
+Gate::SessionPtr Gate::GetSession(uint64_t serial)
 {
     auto iter = sessions_.find(serial);
     if (iter != sessions_.end())
@@ -121,7 +126,7 @@ void Gate::Kick(SessionPtr session)
     }
 }
 
-bool Gate::Kick(uint32_t serial)
+bool Gate::Kick(uint64_t serial)
 {
     auto session = GetSession(serial);
     if (session)
@@ -137,7 +142,7 @@ void Gate::KickAll()
     sessions_.clear();
 }
 
-bool Gate::Send(uint32_t serial, ByteRange data)
+bool Gate::Send(uint64_t serial, ByteRange data)
 {
     auto session = GetSession(serial);
     if (session)
@@ -158,11 +163,14 @@ void Gate::SendAll(const void* buf, size_t size)
     }
 }
 
-uint32_t Gate::NextSerial()
+uint64_t Gate::NextSerial()
 {
-    while (sessions_.count(current_serial_++))
-        ;
-    return current_serial_;
+    uint64_t serial = MAKE_UINT64(serial_prefix_, current_serial_);
+    while (sessions_.count(serial))
+    {
+        serial = MAKE_UINT64(serial_prefix_, current_serial_++);
+    }
+    return serial;
 }
 
 void Gate::StartAccept()
@@ -219,10 +227,19 @@ void Gate::AllowAddress(const std::string& address)
     black_list_.erase(address);
 }
 
+std::string Gate::GetSessionAddress(uint64_t serial)
+{
+    auto session = GetSession(serial);
+    if (session)
+    {
+        return session->remote_addr_;
+    }
+    return "";
+}
 
 void Gate::CheckHeartBeat()
 {
-    std::vector<uint32_t> dead_connections;
+    std::vector<uint64_t> dead_connections;
     dead_connections.reserve(DEFAULT_DEAD_CONN_SIZE);
 
     // garbage collecting
@@ -303,7 +320,7 @@ void Gate::SessionWriteFrame(SessionPtr session, ByteRange frame, PacketType typ
     }
 }
 
-void Gate::HandleReadHead(uint32_t serial, const std::error_code& ec, size_t bytes)
+void Gate::HandleReadHead(uint64_t serial, const std::error_code& ec, size_t bytes)
 {
     auto session = GetSession(serial);
     if (!session)
@@ -344,7 +361,7 @@ void Gate::HandleReadHead(uint32_t serial, const std::error_code& ec, size_t byt
     }
 }
 
-void Gate::HandleReadBody(uint32_t serial, const std::error_code& ec, size_t bytes)
+void Gate::HandleReadBody(uint64_t serial, const std::error_code& ec, size_t bytes)
 {
     auto session = GetSession(serial);
     if (!session)
@@ -378,7 +395,7 @@ void Gate::HandleReadBody(uint32_t serial, const std::error_code& ec, size_t byt
     }
 }
 
-void Gate::HandleWrite(uint32_t serial, 
+void Gate::HandleWrite(uint64_t serial,
                        const std::error_code& ec,
                        size_t bytes, 
                        std::shared_ptr<IOBuf> buf)

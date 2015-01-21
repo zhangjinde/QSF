@@ -49,37 +49,38 @@ static int gate_create(lua_State* L)
     uint32_t max_connections = DEFAULT_MAX_CONNECTIONS;
     uint32_t no_compression_size = DEFAULT_NO_COMPRESSION_SIZE;
     uint8_t xor_key = DEFAULT_XOR_KEY;
+
+    luaL_argcheck(L, lua_istable(L, 1), 1, "parameter must be table");
     int top = lua_gettop(L);
-    if (lua_gettop(L) > 0 && lua_istable(L, 1))
+    lua_getfield(L, 1, "serial_prefix");
+    uint32_t serial_prefix = (uint32_t)luaL_checkinteger(L, -1);
+    lua_getfield(L, 1, "heart_beat");
+    if (lua_isnumber(L, -1))
     {
-        lua_getfield(L, 1, "heart_beat");
-        if (lua_isnumber(L, -1))
-        {
-            heart_beat_sec = (uint32_t)luaL_checkinteger(L, -1);
-        }
-        lua_getfield(L, 1, "heart_beat_check");
-        if (lua_isnumber(L, -1))
-        {
-            heart_beat_check_sec = (uint32_t)luaL_checkinteger(L, -1);
-        }
-        lua_getfield(L, 1, "max_connection");
-        if (lua_isnumber(L, -1))
-        {
-            max_connections = (uint32_t)luaL_checkinteger(L, -1);
-        }
-        lua_getfield(L, 1, "no_compression_size");
-        if (lua_isnumber(L, -1))
-        {
-            no_compression_size = (uint32_t)luaL_checkinteger(L, -1);
-        }
-        lua_getfield(L, 1, "xor_key");
-        if (lua_isnumber(L, -1))
-        {
-            xor_key = (uint8_t)luaL_checkinteger(L, -1);
-        }
-        lua_pop(L, lua_gettop(L) - top);
+        heart_beat_sec = (uint32_t)luaL_checkinteger(L, -1);
     }
-    ptr->server.reset(new Gate(*global_io_service, 
+    lua_getfield(L, 1, "heart_beat_check");
+    if (lua_isnumber(L, -1))
+    {
+        heart_beat_check_sec = (uint32_t)luaL_checkinteger(L, -1);
+    }
+    lua_getfield(L, 1, "max_connection");
+    if (lua_isnumber(L, -1))
+    {
+        max_connections = (uint32_t)luaL_checkinteger(L, -1);
+    }
+    lua_getfield(L, 1, "no_compression_size");
+    if (lua_isnumber(L, -1))
+    {
+        no_compression_size = (uint32_t)luaL_checkinteger(L, -1);
+    }
+    lua_getfield(L, 1, "xor_key");
+    if (lua_isnumber(L, -1))
+    {
+        xor_key = (uint8_t)luaL_checkinteger(L, -1);
+    }
+    lua_pop(L, lua_gettop(L) - top);
+    ptr->server.reset(new Gate(*global_io_service, serial_prefix,
         max_connections, heart_beat_sec, heart_beat_check_sec, 
         no_compression_size, xor_key));
     ptr->ref = LUA_NOREF;
@@ -127,7 +128,7 @@ static int gate_start(lua_State* L)
         return luaL_error(L, "luaL_ref() failed: %d", ref);
     }
     gate->ref = ref;
-    gate->server->Start(host, port, [=](int err, uint32_t serial, ByteRange data)
+    gate->server->Start(host, port, [=](int err, uint64_t serial, ByteRange data)
     {
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
         luaL_argcheck(L, lua_isfunction(L, -1), 1, "callback must be function");
@@ -153,7 +154,7 @@ static int gate_send(lua_State* L)
 {
     Gateway* gate = check_gate(L);
     assert(gate);
-    uint32_t serial = (uint32_t)luaL_checkinteger(L, 2);
+    uint64_t serial = (uint64_t)luaL_checkinteger(L, 2);
     size_t size;
     const char* data = luaL_checklstring(L, 3, &size);
     luaL_argcheck(L, data && size > 0, 3, "invalid data");
@@ -176,7 +177,7 @@ static int gate_kick(lua_State* L)
 {
     Gateway* gate = check_gate(L);
     assert(gate);
-    uint32_t serial = (uint32_t)luaL_checkinteger(L, 2);
+    uint64_t serial = (uint64_t)luaL_checkinteger(L, 2);
     gate->server->Kick(serial);
     return 0;
 }
@@ -205,6 +206,16 @@ static int gate_allow(lua_State* L)
     const std::string& address = luaL_checkstring(L, 2);
     gate->server->AllowAddress(address);
     return 0;
+}
+
+static int gate_peer_address(lua_State* L)
+{
+    Gateway* gate = check_gate(L);
+    assert(gate);
+    uint64_t serial = (uint64_t)luaL_checkinteger(L, 2);
+    auto address = gate->server->GetSessionAddress(serial);
+    lua_pushlstring(L, address.c_str(), address.length());
+    return 1;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -375,6 +386,7 @@ static void make_meta_gate(lua_State* L)
         { "kickall", gate_kickall },
         { "deny", gate_deny },
         { "allow", gate_allow },
+        { "address", gate_peer_address },
         { NULL, NULL },
     };
     luaL_newmetatable(L, GATE_HANDLE);
