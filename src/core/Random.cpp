@@ -30,7 +30,8 @@ static std::default_random_engine* get_tls_rng()
     static THREAD_LOCAL std::default_random_engine* rng = nullptr;
     if (rng == nullptr)
     {
-        rng = new std::default_random_engine();
+        std::random_device gen;
+        rng = new std::default_random_engine(gen());
     }
     assert(rng != nullptr);
     return rng;
