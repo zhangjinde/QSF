@@ -14,7 +14,7 @@ public:
     explicit SharedService(Context& ctx);
     ~SharedService();
 
-    virtual int Run(const std::vector<std::string>& args);
+    virtual int Run(const std::vector<std::string>& args) override;
 
 private:
     void Initialize(const std::string& path);
