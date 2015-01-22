@@ -12,13 +12,14 @@ using namespace net;
 const static string DEFAULT_HOST = "127.0.0.1";
 const static uint16_t DEFAULT_PORT = 10086;
 
+const uint32_t serial_prefix = 1024;
 
 TEST(Gate, start)
 {
     asio::io_service io_service;
-    net::Gate gate(io_service);
+    net::Gate gate(io_service, serial_prefix);
     gate.Start(DEFAULT_HOST, DEFAULT_PORT, 
-        [&](int err, uint32_t serial, ByteRange data)
+        [&](int err, uint64_t serial, ByteRange data)
     {
     });
 
@@ -33,9 +34,9 @@ TEST(Gate, connect)
     string msg = "hello";
 
     asio::io_service io_service;
-    net::Gate gate(io_service);
+    net::Gate gate(io_service, serial_prefix);
     gate.Start(DEFAULT_HOST, DEFAULT_PORT,
-        [&](int err, uint32_t serial, ByteRange data)
+        [&](int err, uint64_t serial, ByteRange data)
     {
         if (!err)
         {
@@ -62,9 +63,9 @@ TEST(Gate, denyAddress)
 {
     string msg = "hello";
     asio::io_service io_service;
-    net::Gate gate(io_service);
+    net::Gate gate(io_service, serial_prefix);
     gate.Start(DEFAULT_HOST, DEFAULT_PORT,
-        [&](int err, uint32_t serial, ByteRange data)
+        [&](int err, uint64_t serial, ByteRange data)
     {
     });
 
@@ -93,9 +94,9 @@ static void test_send(const string& msg)
     std::string request = stringPrintf("request msg size %" PRIu64, msg.size());
 
     asio::io_service io_service;
-    net::Gate gate(io_service);
+    net::Gate gate(io_service, serial_prefix);
     gate.Start(DEFAULT_HOST, DEFAULT_PORT,
-        [&](int err, uint32_t serial, ByteRange data)
+        [&](int err, uint64_t serial, ByteRange data)
     {
         if (!err)
         {
