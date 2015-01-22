@@ -88,7 +88,7 @@ void Gate::Start(const std::string& host, uint16_t port, ReadCallback callback)
 
     tcp::endpoint endpoint(address::from_string(host), port);
     acceptor_.open(endpoint.protocol());
-    //acceptor_.set_option(tcp::acceptor::reuse_address(true));
+    acceptor_.set_option(tcp::acceptor::reuse_address(true));
     acceptor_.bind(endpoint);
     acceptor_.listen();
 
