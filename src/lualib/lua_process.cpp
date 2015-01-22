@@ -10,6 +10,12 @@
 #include "utils/MD5.h"
 #include "utils/UTF.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
+
 inline std::string  BinaryToHex(const void* ar, size_t len)
 {
     static const char dict[] = "0123456789abcdef";
@@ -55,6 +61,17 @@ static int process_os(lua_State* L)
 #else
 #error platform not supported
 #endif
+    return 1;
+}
+
+static int process_pid(lua_State* L)
+{
+#ifdef _WIN32
+    auto pid = GetCurrentProcessId();
+#else
+    auto pid = getpid();
+#endif
+    lua_pushinteger(L, pid);
     return 1;
 }
 
@@ -109,6 +126,16 @@ static int process_as_gbk(lua_State* L)
 #endif
 }
 
+static int process_set_title(lua_State* L)
+{
+    size_t len = 0;
+    const char* title = luaL_checklstring(L, 1, &len);
+#ifdef _WIN32
+    SetConsoleTitleA(title);
+#endif
+    return 0;
+}
+
 extern "C" int luaopen_process(lua_State* L)
 {
     static const luaL_Reg lib[] =
@@ -117,9 +144,11 @@ extern "C" int luaopen_process(lua_State* L)
         { "gettick", process_gettick },
         { "concurrency", process_concurrency },
         { "os", process_os },
+        { "pid", process_pid },
         { "random", process_random },
         { "md5", process_md5 },
         { "as_gbk", process_as_gbk },
+        { "set_title", process_set_title },
         { NULL, NULL },
     };
     luaL_newlib(L, lib);
