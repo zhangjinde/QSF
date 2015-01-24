@@ -11,6 +11,8 @@ int luaopen_process(lua_State* L);
 int luaopen_luazmq(lua_State* L);
 int luaopen_gate(lua_State* L);
 int luaopen_uuid(lua_State* L);
+int luaopen_luamysql(lua_State* L);
+int luaopen_luahiredis(lua_State* L);
 
 }
 
@@ -25,6 +27,8 @@ void lua_initlibs(lua_State* L)
         { "luazmq", luaopen_luazmq },
         { "luagate", luaopen_gate },
         { "luauuid", luaopen_uuid },
+        { "luamysql", luaopen_luamysql },
+        { "luahiredis", luaopen_luahiredis },
         { NULL, NULL },
     };
 
