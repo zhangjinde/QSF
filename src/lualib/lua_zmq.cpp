@@ -124,7 +124,6 @@ static int zsocket_send(lua_State* L)
     }
 }
 
-
 static int zsocket_recv(lua_State* L)
 {
     void* socket = check_socket(L);
@@ -149,6 +148,17 @@ static int zsocket_recv(lua_State* L)
         zmq_msg_close(&msg);
         return 0;
     }
+}
+
+static int zsocket_monitor(lua_State* L)
+{
+    void* socket = check_socket(L);
+    assert(socket);
+    const char* addr = luaL_checkstring(L, 2);
+    int events = (int)luaL_checkinteger(L, 3);
+    int rc = zmq_socket_monitor(socket, addr, events);
+    LZMQ_CHECK_THROW(L, rc);
+    return 0;
 }
 
 static int zsocket_set_sendhwm(lua_State* L)
@@ -534,6 +544,19 @@ static void push_socket_constant(lua_State* L)
 
     push_literal(L, "DONTWAIT", ZMQ_DONTWAIT);
     push_literal(L, "SNDMORE", ZMQ_SNDMORE);
+
+    push_literal(L, "EVENT_CONNECTED", ZMQ_EVENT_CONNECTED);
+    push_literal(L, "EVENT_CONNECT_DELAYED", ZMQ_EVENT_CONNECT_DELAYED);
+    push_literal(L, "EVENT_CONNECT_RETRIED", ZMQ_EVENT_CONNECT_RETRIED);
+    push_literal(L, "EVENT_LISTENING", ZMQ_EVENT_LISTENING);
+    push_literal(L, "EVENT_BIND_FAILED", ZMQ_EVENT_BIND_FAILED);
+    push_literal(L, "EVENT_ACCEPTED", ZMQ_EVENT_ACCEPTED);
+    push_literal(L, "EVENT_ACCEPT_FAILED", ZMQ_EVENT_ACCEPT_FAILED);
+    push_literal(L, "EVENT_CLOSED", ZMQ_EVENT_CLOSED);
+    push_literal(L, "EVENT_CLOSE_FAILED", ZMQ_EVENT_CLOSE_FAILED);
+    push_literal(L, "EVENT_DISCONNECTED", ZMQ_EVENT_DISCONNECTED);
+    push_literal(L, "EVENT_MONITOR_STOPPED", ZMQ_EVENT_MONITOR_STOPPED);
+    push_literal(L, "EVENT_ALL", ZMQ_EVENT_ALL);
 }
 
 static void create_metatable(lua_State* L)
@@ -549,6 +572,7 @@ static void create_metatable(lua_State* L)
         { "disconnect", zsocket_disconnect },
         { "send", zsocket_send },
         { "recv", zsocket_recv },
+        { "monitor", zsocket_monitor },
         { "set_sendhwm", zsocket_set_sendhwm },
         { "set_recvhwm", zsocket_set_recvhwm },
         { "set_sendbuf", zsocket_set_sendbuf },
