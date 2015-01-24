@@ -1,3 +1,4 @@
+--
 -- Stacktrace for xpcall
 --
 
@@ -8,7 +9,7 @@ local string = string
 local M = 
 {
     need_upvalue = false,
-    dumper = print,
+    dumper = print, -- print to console by default
 }
 
 local MIN_LEVEL = 3
@@ -45,8 +46,9 @@ local function trace_level(level, dumper)
     return true
 end
 
-function M.dump_stack(...)
+function M.dump_stack(errmsg)
     local dumper = M.dumper
+    dumper(errmsg)
     dumper(debug.traceback())
     dumper('stack variables:\n')
     for level=MIN_LEVEL, MAX_LEVEL do
