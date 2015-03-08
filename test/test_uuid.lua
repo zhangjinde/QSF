@@ -1,18 +1,21 @@
 local uuid = require 'uuid'
 
-local uuid1 = uuid.create()
-assert(#uuid1 == 16)
-print(uuid1)
-local s1 = tostring(uuid1)
-local s2 = tostring(uuid1)
-assert(s1 == s2)
+local function uuid_create()
+    local list = {}
+    for n=1, 100 do
+        local s = tostring(uuid.create())
+        assert(not list[s])
+        list[s] = true
+    end
+end
 
-local uuid2 = uuid.create()
-assert(uuid1 ~= uuid2)
-assert(uuid1 == uuid1)
+local function uuid_compare()
+    local a = uuid.create()
+    assert(#a == 16)
+    local b = uuid.create()
+    assert(a ~= b)
+end
 
-local cmp = uuid1 < uuid2
-cmp = uuid1 <= uuid2
-cmp = uuid1 > uuid2
-
-print('uuid OK')
+uuid_create()
+uuid_compare()
+print('uuid passed')
