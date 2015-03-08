@@ -11,19 +11,6 @@
 
 using std::string;
 
-static int lua_traceback(lua_State *L)
-{
-    if (!lua_isstring(L, 1))  /* Non-string error object? Try metamethod. */
-    {
-        if (lua_isnoneornil(L, 1) ||
-            !luaL_callmeta(L, 1, "__tostring") ||
-            !lua_isstring(L, -1))
-            return 1;  /* Return non-string error object. */
-        lua_remove(L, 1);  /* Replace object by result of __tostring metamethod. */
-    }
-    luaL_traceback(L, L, lua_tostring(L, 1), 1);
-    return 1;
-}
 
 //////////////////////////////////////////////////////////////////////////
 

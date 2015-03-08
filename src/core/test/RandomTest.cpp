@@ -28,28 +28,3 @@ TEST(Random, rand64)
         prev = seed;
     }
 }
-
-TEST(Random, MultiThreaded) 
-{
-    const int n = 1024;
-    std::vector<uint32_t> seeds(n);
-    std::vector<std::thread> threads;
-    for (int i = 0; i < n; ++i) 
-    {
-        threads.push_back(std::thread([i, &seeds] 
-        {
-            Random::seed();
-            seeds[i] = Random::rand32();
-            Random::release();
-        }));
-    }
-    for (auto& t : threads) 
-    {
-        t.join();
-    }
-    std::sort(seeds.begin(), seeds.end());
-    for (int i = 0; i < n - 1; ++i) 
-    {
-        EXPECT_LT(seeds[i], seeds[i + 1]);
-    }
-}

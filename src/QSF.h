@@ -29,8 +29,7 @@ bool CreateService(const std::string& type,
 int  Start(const char* config);
 
 // Stop all service
-void Stop();
+void Exit();
 
-zmq::context_t& GlobalContext();
 
 };

@@ -9,6 +9,8 @@
 
 using std::string;
 
+#define SYMBOL_POSTFIX  "_run"
+
 SharedService::SharedService(Context& ctx)
     : Service("SharedService", ctx)
 {
@@ -21,7 +23,7 @@ SharedService::~SharedService()
 void SharedService::Initialize(const std::string& path)
 {
     this_lib_.reset(new SharedLibrary(path));
-    string name = this_lib_->path() + "_service_run";
+    string name = this_lib_->path() + SYMBOL_POSTFIX;
     on_run_ = (decltype(on_run_))this_lib_->getSymbol(name);
     if (on_run_ == nullptr)
     {

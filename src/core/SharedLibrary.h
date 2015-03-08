@@ -5,6 +5,7 @@
 #pragma once
 
 #include <string>
+#include <uv.h>
 
 //
 // Dynamically loads shared libraries at run-time.
@@ -13,13 +14,10 @@
 class SharedLibrary
 {
 public:
-    enum Flags
-    {
         /// On platforms that use dlopen(), use RTLD_GLOBAL. This is the default
         /// if no flags are given.
         ///
         /// This flag is ignored on platforms that do not use dlopen().
-        SHLIB_GLOBAL = 1,
 
         /// On platforms that use dlopen(), use RTLD_LOCAL instead of RTLD_GLOBAL.
         ///
@@ -28,10 +26,8 @@ public:
         /// compilers as well. See http://gcc.gnu.org/faq.html#dso for more information.
         ///
         /// This flag is ignored on platforms that do not use dlopen().
-        SHLIB_LOCAL = 2
-    };
 
-    explicit SharedLibrary(const std::string& path, int flags = 0);
+    explicit SharedLibrary(const std::string& path);
     virtual ~SharedLibrary();
 
     SharedLibrary(const SharedLibrary&) = delete;
@@ -45,5 +41,5 @@ public:
 
 private:
     std::string     path_;
-    void*           handle_;
+    uv_lib_t        lib_;
 };

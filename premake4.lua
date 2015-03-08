@@ -4,10 +4,9 @@
 
 assert(os.get() == 'windows' or os.get() == 'linux')
 
--- https://github.com/ichenq/PreCompiledWinLib
-local LIB_DIR = 'E:/Library/PreCompiledWinLib/usr'
+local USR_DIR = os.getenv('USR_DIR') or 'E:/Library/usr'
 
-solution 'QSF'
+solution 'qsf'
     configurations {'Debug', 'Release'}
     language 'C++'
     --flags {'ExtraWarnings'}
@@ -25,22 +24,35 @@ solution 'QSF'
     configuration 'vs*'
         defines
         {
-            'WIN32',
             'WIN32_LEAN_AND_MEAN',
             '_WIN32_WINNT=0x0600',
             '_CRT_SECURE_NO_WARNINGS',
             '_SCL_SECURE_NO_WARNINGS',
             '_WINSOCK_DEPRECATED_NO_WARNINGS',
             'NOMINMAX',
+            'BOOST_DATE_TIME_NO_LIB',
+            'BOOST_REGEX_NO_LIB',          
+        }        
+        includedirs { USR_DIR .. '/include' }
+        libdirs { USR_DIR .. '/lib/x86' }
+        links 
+        {
+            'ws2_32',
+            'iphlpapi',
+            'psapi',
         }
-        includedirs { LIB_DIR .. '/include'}
 
     configuration 'gmake'
-        buildoptions '-std=c++11 -mcrc32 -msse4.2 -rdynamic'
+        buildoptions '-std=c++11 -std=c99 -mcrc32 -msse4.2'
         defines
         {
             '__STDC_LIMIT_MACROS',
-            'HAVE_UNISTD_H',
+            '_POSIX_C_SOURCE=200112L',
+        }
+        includedirs 
+        {
+            '/usr/include/mysql', 
+            '/usr/include/hiredis',
         }
         links
         {
@@ -49,15 +61,12 @@ solution 'QSF'
             'pthread',
         }
 
-    project 'QSF'
+    project 'qsf'
         location 'build'
         kind 'ConsoleApp'
         uuid '65BCF1EB-A936-4688-B1F4-7073B4ACE736'
         defines
         {
-            'ASIO_STANDALONE',
-            'BOOST_DATE_TIME_NO_LIB',
-            'BOOST_REGEX_NO_LIB',
         }
         files
         {
@@ -75,19 +84,22 @@ solution 'QSF'
         includedirs
         {
             'src',
-            'deps',
-            'deps/asio/include',
-            LIB_DIR,
+            'deps/cppzmq',
+            'deps/lua/src',
         }
         libdirs 'bin'
-        
+        links {'lua5.3', 'hiredis'}
         if os.get() == 'windows' then
-        links {'libzmq', 'zlib', 'lua5.3'}
+        links {'libzmq', 'libuv', 'zlib', 'libmysql', 'Win32_Interop'}
+        includedirs
+        {
+            'deps/libuv/include',        
+        }
         else
-        links {'zmq', 'z', 'lua5.3', 'uuid'}
+        links {'zmq', 'uv', 'z', 'uuid', 'mysqlclient', 'boost_date_time', 'boost_system'}
         end
 
-    project 'TestCore'
+    project 'unittest'
         location 'build'
         kind 'ConsoleApp'
         uuid '9E30CCC3-DA13-47FB-9902-7BF6D4792380'
@@ -99,44 +111,14 @@ solution 'QSF'
         includedirs
         {
             'src',
-            'deps/gtest',
+            'deps/libuv/include',
             'deps/gtest/include',
-        }
-        libdirs
-        {
-            'bin',
-        }
-
-    project 'TestNet'
-        location 'build'
-        kind 'ConsoleApp'
-        uuid '7EAB00F8-E324-45FC-83FA-3ADD6439BB89'
-        defines
-        {
-            'ASIO_STANDALONE',
-            'BOOST_DATE_TIME_NO_LIB',
-            'BOOST_REGEX_NO_LIB',
-        }
-        files
-        {
-            'src/core/*.*',
-            'src/net/**.*',
-            'deps/gtest/src/gtest-all.cc',
-        }
-        includedirs
-        {
-            'src',
-            'deps/asio/include',
             'deps/gtest',
-            'deps/gtest/include',
         }
-        libdirs
-        {
-            'bin',
-        }
+        libdirs 'bin'
         if os.get() == 'windows' then
-        links 'zlib'
+        links {'libuv', 'zlib'}
         else
-        links 'z'
+        links {'uv', 'z'}
         end
         
