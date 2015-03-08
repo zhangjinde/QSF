@@ -22,6 +22,7 @@ solution '3rdlibs'
         {
             '_WIN32_WINNT=0x0600',
             '_CRT_SECURE_NO_WARNINGS',
+            '_CRT_NONSTDC_NO_DEPRECATE',
             'NOMINMAX',
         }
 
@@ -29,7 +30,6 @@ solution '3rdlibs'
         language 'C'
         kind 'SharedLib'
         location 'build'
-        uuid 'C9A112FB-08C0-4503-9AFD-8EBAB5B3C204'
         if os.get() == 'linux' then
         defines 'LUA_USE_LINUX'
         links{ 'dl', 'libreadline'}
@@ -47,3 +47,33 @@ solution '3rdlibs'
             'lua/src/luac.c',
         }
         
+    if os.get() ~= 'windows' then return end
+    
+    project 'libuv'
+        language 'C'
+        kind 'SharedLib'
+        location 'build'
+        defines 'BUILDING_UV_SHARED'
+        files
+        {
+            'libuv/include/uv.h',
+            'libuv/include/tree.h',
+            'libuv/include/uv-version.h',
+            'libuv/include/uv-errno.h',
+            'libuv/src/*.h',
+            'libuv/src/*.c',
+        }
+        files
+        {
+            'libuv/src/win/*.c',
+        }
+        includedirs 
+        {
+            'libuv/include',
+        }
+        links 
+        {
+            'ws2_32',
+            'psapi',
+            'iphlpapi',
+        }

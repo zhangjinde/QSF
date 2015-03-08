@@ -30,17 +30,10 @@ solution 'qsf'
             '_SCL_SECURE_NO_WARNINGS',
             '_WINSOCK_DEPRECATED_NO_WARNINGS',
             'NOMINMAX',
-            'BOOST_DATE_TIME_NO_LIB',
-            'BOOST_REGEX_NO_LIB',          
+            '_ALLOW_KEYWORD_MACROS',         
         }        
         includedirs { USR_DIR .. '/include' }
         libdirs { USR_DIR .. '/lib/x86' }
-        links 
-        {
-            'ws2_32',
-            'iphlpapi',
-            'psapi',
-        }
 
     configuration 'gmake'
         buildoptions '-std=c++11 -std=c99 -mcrc32 -msse4.2'
@@ -76,10 +69,7 @@ solution 'qsf'
         }
         excludes
         {
-            'src/module/**.*',
             'src/test/*.*',
-            'src/core/test/*.*',
-            'src/net/test/*.*',
         }
         includedirs
         {
@@ -90,13 +80,28 @@ solution 'qsf'
         libdirs 'bin'
         links {'lua5.3', 'hiredis'}
         if os.get() == 'windows' then
-        links {'libzmq', 'libuv', 'zlib', 'libmysql', 'Win32_Interop'}
+        links 
+        {
+            'libzmq', 
+            'libuv', 
+            'zlib', 
+            'libeay32',
+            'libmysql', 
+            'Win32_Interop',
+        }
         includedirs
         {
             'deps/libuv/include',        
         }
         else
-        links {'zmq', 'uv', 'z', 'uuid', 'mysqlclient', 'boost_date_time', 'boost_system'}
+        links 
+        {
+            'zmq', 
+            'uv', 
+            'z', 
+            'uuid', 
+            'mysqlclient',
+        }
         end
 
     project 'unittest'
@@ -105,7 +110,8 @@ solution 'qsf'
         uuid '9E30CCC3-DA13-47FB-9902-7BF6D4792380'
         files
         {
-            'src/core/**.*',
+            'src/core/*.cpp',
+            'src/test/*.cpp',
             'deps/gtest/src/gtest-all.cc',
         }
         includedirs
