@@ -546,7 +546,8 @@ static void make_mysql_meta(lua_State* L)
     create_metatable(L, LUAMYSQL_CURSOR, cursor_methods);
 }
 
-extern "C" int luaopen_luamysql(lua_State* L)
+extern "C" 
+int luaopen_mysql(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {

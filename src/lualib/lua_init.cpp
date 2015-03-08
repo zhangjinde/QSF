@@ -1,4 +1,7 @@
-#include "lua_init.h"
+// Copyright (C) 2014 ichenq@gmail.com. All rights reserved.
+// Distributed under the terms and conditions of the Apache License.
+// See accompanying files LICENSE.
+
 #include <lua.hpp>
 #include <cstdint>
 
@@ -8,11 +11,10 @@ extern "C" {
 
 int luaopen_mq(lua_State* L);
 int luaopen_process(lua_State* L);
-int luaopen_luazmq(lua_State* L);
-int luaopen_gate(lua_State* L);
+int luaopen_zmq(lua_State* L);
 int luaopen_uuid(lua_State* L);
-int luaopen_luamysql(lua_State* L);
-int luaopen_luahiredis(lua_State* L);
+int luaopen_mysql(lua_State* L);
+int luaopen_hiredis(lua_State* L);
 
 }
 
@@ -24,11 +26,10 @@ void lua_initlibs(lua_State* L)
     {
         { "luamq", luaopen_mq },
         { "process", luaopen_process },
-        { "luazmq", luaopen_luazmq },
-        { "luagate", luaopen_gate },
+        { "zmq", luaopen_zmq },
         { "luauuid", luaopen_uuid },
-        { "luamysql", luaopen_luamysql },
-        { "luahiredis", luaopen_luahiredis },
+        { "mysql", luaopen_mysql },
+        { "hiredis", luaopen_hiredis },
         { NULL, NULL },
     };
 

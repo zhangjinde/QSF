@@ -132,7 +132,8 @@ static void make_uuid_meta(lua_State* L)
     lua_pop(L, 1);  /* pop new metatable */
 }
 
-extern "C" int luaopen_uuid(lua_State* L)
+extern "C" 
+int luaopen_uuid(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {

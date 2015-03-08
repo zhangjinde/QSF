@@ -19,7 +19,7 @@ static int mq_send(lua_State* L)
     const char* name = luaL_checklstring(L, 1, &name_size);
     const char* data = luaL_checklstring(L, 2, &data_size);
     assert(data && data_size && name && name_size && name_size <= MAX_NAME_SIZE);
-    self->send(StringPiece(name, name_size), StringPiece(data, data_size));
+    self->Send(StringPiece(name, name_size), StringPiece(data, data_size));
     return 0;
 }
 
@@ -35,7 +35,7 @@ static int mq_recv(lua_State* L)
         dontwait = (strcmp(option, "nowait") == 0);
     }
     int r = 0;
-    self->recv([&](StringPiece name, StringPiece data)
+    self->Recv([&](StringPiece name, StringPiece data)
     {
         if (data.size() > 0)
         {
@@ -52,7 +52,7 @@ static int mq_name(lua_State* L)
 {
     Context* self = (Context*)lua_touserdata(L, lua_upvalueindex(1));
     assert(self);
-    const auto& name = self->name();
+    const auto& name = self->Name();
     lua_pushlstring(L, name.c_str(), name.length());
     return 1;
 }
@@ -60,9 +60,8 @@ static int mq_name(lua_State* L)
 // launch a new service
 static int mq_launch(lua_State* L)
 {
-    std::string type = luaL_checkstring(L, 1);
-    std::string ident = luaL_checkstring(L, 2);
-    std::string args = luaL_checkstring(L, 3);
+    std::string ident = luaL_checkstring(L, 1);
+    std::string args = luaL_checkstring(L, 2);
     int top = lua_gettop(L);
     for (int i = 4; i <= top; i++)
     {
@@ -70,7 +69,7 @@ static int mq_launch(lua_State* L)
         args.append(" ");
         args.append(value);
     }
-    bool r = qsf::CreateService(type, ident, args);
+    bool r = qsf::CreateService("LuaService", ident, args);
     lua_pushboolean(L, r);
     return 1;
 }
@@ -78,11 +77,12 @@ static int mq_launch(lua_State* L)
 // stop all services
 static int mq_shutdown(lua_State* L)
 {
-    qsf::Stop();
+    qsf::Exit();
     return 0;
 }
 
-extern "C" int luaopen_mq(lua_State* L)
+extern "C" 
+int luaopen_mq(lua_State* L)
 {
     static const luaL_Reg lib[] = 
     {

@@ -2,6 +2,7 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
+#include "Platform.h"
 #include <stdio.h>
 #include <assert.h>
 #include <zmq.h>
@@ -9,9 +10,6 @@
 #include <lua.hpp>
 #include "QSF.h"
 
-#ifdef _MSC_VER
-#define snprintf        _snprintf
-#endif
 
 #define LZMQ_SOCKET     "socket*"
 #define check_socket(L) (*(void**)luaL_checkudata(L, 1, LZMQ_SOCKET))
@@ -617,7 +615,8 @@ static void create_metatable(lua_State* L)
     }
 }
 
-extern "C" int luaopen_luazmq(lua_State* L)
+extern "C" 
+int luaopen_zmq(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
