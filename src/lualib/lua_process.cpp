@@ -7,12 +7,6 @@
 #include <chrono>
 #include <uv.h>
 
-#ifndef _WIN32
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
-#endif
-
 static int process_sleep(lua_State* L)
 {
     int msec = (int)luaL_checkinteger(L, 1);
@@ -22,36 +16,23 @@ static int process_sleep(lua_State* L)
 
 static int process_gettick(lua_State* L)
 {
-#ifdef _WIN32
-    uint32_t ticks = GetTickCount();
-#else
-    timeval tv = {};
-    gettimeofday(&tv, NULL);
-    uint32_t ticks = tv.tv_sec * 1000L + tv.tv_usec / 1000000L;
-#endif
-    lua_pushinteger(L, (lua_Integer)ticks);
-    return 1;
-}
-
-// number of CPU core
-static int process_concurrency(lua_State* L)
-{
-    int32_t concurrency = std::thread::hardware_concurrency();
-    lua_pushinteger(L, concurrency);
+    using namespace std::chrono;
+    auto duration = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    lua_pushinteger(L, (int64_t)duration.count());
     return 1;
 }
 
 static int process_hrtime(lua_State* L)
 {
     uint64_t time_point = uv_hrtime();
-    lua_pushnumber(L, (lua_Number)time_point);
+    lua_pushinteger(L, (int64_t)time_point);
     return 1;
 }
 
 static int process_total_memory(lua_State* L)
 {
     uint64_t bytes = uv_get_total_memory();
-    lua_pushnumber(L, (lua_Number)bytes);
+    lua_pushinteger(L, (int64_t)bytes);
     return 1;
 }
 
@@ -143,7 +124,6 @@ int luaopen_process(lua_State* L)
     {
         { "sleep", process_sleep },
         { "gettick", process_gettick },
-        { "concurrency", process_concurrency },
         { "os", process_os },
         { "pid", process_pid },
         { "hrtime", process_hrtime },
