@@ -29,7 +29,7 @@ inline void uuid_create(void* buf)
 #endif
 }
 
-inline int uuid_compare(const void* uuid1, const void* uuid2)
+inline int uuid_comp(const void* uuid1, const void* uuid2)
 {
     assert(uuid1 && uuid2);
 #ifdef _WIN32
@@ -90,7 +90,7 @@ static int uuid_equal(lua_State* L)
 {
     void* uuid1 = check_uuid(L, 1);
     void* uuid2 = check_uuid(L, 2);
-    int r = uuid_compare(uuid1, uuid2);
+    int r = uuid_comp(uuid1, uuid2);
     lua_pushboolean(L, r == 0);
     return 1;
 }
@@ -99,7 +99,7 @@ static int uuid_less_than(lua_State* L)
 {
     void* uuid1 = check_uuid(L, 1);
     void* uuid2 = check_uuid(L, 2);
-    int r = uuid_compare(uuid1, uuid2);
+    int r = uuid_comp(uuid1, uuid2);
     lua_pushboolean(L, r < 0);
     return 1;
 }
@@ -108,7 +108,7 @@ static int uuid_less_equal(lua_State* L)
 {
     void* uuid1 = check_uuid(L, 1);
     void* uuid2 = check_uuid(L, 2);
-    int r = uuid_compare(uuid1, uuid2);
+    int r = uuid_comp(uuid1, uuid2);
     lua_pushboolean(L, r <= 0);
     return 1;
 }
