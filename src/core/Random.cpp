@@ -21,42 +21,27 @@
 #include "Random.h"
 #include <random>
 #include <cassert>
-#include "Platform.h"
-#include "Logging.h"
 
 
-static std::default_random_engine* get_tls_rng()
+Random::Random(uint32_t seed_value)
 {
-    static THREAD_LOCAL std::default_random_engine* rng = nullptr;
-    if (rng == nullptr)
-    {
-        std::random_device gen;
-        rng = new std::default_random_engine(gen());
-    }
-    assert(rng != nullptr);
-    return rng;
+    seed(seed_value);
 }
 
-void Random::release()
+Random::~Random()
 {
-    delete get_tls_rng();
 }
 
-void Random::seed(int32_t seed_value)
+void Random::seed(uint32_t seed_value)
 {
     if (seed_value == 0)
     {
         std::random_device device;
         seed_value = device();
     }
-    get_tls_rng()->seed(seed_value);
+    rand_engine_.seed(seed_value);
 }
 
-uint32_t Random::rand32()
-{
-    uint32_t r = (*get_tls_rng())();
-    return r;
-}
 
 uint32_t Random::rand32(uint32_t max)
 {
@@ -64,7 +49,7 @@ uint32_t Random::rand32(uint32_t max)
     {
         return 0;
     }
-    return std::uniform_int_distribution<uint32_t>(0, max - 1)(*get_tls_rng());
+    return std::uniform_int_distribution<uint32_t>(0, max - 1)(rand_engine_);
 }
 
 uint32_t Random::rand32(uint32_t min, uint32_t max)
@@ -73,7 +58,7 @@ uint32_t Random::rand32(uint32_t min, uint32_t max)
     {
         return 0;
     }
-    return std::uniform_int_distribution<uint32_t>(min, max - 1)(*get_tls_rng());
+    return std::uniform_int_distribution<uint32_t>(min, max - 1)(rand_engine_);
 }
 
 uint64_t Random::rand64(uint64_t max)
@@ -82,7 +67,7 @@ uint64_t Random::rand64(uint64_t max)
     {
         return 0;
     }
-    return std::uniform_int_distribution<uint64_t>(0, max - 1)(*get_tls_rng());
+    return std::uniform_int_distribution<uint64_t>(0, max - 1)(rand_engine_);
 }
 
 uint64_t Random::rand64(uint64_t min, uint64_t max)
@@ -91,7 +76,7 @@ uint64_t Random::rand64(uint64_t min, uint64_t max)
     {
         return 0;
     }
-    return std::uniform_int_distribution<uint64_t>(min, max - 1)(*get_tls_rng());
+    return std::uniform_int_distribution<uint64_t>(min, max - 1)(rand_engine_);
 }
 
 bool Random::oneIn(uint32_t n)

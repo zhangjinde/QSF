@@ -21,7 +21,7 @@
 #pragma once
 
 #include <cstdint>
-
+#include <random>
 
 /**
  * A thread-safe PRNG, use a mersenne twister random number generator.
@@ -31,30 +31,32 @@ class Random
 public:
 
     // Initialize PRNG pointer and seed
-    static void seed(int32_t seed = 0);
+    explicit Random(uint32_t seed = 0);
+    ~Random();
 
-    // Delete PRNG pointer
-    static void release();
+    Random(const Random&) = delete;
+    Random& operator = (const Random&) = delete;
+    void seed(uint32_t seed = 0);
 
     /**
      * Returns a random uint32_t
      */
-    static uint32_t rand32();
+    uint32_t rand32() { return rand_engine_(); }
 
     /**
      * Returns a random uint32_t in [0, max). If max == 0, returns 0.
      */
-    static uint32_t rand32(uint32_t max);
+    uint32_t rand32(uint32_t max);
 
     /**
      * Returns a random uint32_t in [min, max). If min == max, returns 0.
      */
-    static uint32_t rand32(uint32_t min, uint32_t max);
+    uint32_t rand32(uint32_t min, uint32_t max);
 
     /**
      * Returns a random uint64_t
      */
-    static uint64_t rand64()
+    uint64_t rand64()
     {
         return ((uint64_t)rand32() << 32) | rand32();
     }
@@ -62,16 +64,18 @@ public:
     /**
      * Returns a random uint64_t in [0, max). If max == 0, returns 0.
      */
-    static uint64_t rand64(uint64_t max);
+    uint64_t rand64(uint64_t max);
 
     /**
      * Returns a random uint64_t in [min, max). If min == max, returns 0.
      */
-    static uint64_t rand64(uint64_t min, uint64_t max);
+    uint64_t rand64(uint64_t min, uint64_t max);
 
     /**
      * Returns true 1/n of the time. If n == 0, always returns false
      */
-    static bool oneIn(uint32_t n);
+    bool oneIn(uint32_t n);
+private:
+    std::default_random_engine rand_engine_;
 };
 
