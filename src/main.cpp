@@ -1,11 +1,8 @@
-#include <cstdio>
-#include <csignal>
-#include <exception>
-#include <typeinfo>
-#include "QSF.h"
-#include "core/Logging.h"
+// Copyright (C) 2014 ichenq@gmail.com. All rights reserved.
+// Distributed under the terms and conditions of the Apache License.
+// See accompanying files LICENSE.
 
-using namespace std;
+#include "QSF.h"
 
 int main(int argc, char* argv[])
 {
@@ -15,20 +12,5 @@ int main(int argc, char* argv[])
         default_file = argv[1];
     }
     
-    // Ctrl + C interrupt signal
-    signal(SIGINT, [](int sig)
-    {
-        qsf::Stop();
-        exit(1);
-    });
-
-    try
-    {
-        return qsf::Start(default_file);
-    }
-    catch (std::exception& ex)
-    {
-        LOG(ERROR) << typeid(ex).name() << ": " << ex.what();
-        return EXIT_FAILURE;
-    }
+    return qsf::Start(default_file);
 }
