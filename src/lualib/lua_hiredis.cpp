@@ -263,7 +263,7 @@ static void make_meta(lua_State* L)
 }
 
 extern "C" 
-int luaopen_luahiredis(lua_State* L)
+int luaopen_hiredis(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
