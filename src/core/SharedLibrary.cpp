@@ -7,9 +7,6 @@
 #include "Logging.h"
 #include <stdexcept>
 
-
-
-
 SharedLibrary::SharedLibrary(const std::string& path)
     : path_(path)
 {
@@ -22,22 +19,22 @@ SharedLibrary::SharedLibrary(const std::string& path)
 
 SharedLibrary::~SharedLibrary()
 {
-    unload();
+    UnLoad();
 }
 
-void SharedLibrary::unload()
+void SharedLibrary::UnLoad()
 {
     uv_dlclose(&lib_);
 }
 
-void* SharedLibrary::getSymbol(const std::string& name)
+void* SharedLibrary::GetSymbol(const std::string& name)
 {
     void* symbol = nullptr;
     uv_dlsym(&lib_, name.c_str(), &symbol);
     return symbol;
 }
 
-bool SharedLibrary::hasSymbol(const std::string& name)
+bool SharedLibrary::HasSymbol(const std::string& name)
 {
-    return (getSymbol(name) != nullptr);
+    return (GetSymbol(name) != nullptr);
 }
