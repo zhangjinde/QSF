@@ -7,10 +7,10 @@
 #include "Env.h"
 #include "core/Strings.h"
 #include "core/Logging.h"
-#include "lualib/lua_init.h"
 
 using std::string;
 
+void lua_initlibs(lua_State* L);
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -35,7 +35,7 @@ LuaService::~LuaService()
 void LuaService::Initialize()
 {
     lua_State* L = luaVM_;
-    auto& ctx = this->GetCtx();
+    auto& ctx = this->GetContext();
     luaL_checkversion(L);
     lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
     luaL_openlibs(L);
@@ -74,7 +74,7 @@ int LuaService::Run(const std::vector<string>& args)
         return 1;
     }
     
-    const string& id = this->GetCtx().name();
+    const string& id = this->GetContext().Name();
     const string& filename = args[0];
     lua_State* L = luaVM_;
     int r = luaL_loadfile(L, filename.c_str());

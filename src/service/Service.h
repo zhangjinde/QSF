@@ -14,7 +14,7 @@
 class Service
 {
 public:
-    Service(const std::string& type, Context& ctx) 
+    Service(const std::string& type, Context& ctx)
         : ctx_(ctx), type_(type)
     {
     }
@@ -30,7 +30,7 @@ public:
     const std::string&  GetType() const { return type_; }
     
     // Context object of this service
-    Context&  GetCtx() { return ctx_; }
+    Context&  GetContext() { return ctx_; }
 
     // Run this service, virtual interface
     virtual int Run(const std::vector<std::string>& args) = 0;

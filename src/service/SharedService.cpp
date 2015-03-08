@@ -24,7 +24,7 @@ void SharedService::Initialize(const std::string& path)
 {
     this_lib_.reset(new SharedLibrary(path));
     string name = this_lib_->path() + SYMBOL_POSTFIX;
-    on_run_ = (decltype(on_run_))this_lib_->getSymbol(name);
+    on_run_ = (decltype(on_run_))this_lib_->GetSymbol(name);
     if (on_run_ == nullptr)
     {
         throw std::runtime_error(to<string>("symbole [", name, "] not found"));
@@ -38,7 +38,7 @@ int SharedService::Run(const std::vector<std::string>& args)
         return 1;
     }
     std::string argument = join(" ", args);
-    auto& ctx = this->GetCtx();
+    auto& ctx = this->GetContext();
     Initialize(args[0]);
     int r = 0;
     try
