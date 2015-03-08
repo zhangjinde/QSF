@@ -5,7 +5,7 @@
 -- start-up service
 start_type = 'LuaService'
 start_name = 'test'
-start_file = '../test/test_utils.lua'
+start_file = '../test/runner.lua'
 
 -- lua module searching path
 lua_path = './?.lua;../lib/?.lua;../test/?.lua'
