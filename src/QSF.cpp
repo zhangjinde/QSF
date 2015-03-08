@@ -12,10 +12,8 @@
 #include <unordered_map>
 #include "core/ScopeGuard.h"
 #include "core/Strings.h"
-#include "core/Random.h"
 #include "service/Context.h"
 #include "service/Service.h"
-#include "utils/Initializer.h"
 #include "Env.h"
 
 using std::mutex;
@@ -91,22 +89,29 @@ bool DispatchMessage()
     zmq::message_t to;      // where is this message going
     zmq::message_t msg;     // message itself
 
-    s_router->recv(&from);
-    s_router->recv(&to);
-    s_router->recv(&msg);
+    try
+    {
+        s_router->recv(&from);
+        s_router->recv(&to);
+        s_router->recv(&msg);
 
-    StringPiece source((const char*)from.data(), from.size());
-    StringPiece destination((const char*)to.data(), to.size());
-    if (destination == "sys")
-    {
-        StringPiece command((const char*)msg.data(), msg.size());
-        return OnSysMessage(source, command);
+        StringPiece source((const char*)from.data(), from.size());
+        StringPiece destination((const char*)to.data(), to.size());
+        if (destination == "sys")
+        {
+            StringPiece command((const char*)msg.data(), msg.size());
+            return OnSysMessage(source, command);
+        }
+        else
+        {
+            s_router->send(to, ZMQ_SNDMORE);
+            s_router->send(from, ZMQ_SNDMORE);
+            s_router->send(msg);
+        }
     }
-    else
+    catch (zmq::error_t& err)
     {
-        s_router->send(to, ZMQ_SNDMORE);
-        s_router->send(from, ZMQ_SNDMORE);
-        s_router->send(msg);
+        LOG(ERROR) << err.num() << ": " << err.what();
     }
     return true;
 }
@@ -115,7 +120,6 @@ bool DispatchMessage()
 void OnServiceCleanup(const std::string& name)
 {
     fprintf(stdout, "service [%s] exit.\n", name.c_str());
-    Random::release();
     lock_guard<mutex> guard(s_mutex);
     s_services.erase(name);
 }
@@ -128,7 +132,7 @@ void ServiceThreadCallback(std::string type,
     try
     {
         assert(!type.empty() && !args.empty());
-        Context ctx(std::move(qsf::CreateDealer(name)), name);
+        Context ctx(name);
         auto service = CreateService(type, ctx);
         if (service)
         {
@@ -136,7 +140,6 @@ void ServiceThreadCallback(std::string type,
                 lock_guard<mutex> guard(s_mutex);
                 s_services[name] = service;
             }
-            Initializer init;
             service->Run(args);
         }
     }
@@ -202,7 +205,7 @@ std::unique_ptr<zmq::socket_t> CreateDealer(const std::string& identity)
     return std::move(dealer);
 }
 
-void Stop()
+void Exit()
 {
     s_close_flag = QSF_CLOSING;
     SystemCommand("exit");
@@ -254,7 +257,6 @@ int Start(const char* filename)
         return 1;
     }
 
-    Initializer init;
     auto type = Env::Get("start_type");
     auto name = Env::Get("start_name");
     auto args = Env::Get("start_file");
@@ -262,16 +264,9 @@ int Start(const char* filename)
 
     while (true)
     {
-        try
+        if (!DispatchMessage())
         {
-            if (!DispatchMessage())
-            {
-                break;
-            }
-        }
-        catch (zmq::error_t& ex)
-        {
-            LOG(ERROR) << "zmq error[" << ex.num() << "]: " << ex.what();
+            break;
         }
     }
 
