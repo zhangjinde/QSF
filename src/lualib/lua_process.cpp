@@ -5,31 +5,13 @@
 #include <lua.hpp>
 #include <thread>
 #include <chrono>
-#include "core/Benchmark.h"     // getNowTickCount()
-#include "core/Random.h"
-#include "utils/MD5.h"
-#include "utils/UTF.h"
+#include <uv.h>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
+#ifndef _WIN32
+#include <sys/time.h>
+#include <sys/types.h>
 #include <unistd.h>
 #endif
-
-inline std::string  BinaryToHex(const void* ar, size_t len)
-{
-    static const char dict[] = "0123456789abcdef";
-    std::string result;
-    result.reserve(len * 2);
-    const uint8_t* buf = reinterpret_cast<const uint8_t*>(ar);
-    for (size_t i = 0; i < len; i++)
-    {
-        uint8_t ch = buf[i];
-        result.push_back(dict[(ch & 0xF0) >> 4]);
-        result.push_back(dict[ch & 0x0F]);
-    }
-    return std::move(result);
-}
 
 static int process_sleep(lua_State* L)
 {
@@ -40,7 +22,13 @@ static int process_sleep(lua_State* L)
 
 static int process_gettick(lua_State* L)
 {
-    int64_t ticks = getNowTickCount() / 100000UL;
+#ifdef _WIN32
+    uint32_t ticks = GetTickCount();
+#else
+    timeval tv = {};
+    gettimeofday(&tv, NULL);
+    uint32_t ticks = tv.tv_sec * 1000L + tv.tv_usec / 1000000L;
+#endif
     lua_pushinteger(L, (lua_Integer)ticks);
     return 1;
 }
@@ -48,7 +36,22 @@ static int process_gettick(lua_State* L)
 // number of CPU core
 static int process_concurrency(lua_State* L)
 {
-    lua_pushinteger(L, std::thread::hardware_concurrency());
+    int32_t concurrency = std::thread::hardware_concurrency();
+    lua_pushinteger(L, concurrency);
+    return 1;
+}
+
+static int process_hrtime(lua_State* L)
+{
+    uint64_t time_point = uv_hrtime();
+    lua_pushnumber(L, (lua_Number)time_point);
+    return 1;
+}
+
+static int process_total_memory(lua_State* L)
+{
+    uint64_t bytes = uv_get_total_memory();
+    lua_pushnumber(L, (lua_Number)bytes);
     return 1;
 }
 
@@ -58,6 +61,8 @@ static int process_os(lua_State* L)
     lua_pushliteral(L, "windows");
 #elif defined(__linux__)
     lua_pushliteral(L, "linux");
+#else defined(__APPLE__)
+    lua_pushliteral(L, "macos");
 #else
 #error platform not supported
 #endif
@@ -66,77 +71,73 @@ static int process_os(lua_State* L)
 
 static int process_pid(lua_State* L)
 {
-#ifdef _WIN32
-    auto pid = GetCurrentProcessId();
-#else
-    auto pid = getpid();
-#endif
+    int pid = getpid();
     lua_pushinteger(L, pid);
     return 1;
 }
 
-// a drop-in replacement for `math.random`
-static int process_random(lua_State *L)
+static int process_cwd(lua_State* L)
 {
-    switch (lua_gettop(L))   /* check number of arguments */
+    char path[260];
+    size_t size = sizeof(path);
+    int r = uv_cwd(path, &size);
+    if (r < 0)
     {
-    case 1:   /* only upper limit */
-    {
-        uint32_t upper = (uint32_t)luaL_checkinteger(L, 1);
-        luaL_argcheck(L, 1 <= upper, 1, "interval is empty");
-        lua_pushinteger(L, Random::rand32(upper + 1));  /* [1, u] */
-        break;
+        return luaL_error(L, "cwd: %s", uv_strerror(r));
     }
-    case 2:   /* lower and upper limits */
-    {
-        uint32_t lower = (uint32_t)luaL_checkinteger(L, 1);
-        uint32_t upper = (uint32_t)luaL_checkinteger(L, 2);
-        luaL_argcheck(L, lower <= upper, 2, "interval is empty");
-        lua_pushinteger(L, Random::rand32(lower, upper + 1));  /* [l, u] */
-        break;
-    }
-    default: 
-        return luaL_error(L, "wrong number of arguments");
-    }
+    lua_pushlstring(L, path, size);
     return 1;
 }
 
-static int process_md5(lua_State* L)
+static int process_exepath(lua_State* L)
 {
-    size_t len;
-    const char* data = luaL_checklstring(L, 1, &len);
-    char buffer[HASHSIZE];
-    md5(data, len, buffer);
-    std::string hex = BinaryToHex(buffer, HASHSIZE);
-    lua_pushlstring(L, hex.c_str(), hex.size());
+    char path[260];
+    size_t size = sizeof(path);
+    int r = uv_exepath(path, &size);
+    if (r < 0)
+    {
+        return luaL_error(L, "exepath: %s", uv_strerror(r));
+    }
+    lua_pushlstring(L, path, size);
     return 1;
 }
 
-static int process_as_gbk(lua_State* L)
+static int process_chdir(lua_State* L)
 {
-#ifdef _WIN32
-    size_t len;
-    const char* str = luaL_checklstring(L, 1, &len);
-    std::string u8str(str, len);
-    std::string strgkb = U8toA(u8str);
-    lua_pushlstring(L, strgkb.c_str(), strgkb.length());
-    return 1;
-#else
+    const char* path = luaL_checkstring(L, 1);
+    int r = uv_chdir(path);
+    if (r < 0)
+    {
+        return luaL_error(L, "chdir: %s", uv_strerror(r));
+    }
     return 0;
+}
+
+static int process_mkdir(lua_State* L)
+{
+    const char* path = luaL_checkstring(L, 1);
+#ifdef _WIN32
+    int r = CreateDirectory(path, NULL);
+#else
+    int r = (mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
 #endif
+    if (!r)
+    {
+        return luaL_error(L, "unable to create directory '%s'", path);
+    }
+    return 0;
 }
 
 static int process_set_title(lua_State* L)
 {
     size_t len = 0;
     const char* title = luaL_checklstring(L, 1, &len);
-#ifdef _WIN32
-    SetConsoleTitleA(title);
-#endif
+    uv_set_process_title(title);
     return 0;
 }
 
-extern "C" int luaopen_process(lua_State* L)
+extern "C" 
+int luaopen_process(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
@@ -145,9 +146,12 @@ extern "C" int luaopen_process(lua_State* L)
         { "concurrency", process_concurrency },
         { "os", process_os },
         { "pid", process_pid },
-        { "random", process_random },
-        { "md5", process_md5 },
-        { "as_gbk", process_as_gbk },
+        { "hrtime", process_hrtime },
+        { "total_memory", process_total_memory },
+        { "cwd", process_cwd },
+        { "exepath", process_exepath },
+        { "chdir", process_chdir },
+        { "mkdir", process_mkdir },
         { "set_title", process_set_title },
         { NULL, NULL },
     };
