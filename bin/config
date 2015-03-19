@@ -8,21 +8,15 @@ start_name = 'test'
 start_file = '../test/runner.lua'
 
 -- lua module searching path
-lua_path = './?.lua;../lib/?.lua;../test/?.lua'
-lua_cpath = '../lib/?.so;../lib/?.dll'
+if os.getenv('windir') then
+    lua_path = './?.lua;./lib/?.lua;'
+    lua_cpath = './bin/win/?.dll;../lib/?.dll;'    
+else
+    lua_path = './?.lua;./lib/?.lua;'
+    lua_cpath = './bin/posix/?.so;../lib/?.so'
+end
 
 -- Max size of an inproc message, limited to 32M
 max_ipc_msg_size = 32 * 1024 * 1024
+max_recv_timeout = -1
 router_mandatory = true
-
--- easylogging configuration
-logconf = [[
-* GLOBAL:
-   FORMAT               =  "%datetime %file %func %line %msg"
-   FILENAME             =  "./qsf.log"
-   ENABLED              =  true
-   TO_FILE              =  true
-   TO_STANDARD_OUTPUT   =  true
-   MILLISECONDS_WIDTH   =  6
-   PERFORMANCE_TRACKING =  true
-]]
