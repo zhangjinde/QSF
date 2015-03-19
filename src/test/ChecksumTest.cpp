@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "core/Benchmark.h"
+#include "Benchmark.h"
 #include "core/Logging.h"
 #include "core/CpuId.h"
 #include "core/Checksum.h"

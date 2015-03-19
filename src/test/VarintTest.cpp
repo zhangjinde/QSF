@@ -19,9 +19,8 @@
 #include <random>
 #include <vector>
 #include <gtest/gtest.h>
+#include "Benchmark.h"
 #include "core/Logging.h"
-#include "core/Benchmark.h"
-#include "core/Random.h"
 #include "core/Range.h"
 #include "core/Varint.h"
 
@@ -106,7 +105,8 @@ std::vector<uint8_t> gEncoded;
 
 BENCHMARK_INITIALIZER(generateRandomValues)
 {
-    std::mt19937 rng(Random::rand32());
+    uint32_t seed = std::random_device()();
+    std::mt19937 rng(seed);
 
     // Approximation of power law
     std::uniform_int_distribution<int> numBytes(1, 8);

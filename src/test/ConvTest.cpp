@@ -18,8 +18,8 @@
 #include <limits>
 #include <stdexcept>
 #include <gtest/gtest.h>
+#include "Benchmark.h"
 #include "core/Conv.h"
-#include "core/Benchmark.h"
 
 using namespace std;
 

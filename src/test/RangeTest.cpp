@@ -25,8 +25,8 @@
 #include <vector>
 #include <random>
 #include <gtest/gtest.h>
+#include "Benchmark.h"
 #include "core/Range.h"
-#include "core/Benchmark.h"
 
 
 using namespace std;

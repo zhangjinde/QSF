@@ -1,6 +1,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
-#include "core/Benchmark.h"
+#include "Benchmark.h"
 
 
 using namespace std;

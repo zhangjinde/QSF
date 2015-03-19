@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <cinttypes>
 #include <vector>
+#include "Benchmark.h"
 #include "core/Strings.h"
-#include "core/Benchmark.h"
 
 using namespace std;
 
