@@ -38,11 +38,11 @@ static int process_total_memory(lua_State* L)
 
 static int process_os(lua_State* L)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     lua_pushliteral(L, "windows");
 #elif defined(__linux__)
     lua_pushliteral(L, "linux");
-#else defined(__APPLE__)
+#elif defined(__APPLE__)
     lua_pushliteral(L, "macos");
 #else
 #error platform not supported
@@ -52,7 +52,11 @@ static int process_os(lua_State* L)
 
 static int process_pid(lua_State* L)
 {
+#if defined(_WIN32)
+    int pid = GetCurrentProcessId();
+#else
     int pid = getpid();
+#endif
     lua_pushinteger(L, pid);
     return 1;
 }
