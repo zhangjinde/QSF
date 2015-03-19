@@ -4,8 +4,6 @@
 
 #include "Service.h"
 #include "LuaService.h"
-#include "SharedService.h"
-
 
 ServicePtr CreateService(const std::string& type, Context& ctx)
 {
@@ -14,10 +12,7 @@ ServicePtr CreateService(const std::string& type, Context& ctx)
     {
         return ServicePtr(new LuaService(ctx));
     }
-    else if (type == "SharedService")
-    {
-        return ServicePtr(new SharedService(ctx));
-    }
+    assert(!"unsupported service type");
     return ServicePtr();
 }
 
