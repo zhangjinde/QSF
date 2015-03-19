@@ -1,19 +1,21 @@
-sudo apt-get install libreadline-dev zlib1g-dev uuid-dev
+mkdir download && cd download
 
-mkdir build && cd build
+sudo apt-get install p7zip-full zip unzip
+sudo apt-get install build-essential autoconf libtool cmake 
+sudo apt-get install libreadline-dev zlib1g-dev uuid-dev libssl-dev libmysqlclient-dev
 
 # libsodium
-mkdir libsodium && cd libsodium
-wget -c https://github.com/jedisct1/libsodium/archive/master.zip -O libsodium.zip
-unzip libsodium.zip
+wget -c http://download.libsodium.org/libsodium/releases/libsodium-1.0.1.tar.gz
+tar -xzvf libsodium-1.0.1.tar.gz
+cd libsodium-1.0.1
 sh ./autogen.sh && ./configure && make
 sudo make install
 cd ..
 
-# ubuntu zmq version is version 2.2, which is too old
-mkdir libzmq && cd libzmq
-wget -c https://github.com/zeromq/zeromq4-x/archive/master libzmq.zip
-unzip libsodium.zip
+# zeromq 4.x
+wget -c http://download.zeromq.org/zeromq-4.0.5.zip
+unzip zeromq-4.0.5.zip
+cd zeromq-4.0.5
 ./configure && make
 sudo make install
 cd ..
