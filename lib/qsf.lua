@@ -56,10 +56,7 @@ function qsf.run(service, func)
     trace.dumper = qsf.log
     while true do
         local ticks = process_gettick()
-        local ok, result = xpcall(dispatch_message, trace_stack, service, func)
-        if ok then 
-            if not result then break end
-        end
+        xpcall(dispatch_message, trace_stack, service, func)
         ticks = process_gettick() - ticks
         if ticks < 10 then
             process_sleep(5) -- yield OS thread context
