@@ -15,7 +15,6 @@ int luaopen_uuid(lua_State* L);
 int luaopen_crypto(lua_State* L);
 int luaopen_process(lua_State* L);
 int luaopen_mysql(lua_State* L);
-int luaopen_hiredis(lua_State* L);
 
 }
 
@@ -31,7 +30,6 @@ void lua_initlibs(lua_State* L)
         { "crypto", luaopen_crypto },
         { "process", luaopen_process },
         { "mysql", luaopen_mysql },
-        { "hiredis", luaopen_hiredis },
         { NULL, NULL },
     };
 

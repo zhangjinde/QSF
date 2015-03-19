@@ -45,7 +45,6 @@ solution 'qsf'
         includedirs 
         {
             '/usr/include/mysql', 
-            '/usr/include/hiredis',
         }
         links
         {
@@ -78,16 +77,15 @@ solution 'qsf'
             'deps/lua/src',
         }
         libdirs 'bin'
-        links {'lua5.3', 'hiredis'}
         if os.get() == 'windows' then
         links 
         {
             'libzmq', 
             'libuv', 
             'zlib', 
+            'lua5.3',
             'libeay32',
-            'libmysql', 
-            'Win32_Interop',
+            'libmysql',
         }
         includedirs
         {
@@ -100,6 +98,7 @@ solution 'qsf'
             'uv', 
             'z', 
             'uuid', 
+            'lua5.3',
             'mysqlclient',
         }
         end
