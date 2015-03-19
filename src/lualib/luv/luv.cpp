@@ -6,8 +6,7 @@
 #include <assert.h>
 #include <malloc.h>
 #include <uv.h>
-#include <lua.h>
-#include <lauxlib.h>
+#include <lua.hpp>
 #include "luv.h"
 
 int luv_check_ref(lua_State* L, int idx)

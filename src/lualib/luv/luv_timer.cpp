@@ -3,8 +3,7 @@
 // See accompanying files LICENSE.
 
 #include <assert.h>
-#include <lua.h>
-#include <lauxlib.h>
+#include <lua.hpp>
 #include <uv.h>
 #include "luv.h"
 
