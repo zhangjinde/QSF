@@ -31,16 +31,10 @@ public:
     // Send message to other context
     void    Send(StringPiece name, StringPiece data);
 
-    // Get random number generator of current context
-    Random& GetPRNG() { return rand_gen_; }
-
 private:
     // zeromq socket object
     std::unique_ptr<zmq::socket_t>  socket_;
 
     // Identity of this object, should be unique in current process
     std::string  name_;
-
-    // PRNG per thread
-    Random  rand_gen_;
 };
