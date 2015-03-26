@@ -5,6 +5,7 @@
 #include "Service.h"
 #include "LuaService.h"
 
+
 ServicePtr CreateService(const std::string& type, Context& ctx)
 {
     assert(!type.empty());
@@ -12,7 +13,7 @@ ServicePtr CreateService(const std::string& type, Context& ctx)
     {
         return ServicePtr(new LuaService(ctx));
     }
-    assert(!"unsupported service type");
+    assert(false && "unsupported service type");
     return ServicePtr();
 }
 

@@ -7,14 +7,13 @@
 #include <cassert>
 #include <memory>
 #include <string>
-#include <vector>
 #include "Context.h"
 
 // A service is an execution unit scheduled to an individual OS thread
 class Service
 {
 public:
-    Service(const std::string& type, Context& ctx)
+    Service(const std::string& type, Context& ctx) 
         : ctx_(ctx), type_(type)
     {
     }
@@ -30,10 +29,10 @@ public:
     const std::string&  GetType() const { return type_; }
     
     // Context object of this service
-    Context&  GetContext() { return ctx_; }
+    Context&  GetCtx() { return ctx_; }
 
     // Run this service, virtual interface
-    virtual int Run(const std::vector<std::string>& args) = 0;
+    virtual int Run(const std::string& args) = 0;
 
 private:
     Context&        ctx_;

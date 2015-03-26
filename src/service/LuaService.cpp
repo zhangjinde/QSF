@@ -4,15 +4,17 @@
 
 #include "LuaService.h"
 #include <lua.hpp>
-#include "Env.h"
-#include "core/Strings.h"
+#include "core/Conv.h"
 #include "core/Logging.h"
+#include "Env.h"
+
 
 using std::string;
 
-void lua_initlibs(lua_State* L);
+extern "C" void lua_initlibs(lua_State* L);
 
-//////////////////////////////////////////////////////////////////////////
+// LUA_INTEGER must be 64-bit
+static_assert(sizeof(LUA_INTEGER) == sizeof(int64_t), "LUA_INT_LONGLONG not defiend");
 
 LuaService::LuaService(Context& ctx)
     : Service("LuaSandbox", ctx)
@@ -35,7 +37,7 @@ LuaService::~LuaService()
 void LuaService::Initialize()
 {
     lua_State* L = luaVM_;
-    auto& ctx = this->GetContext();
+    auto& ctx = this->GetCtx();
     luaL_checkversion(L);
     lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
     luaL_openlibs(L);
@@ -52,30 +54,27 @@ void LuaService::LoadLibPath()
     string path = Env::Get("lua_path");
     if (!path.empty())
     {
-        auto chunk = stringPrintf("package.path = package.path .. ';' .. '%s'", 
-            path.c_str());
+        auto chunk = to<string>("package.path = package.path .. ';' .. '", path, "'");
         int err = luaL_dostring(L, chunk.c_str());
         CHECK(!err) << lua_tostring(L, -1);
     }
     string cpath = Env::Get("lua_cpath");
     if (!cpath.empty())
     {
-        auto chunk = stringPrintf("package.cpath = package.cpath .. ';' .. '%s'", 
-            cpath.c_str());
+        auto chunk = to<string>("package.cpath = package.cpath .. ';' .. '", cpath, "'");
         int err = luaL_dostring(L, chunk.c_str());
         CHECK(!err) << lua_tostring(L, -1);
     }
 }
 
-int LuaService::Run(const std::vector<string>& args)
+int LuaService::Run(const std::string& filename)
 {
-    if (args.empty())
+    if (filename.empty())
     {
         return 1;
     }
     
-    const string& id = this->GetContext().Name();
-    const string& filename = args[0];
+    const string& id = this->GetCtx().Name();
     lua_State* L = luaVM_;
     int r = luaL_loadfile(L, filename.c_str());
     if (r != LUA_OK)
@@ -83,12 +82,7 @@ int LuaService::Run(const std::vector<string>& args)
         fprintf(stderr, "%s: %s\n", id.c_str(), lua_tostring(L, -1));
         return 1;
     }
-    lua_pushlstring(L, id.c_str(), id.size());
-    for (auto i = 1U; i < args.size(); i++)
-    {
-        lua_pushlstring(L, args[i].c_str(), args[i].size());
-    }
-    r = lua_pcall(L, (int)args.size(), 0, 0);
+    r = lua_pcall(L, 0, 0, 0);
     if (r != LUA_OK)
     {
         fprintf(stderr, "%s: %s\n", id.c_str(), lua_tostring(L, -1));

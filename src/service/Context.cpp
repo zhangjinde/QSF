@@ -3,7 +3,7 @@
 // See accompanying files LICENSE.
 
 #include "Context.h"
-#include "QSF.h"
+#include "qsf.h"
 
 Context::Context(const std::string& name)
     : socket_(std::move(qsf::CreateDealer(name))), name_(name)
