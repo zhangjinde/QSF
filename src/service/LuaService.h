@@ -16,7 +16,7 @@ public:
     virtual ~LuaService();
 
     // First argument is the main chunk file name
-    virtual int Run(const std::string& filename) override;
+    virtual int Run(const std::string& args) override;
 
 private:
     // Pre-load modules

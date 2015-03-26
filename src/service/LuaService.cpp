@@ -67,22 +67,31 @@ void LuaService::LoadLibPath()
     }
 }
 
-int LuaService::Run(const std::string& filename)
+int LuaService::Run(const std::string& args)
 {
-    if (filename.empty())
+    if (args.empty())
     {
         return 1;
     }
-    
     const string& id = this->GetCtx().Name();
+    string filename = args;
+    string loader = "sys";
+    size_t pos = args.find(" ");
+    if (pos > 0 && pos != string::npos)
+    {
+        filename = args.substr(0, pos);
+        loader = args.substr(pos);
+    }
+    
     lua_State* L = luaVM_;
     int r = luaL_loadfile(L, filename.c_str());
     if (r != LUA_OK)
     {
-        fprintf(stderr, "%s: %s\n", id.c_str(), lua_tostring(L, -1));
+        fprintf(stderr, "%s\n", id.c_str(), lua_tostring(L, -1));
         return 1;
     }
-    r = lua_pcall(L, 0, 0, 0);
+    lua_pushlstring(L, loader.c_str(), loader.size());
+    r = lua_pcall(L, 1, 0, 0);
     if (r != LUA_OK)
     {
         fprintf(stderr, "%s: %s\n", id.c_str(), lua_tostring(L, -1));

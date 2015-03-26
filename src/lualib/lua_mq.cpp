@@ -60,8 +60,13 @@ static int mq_name(lua_State* L)
 // launch a new service
 static int mq_launch(lua_State* L)
 {
+    Context* self = (Context*)lua_touserdata(L, lua_upvalueindex(1));
+    assert(self);
+    const auto& name = self->Name();
     std::string ident = luaL_checkstring(L, 1);
     std::string args = luaL_checkstring(L, 2);
+    args += " ";
+    args += name;
     int top = lua_gettop(L);
     for (int i = 3; i <= top; i++)
     {
