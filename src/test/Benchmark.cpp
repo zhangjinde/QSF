@@ -32,9 +32,8 @@
 #include <regex>
 #include <algorithm>
 #include <iostream>
-#include "core/Logging.h"
-#include "Platform.h"
 #include "CmdLineFlags.h"
+#include "core/Logging.h"
 
 #ifdef _WIN32
 #include <Windows.h>

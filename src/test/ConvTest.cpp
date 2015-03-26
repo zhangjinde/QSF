@@ -609,7 +609,7 @@ void u2aAppendFollyBM(unsigned int n, uint64_t value)
     }
 }
 
-const static size_t bigInt = 11424545345345;
+const static uint64_t bigInt = 11424545345345;
 const static size_t smallInt = 104;
 const static char someString[] = "this is some nice string";
 const static char otherString[] = "this is a long string, so it's not so nice";

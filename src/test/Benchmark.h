@@ -56,7 +56,6 @@ void addBenchmarkInit(BenchmarkInitializer initializer);
 uint64_t getNowTickCount();
 
 
-
 /**
  * Supporting type for BENCHMARK_SUSPEND defined below.
  */
@@ -235,7 +234,7 @@ void doNotOptimizeAway(T&& datum)
 #define BENCHMARK(name, n)      \
       BENCHMARK_IMPL(           \
         name,                   \
-        FB_STRINGIZE(name),     \
+        STRINGIZE(name),        \
         unsigned,               \
         n)
 
@@ -304,6 +303,6 @@ void doNotOptimizeAway(T&& datum)
 #define BENCHMARK_RELATIVE(name, n)     \
       BENCHMARK_IMPL(                   \
         name,                           \
-        "%" FB_STRINGIZE(name),         \
+        "%" STRINGIZE(name),            \
         unsigned,                       \
         n)

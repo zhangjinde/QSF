@@ -105,8 +105,7 @@ std::vector<uint8_t> gEncoded;
 
 BENCHMARK_INITIALIZER(generateRandomValues)
 {
-    uint32_t seed = std::random_device()();
-    std::mt19937 rng(seed);
+    std::mt19937 rng;
 
     // Approximation of power law
     std::uniform_int_distribution<int> numBytes(1, 8);
