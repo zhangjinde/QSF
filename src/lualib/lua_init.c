@@ -13,7 +13,6 @@ extern "C" {
 int luaopen_mq(lua_State* L);
 int luaopen_process(lua_State* L);
 int luaopen_zmq(lua_State* L);
-int luaopen_net(lua_State* L);
 int luaopen_uuid(lua_State* L);
 int luaopen_mysql(lua_State* L);
 int luaopen_crypto(lua_State* L);
@@ -31,7 +30,6 @@ void lua_initlibs(lua_State* L)
     {
         { "mq", luaopen_mq },
         { "zmq", luaopen_zmq },
-        { "net", luaopen_net },
         { "uuid", luaopen_uuid },
         { "crypto", luaopen_crypto },
         { "process", luaopen_process },
