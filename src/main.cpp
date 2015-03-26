@@ -2,7 +2,13 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "QSF.h"
+#include <cstdio>
+#include <csignal>
+#include <exception>
+#include <typeinfo>
+#include "qsf.h"
+
+using namespace std;
 
 int main(int argc, char* argv[])
 {

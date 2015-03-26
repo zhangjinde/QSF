@@ -2,7 +2,7 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "QSF.h"
+#include "qsf.h"
 #include <mutex>
 #include <atomic>
 #include <vector>
@@ -11,7 +11,6 @@
 #include <unordered_set>
 #include <unordered_map>
 #include "core/ScopeGuard.h"
-#include "core/Strings.h"
 #include "service/Context.h"
 #include "service/Service.h"
 #include "Env.h"
@@ -109,9 +108,12 @@ bool DispatchMessage()
             s_router->send(msg);
         }
     }
-    catch (zmq::error_t& err)
+    catch (zmq::error_t& ex)
     {
-        LOG(ERROR) << err.num() << ": " << err.what();
+        std::string src((const char*)from.data(), from.size());
+        std::string dst((const char*)to.data(), to.size());
+        LOG(ERROR) << "zmq error: " << ex.num() << ", " 
+                   << src << " ==> " << dst << ", " << ex.what();
     }
     return true;
 }
@@ -127,11 +129,11 @@ void OnServiceCleanup(const std::string& name)
 // Callback function for service thread
 void ServiceThreadCallback(std::string type, 
                            std::string name, 
-                           std::vector<std::string> args)
+                           std::string args)
 {
     try
     {
-        assert(!type.empty() && !args.empty());
+        assert(!type.empty());
         Context ctx(name);
         auto service = CreateService(type, ctx);
         if (service)
@@ -198,8 +200,10 @@ std::unique_ptr<zmq::socket_t> CreateDealer(const std::string& identity)
     std::unique_ptr<zmq::socket_t> dealer(new zmq::socket_t(s_context, ZMQ_DEALER));
     int linger = 0;
     int64_t max_msg_size = Env::GetInt("max_ipc_msg_size");
+    int32_t max_recv_timeout = static_cast<uint32_t>(Env::GetInt("max_recv_timeout"));
     dealer->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
     dealer->setsockopt(ZMQ_IDENTITY, identity.c_str(), identity.size());
+    dealer->setsockopt(ZMQ_RCVTIMEO, &max_recv_timeout, sizeof(max_recv_timeout));
     dealer->setsockopt(ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
     dealer->connect(QSF_ROUTER);
     return std::move(dealer);
@@ -215,14 +219,9 @@ void Exit()
     }
 }
 
-zmq::context_t& GlobalContext()
-{
-    return s_context;
-}
-
 bool CreateService(const std::string& type, 
                    const std::string& name, 
-                   const std::string& str)
+                   const std::string& args)
 {
     // name of 'sys' is reserved
     if (type.empty() || name.empty() 
@@ -231,12 +230,11 @@ bool CreateService(const std::string& type,
     {
         return false;
     }
-    if (str.empty())
+    if (args.empty())
     {
         return false;
     }
-    std::vector<std::string> args;
-    split(" ", str, args);
+
     {
         lock_guard<mutex> guard(s_mutex);
         if (s_services.count(name)) // name registered already
@@ -276,3 +274,8 @@ int Start(const char* filename)
 }
 
 } // namespace qsf
+
+extern "C" void* GlobalZMQContext()
+{
+    return (void*)s_context;
+}
