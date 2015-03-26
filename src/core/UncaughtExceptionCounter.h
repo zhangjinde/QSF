@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include "Platform.h"
 #include <exception>
 
 #if defined(__GNUG__) || defined(__CLANG__)

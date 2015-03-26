@@ -18,6 +18,54 @@
 
 #pragma once
 
+#if defined(__x86_64__) || defined(_M_X64)
+# define PLATFORM_X64   1
+#else
+# define PLATFORM_X64   0
+#endif
+
+// Portable version check
+#ifndef __GNUC_PREREQ
+# if defined __GNUC__ && defined __GNUC_MINOR__
+#  define __GNUC_PREREQ(maj, min) ((__GNUC__ << 16) + __GNUC_MINOR__ >= \
+                                   ((maj) << 16) + (min))
+# else
+#  define __GNUC_PREREQ(maj, min) 0
+# endif
+#endif
+
+#if defined(__GNUC__) && __GNUC__ >= 4
+# define LIKELY(x)   (__builtin_expect((x), 1))
+# define UNLIKELY(x) (__builtin_expect((x), 0))
+#else
+# define LIKELY(x)   (x)
+# define UNLIKELY(x) (x)
+#endif
+
+
+#ifdef _MSC_VER
+# define ALIGN(x)   __declspec(align(x))
+#else
+# define ALIGN(x)   __attribute__((aligned(x)))
+#endif
+
+// Compiler specific attribute translation
+// msvc should come first, so if clang is in msvc mode it gets the right defines
+// NOTE: this will only do checking in msvc with versions that support /analyze
+#if _MSC_VER
+# ifdef _USE_ATTRIBUTES_FOR_SAL
+#   undef _USE_ATTRIBUTES_FOR_SAL
+# endif
+# define _USE_ATTRIBUTES_FOR_SAL 1
+# include <sal.h>
+# define PRINTF_FORMAT _Printf_format_string_
+# define PRINTF_FORMAT_ATTR(format_param, dots_param) /**/
+#else
+# define PRINTF_FORMAT /**/
+# define PRINTF_FORMAT_ATTR(format_param, dots_param) \
+  __attribute__((format(printf, format_param, dots_param)))
+#endif
+
 /**
  * FB_ANONYMOUS_VARIABLE(str) introduces an identifier starting with
  * str and ending with a number that varies with the line.
@@ -32,8 +80,13 @@
 #endif
 #endif
 
-/**
- * Use FB_STRINGIZE(x) when you'd want to do what #x does inside
- * another macro expansion.
+/*
+ * Turn A into a string literal without expanding macro definitions
+ * (however, if invoked from a macro, macro arguments are expanded).
  */
-#define FB_STRINGIZE(x) #x
+#define STRINGIZE_NX(x) #x
+
+/*
+ * Turn A into a string literal after macro-expanding it.
+ */
+#define STRINGIZE(A)    STRINGIZE_NX(A)

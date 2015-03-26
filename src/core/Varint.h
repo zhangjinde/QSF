@@ -72,7 +72,7 @@ inline uint64_t encodeZigZag(int64_t val)
 
 inline int64_t decodeZigZag(uint64_t val)
 {
-    return static_cast<int64_t>((val >> 1) ^ -(val & 1));
+    return static_cast<int64_t>((val >> 1) ^ -static_cast<int64_t>(val & 1));
 }
 
 // Implementation below

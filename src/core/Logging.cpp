@@ -32,6 +32,11 @@
 #include <stdio.h>
 #include <mutex>
 
+
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
 using std::mutex;
 using std::lock_guard;
 
@@ -39,13 +44,17 @@ namespace internal {
 
 void DefaultLogHandler(LogLevel level, const char* filename, int line,
                        const std::string& message) {
-  static const char* level_names[] = { "INFO", "WARNING", "ERROR", "FATAL" };
-
-  // We use fprintf() instead of cerr because we want this to work at static
-  // initialization time.
-  fprintf(stderr, "[qsf %s %s:%d] %s\n",
-          level_names[level], filename, line, message.c_str());
-  fflush(stderr);  // Needed on MSVC.
+    static const char* level_names[] = { "INFO", "WARNING", "ERROR", "FATAL" };
+    char text[2048];
+    snprintf(text, sizeof(text), "[%s %s:%d] %s\n", level_names[level], 
+        filename, line, message.c_str());
+#ifdef _WIN32
+    OutputDebugStringA(text);
+#endif
+    // We use fprintf() instead of cerr because we want this to work at static
+    // initialization time.
+    fprintf(stderr, "%s", text);
+    fflush(stderr);  // Needed on MSVC.
 }
 
 void NullLogHandler(LogLevel /* level */, const char* /* filename */,

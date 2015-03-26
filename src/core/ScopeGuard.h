@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "Platform.h"
+#include "Preprocessor.h"
 #include <cstddef>
 #include <functional>
 #include <new>

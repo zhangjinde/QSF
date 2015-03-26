@@ -1,8 +1,3 @@
-//  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
-//
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
@@ -12,7 +7,7 @@
 
 #include "Checksum.h"
 #include <cstring>
-#include "Platform.h"
+#include "Preprocessor.h"
 #include "CpuId.h"
 
 #ifdef _WIN32
@@ -378,26 +373,10 @@ static inline Crc32Impl Choose_Extend() {
     return cpuid.sse42() ? ExtendImpl<Fast_CRC32> : ExtendImpl < Slow_CRC32 >;
 }
 
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t crc32c(const void* data, size_t nbytes, uint32_t init_crc) {
     static Crc32Impl impl = Choose_Extend();
     return impl(init_crc, (const char*)data, nbytes);
 }
-
-namespace detail {
-/**
- * @note This function is exposed to support special cases where the
- *       calling code is absolutely certain it wants to use the software
- *       implementation instead of the hardware-accelerated code - unit
- *       tests, for example.  For all other scenarios, please call crc32c()
- *       and let it pick an implementation based on the capabilities of
- *       the underlying CPU.
- */
-uint32_t crc32c_hw(const void* data, size_t nbytes, uint32_t init_crc) {
-    return ExtendImpl<Fast_CRC32>(init_crc, (const char*)data, nbytes);
-}
-
-uint32_t crc32c_sw(const void* data, size_t nbytes, uint32_t init_crc) {
-    return ExtendImpl<Slow_CRC32>(init_crc, (const char*)data, nbytes);
-}
-
-} // namespace detail

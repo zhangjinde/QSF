@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <cstdint>
-#include <cstddef>
+#include <stdint.h>
+#include <stddef.h>
 
 
 /**
@@ -18,4 +18,8 @@
  *       polynomial and thus yields different results for the same input
  *       than a traditional CRC-32.
  */
-uint32_t crc32c(const void* data, size_t nbytes, uint32_t init_crc = 0U);
+
+#ifdef __cplusplus
+extern "C"
+#endif
+uint32_t crc32c(const void* data, size_t nbytes, uint32_t init_crc);

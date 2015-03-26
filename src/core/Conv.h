@@ -33,7 +33,7 @@
 #include <string>
 #include <stdexcept>
 #include <type_traits>
-#include "Platform.h"
+#include "Preprocessor.h"
 #include "Logging.h"
 #include "Range.h"
 
