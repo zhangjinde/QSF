@@ -2,10 +2,31 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include <lua.hpp>
+#include <string>
 #include <thread>
 #include <chrono>
-#include <uv.h>
+#include <lua.hpp>
+
+#ifndef _WIN32
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#else
+#include <Windows.h>
+#define getpid  GetCurrentProcessId
+inline std::wstring Utf8ToWide(const std::string& strUtf8)
+{
+    std::wstring strWide;
+    int count = MultiByteToWideChar(CP_UTF8, 0, strUtf8.data(), (int)strUtf8.length(), NULL, 0);
+    if (count > 0)
+    {
+        strWide.resize(count);
+        MultiByteToWideChar(CP_UTF8, 0, strUtf8.data(), (int)strUtf8.length(),
+            const_cast<wchar_t*>(strWide.data()), (int)strWide.length());
+    }
+    return strWide;
+}
+#endif
 
 static int process_sleep(lua_State* L)
 {
@@ -19,20 +40,6 @@ static int process_gettick(lua_State* L)
     using namespace std::chrono;
     auto duration = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     lua_pushinteger(L, (int64_t)duration.count());
-    return 1;
-}
-
-static int process_hrtime(lua_State* L)
-{
-    uint64_t time_point = uv_hrtime();
-    lua_pushinteger(L, (int64_t)time_point);
-    return 1;
-}
-
-static int process_total_memory(lua_State* L)
-{
-    uint64_t bytes = uv_get_total_memory();
-    lua_pushinteger(L, (int64_t)bytes);
     return 1;
 }
 
@@ -52,72 +59,19 @@ static int process_os(lua_State* L)
 
 static int process_pid(lua_State* L)
 {
-#if defined(_WIN32)
-    int pid = GetCurrentProcessId();
-#else
     int pid = getpid();
-#endif
     lua_pushinteger(L, pid);
     return 1;
 }
 
-static int process_cwd(lua_State* L)
-{
-    char path[260];
-    size_t size = sizeof(path);
-    int r = uv_cwd(path, &size);
-    if (r < 0)
-    {
-        return luaL_error(L, "cwd: %s", uv_strerror(r));
-    }
-    lua_pushlstring(L, path, size);
-    return 1;
-}
-
-static int process_exepath(lua_State* L)
-{
-    char path[260];
-    size_t size = sizeof(path);
-    int r = uv_exepath(path, &size);
-    if (r < 0)
-    {
-        return luaL_error(L, "exepath: %s", uv_strerror(r));
-    }
-    lua_pushlstring(L, path, size);
-    return 1;
-}
-
-static int process_chdir(lua_State* L)
-{
-    const char* path = luaL_checkstring(L, 1);
-    int r = uv_chdir(path);
-    if (r < 0)
-    {
-        return luaL_error(L, "chdir: %s", uv_strerror(r));
-    }
-    return 0;
-}
-
-static int process_mkdir(lua_State* L)
-{
-    const char* path = luaL_checkstring(L, 1);
-#ifdef _WIN32
-    int r = CreateDirectory(path, NULL);
-#else
-    int r = (mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
-#endif
-    if (!r)
-    {
-        return luaL_error(L, "unable to create directory '%s'", path);
-    }
-    return 0;
-}
-
 static int process_set_title(lua_State* L)
 {
+#ifdef _WIN32
     size_t len = 0;
     const char* title = luaL_checklstring(L, 1, &len);
-    uv_set_process_title(title);
+    auto str = Utf8ToWide(title);
+    SetConsoleTitleW(str.c_str());
+#endif
     return 0;
 }
 
@@ -130,12 +84,6 @@ int luaopen_process(lua_State* L)
         { "gettick", process_gettick },
         { "os", process_os },
         { "pid", process_pid },
-        { "hrtime", process_hrtime },
-        { "total_memory", process_total_memory },
-        { "cwd", process_cwd },
-        { "exepath", process_exepath },
-        { "chdir", process_chdir },
-        { "mkdir", process_mkdir },
         { "set_title", process_set_title },
         { NULL, NULL },
     };

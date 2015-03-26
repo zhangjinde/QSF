@@ -2,23 +2,28 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include <lua.hpp>
-#include <cstdint>
+#include <lua.h>
+#include <lauxlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // declarations
-extern "C" {
-
 int luaopen_mq(lua_State* L);
-int luaopen_zmq(lua_State* L);
-int luaopen_uuid(lua_State* L);
-int luaopen_crypto(lua_State* L);
 int luaopen_process(lua_State* L);
+int luaopen_zmq(lua_State* L);
+int luaopen_net(lua_State* L);
+int luaopen_uuid(lua_State* L);
 int luaopen_mysql(lua_State* L);
+int luaopen_crypto(lua_State* L);
+int luaopen_zlib(lua_State* L);
+int luaopen_fs(lua_State* L);
+int luaopen_cjson(lua_State *l);
 
+#ifdef __cplusplus
 }
-
-static_assert(sizeof(lua_Integer) == sizeof(int64_t), "LUA_INT_LONGLONG not defiend");
+#endif
 
 void lua_initlibs(lua_State* L)
 {
@@ -26,10 +31,14 @@ void lua_initlibs(lua_State* L)
     {
         { "mq", luaopen_mq },
         { "zmq", luaopen_zmq },
+        { "net", luaopen_net },
         { "uuid", luaopen_uuid },
         { "crypto", luaopen_crypto },
         { "process", luaopen_process },
         { "mysql", luaopen_mysql },
+        { "zlib", luaopen_zlib },
+        { "fs", luaopen_fs },
+        { "cjson", luaopen_cjson },
         { NULL, NULL },
     };
 

@@ -3,8 +3,10 @@
 // See accompanying files LICENSE.
 
 #include <stdint.h>
-#include <string>
-#include <lua.hpp>
+#include <assert.h>
+#include <string.h>
+#include <lua.h>
+#include <lauxlib.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
@@ -12,7 +14,6 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include "core/Checksum.h"
-#include "Hexdump.h"
 
 #define RSA_BITS        1024
 #define MAX_RSA_BUF     16384
@@ -23,20 +24,36 @@
 #define check_aes(L)   ((cryptAES*)luaL_checkudata(L, 1, AES_HANDLE))
 #define check_rsa(L)   ((cryptRSA*)luaL_checkudata(L, 1, RSA_HANDLE))
 
-struct cryptAES
+typedef int(*RSAFuncType)(int, const uint8_t*, uint8_t*, RSA*, int);
+
+typedef struct cryptAES
 {
     uint8_t key[AES_BLOCK_SIZE];
     uint8_t iv[AES_BLOCK_SIZE];
     uint8_t buf[AES_BLOCK_SIZE * 512];  //16KB, big enough for our net packet
-};
+}cryptAES;
 
-struct cryptRSA
+typedef struct cryptRSA
 {
     RSA     ctx;
     uint8_t buf[MAX_RSA_BUF];  //16KB
-};
+}cryptRSA;
 
-typedef int(*rsa_func)(int, const uint8_t*, uint8_t*, rsa_st*, int);
+
+inline void HexDump(const void* data, size_t len, void* out, size_t outlen)
+{
+    assert(data && len > 0 && outlen >= len*2);
+    static const char dict[] = "0123456789abcdef";
+    const uint8_t* src = (const uint8_t*)(data);
+    uint8_t* dst = (uint8_t*)out;
+    for (size_t i = 0; i < len; i++)
+    {
+        uint8_t ch = src[i];
+        *dst++ = dict[(ch & 0xF0) >> 4];
+        *dst++ = dict[ch & 0x0F];
+    }
+}
+
 
 static int crypto_aes_new(lua_State* L)
 {
@@ -68,7 +85,7 @@ static int crypto_aes_new(lua_State* L)
 
 static int crypto_aes_encrypt(lua_State* L)
 {
-    auto aes = check_aes(L);
+    cryptAES* aes = check_aes(L);
     size_t size;
     const uint8_t* data = (const uint8_t*)luaL_checklstring(L, 2, &size);
     if (size > sizeof(aes->buf))
@@ -90,7 +107,8 @@ static int crypto_aes_encrypt(lua_State* L)
     }
     if (slop > 0) // padding
     {
-        uint8_t block[AES_BLOCK_SIZE] = {};
+        uint8_t block[AES_BLOCK_SIZE];
+        memset(block, '\0', sizeof(block)); // padding zero
         memcpy(block, data, slop);
         AES_cbc_encrypt(block, dst, AES_BLOCK_SIZE, &ctx, iv, AES_ENCRYPT);
         dst += AES_BLOCK_SIZE;
@@ -101,7 +119,7 @@ static int crypto_aes_encrypt(lua_State* L)
 
 static int crypto_aes_decrypt(lua_State* L)
 {
-    auto aes = check_aes(L);
+    cryptAES* aes = check_aes(L);
     size_t size;
     const uint8_t* data = (const uint8_t*)luaL_checklstring(L, 2, &size);
     luaL_argcheck(L, (size % AES_BLOCK_SIZE == 0), 2, "invalid block size");
@@ -127,7 +145,7 @@ static int crypto_aes_decrypt(lua_State* L)
 
 static int crypto_rsa_new(lua_State* L)
 {
-    cryptRSA* ptr = (cryptRSA*)lua_newuserdata(L, sizeof(cryptRSA));
+    cryptRSA* rsa = (cryptRSA*)lua_newuserdata(L, sizeof(cryptRSA));
     luaL_getmetatable(L, RSA_HANDLE);
     lua_setmetatable(L, -2);
     return 1;
@@ -148,29 +166,31 @@ static int crypto_rsa_gen_keypair(lua_State* L)
     // public key
     BIO* bio = BIO_new(BIO_s_mem());
     PEM_write_bio_RSAPublicKey(bio, keypair);
-    size_t length = BIO_pending(bio);
-    std::string pubkey(length, '\0');
-    BIO_read(bio, (char*)pubkey.data(), length);
+    int pubkey_len = BIO_pending(bio);
+    char pubkey[1024];
+    assert(pubkey_len < sizeof(pubkey));
+    BIO_read(bio, pubkey, pubkey_len);
 
     // private key
     PEM_write_bio_RSAPrivateKey(bio, keypair, NULL, NULL, 0, NULL, NULL);
-    length = BIO_pending(bio);
-    std::string prikey(length, '\0');
-    BIO_read(bio, (char*)prikey.data(), length);
+    int prikey_len = BIO_pending(bio);
+    char prikey[1024];
+    assert(prikey_len < sizeof(prikey));
+    BIO_read(bio, prikey, prikey_len);
     BIO_free(bio);
 
-    lua_pushlstring(L, pubkey.data(), pubkey.size());
-    lua_pushlstring(L, prikey.data(), prikey.size());
+    lua_pushlstring(L, pubkey, pubkey_len);
+    lua_pushlstring(L, prikey, prikey_len);
     return 2;
 }
 
 static int crypto_rsa_set_pubkey(lua_State* L)
 {
-    auto rsa = check_rsa(L);
+    cryptRSA* rsa = check_rsa(L);
     size_t len;
     const char* key = luaL_checklstring(L, 2, &len);
     BIO* bio = BIO_new(BIO_s_mem());
-    BIO_write(bio, key, len);
+    BIO_write(bio, key, (int)len);
     RSA* ctx = PEM_read_bio_RSAPublicKey(bio, NULL, NULL, NULL);
     BIO_free(bio);
     if (ctx)
@@ -186,11 +206,11 @@ static int crypto_rsa_set_pubkey(lua_State* L)
 
 static int crypto_rsa_set_key(lua_State* L)
 {
-    auto rsa = check_rsa(L);
+    cryptRSA* rsa = check_rsa(L);
     size_t len;
     const char* key = luaL_checklstring(L, 2, &len);
     BIO* bio = BIO_new(BIO_s_mem());
-    BIO_write(bio, key, len);
+    BIO_write(bio, key, (int)len);
     RSA* ctx = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
     BIO_free(bio);
     if (ctx)
@@ -204,7 +224,7 @@ static int crypto_rsa_set_key(lua_State* L)
     return 0;
 }
 
-inline int do_rsa_encrypt(cryptRSA* rsa, rsa_func func, const uint8_t* src, int size)
+inline int do_rsa_encrypt(cryptRSA* rsa, RSAFuncType func, const uint8_t* src, int size)
 {
     assert(rsa && func && src && size > 0);
     uint8_t* dst = rsa->buf;
@@ -230,10 +250,10 @@ inline int do_rsa_encrypt(cryptRSA* rsa, rsa_func func, const uint8_t* src, int 
             return -1;
         }
     }
-    return dst - rsa->buf;
+    return (int)(dst - rsa->buf);
 }
 
-inline int do_rsa_decrypt(cryptRSA* rsa, rsa_func func, const uint8_t* src, int size)
+inline int do_rsa_decrypt(cryptRSA* rsa, RSAFuncType func, const uint8_t* src, int size)
 {
     assert(rsa && func && src && size > 0);
     const int modulus_size = RSA_size(&rsa->ctx);
@@ -262,15 +282,15 @@ inline int do_rsa_decrypt(cryptRSA* rsa, rsa_func func, const uint8_t* src, int 
             return -1;
         }
     }
-    return dst - rsa->buf;
+    return (int)(dst - rsa->buf);
 }
 
 static int crypto_rsa_pub_encrypt(lua_State* L)
 {
-    auto rsa = check_rsa(L);
+    cryptRSA* rsa = check_rsa(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
-    int size = do_rsa_encrypt(rsa, RSA_public_encrypt, (const uint8_t*)data, len);
+    int size = do_rsa_encrypt(rsa, RSA_public_encrypt, (const uint8_t*)data, (int)len);
     if (size > 0)
     {
         lua_pushlstring(L, (const char*)rsa->buf, size);
@@ -281,10 +301,10 @@ static int crypto_rsa_pub_encrypt(lua_State* L)
 
 static int crypto_rsa_encrypt(lua_State* L)
 {
-    auto rsa = check_rsa(L);
+    cryptRSA* rsa = check_rsa(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
-    int size = do_rsa_encrypt(rsa, RSA_private_encrypt, (const uint8_t*)data, len);
+    int size = do_rsa_encrypt(rsa, RSA_private_encrypt, (const uint8_t*)data, (int)len);
     if (size > 0)
     {
         lua_pushlstring(L, (const char*)rsa->buf, size);
@@ -295,10 +315,10 @@ static int crypto_rsa_encrypt(lua_State* L)
 
 static int crypto_rsa_pub_decrypt(lua_State* L)
 {
-    auto rsa = check_rsa(L);
+    cryptRSA* rsa = check_rsa(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
-    int size = do_rsa_decrypt(rsa, RSA_public_decrypt, (const uint8_t*)data, len);
+    int size = do_rsa_decrypt(rsa, RSA_public_decrypt, (const uint8_t*)data, (int)len);
     if (size > 0)
     {
         lua_pushlstring(L, (const char*)rsa->buf, size);
@@ -309,10 +329,10 @@ static int crypto_rsa_pub_decrypt(lua_State* L)
 
 static int crypto_rsa_decrypt(lua_State* L)
 {
-    auto rsa = check_rsa(L);
+    cryptRSA* rsa = check_rsa(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
-    int size = do_rsa_decrypt(rsa, RSA_private_decrypt, (const uint8_t*)data, len);
+    int size = do_rsa_decrypt(rsa, RSA_private_decrypt, (const uint8_t*)data, (int)len);
     if (size > 0)
     {
         lua_pushlstring(L, (const char*)rsa->buf, size);
@@ -337,8 +357,9 @@ static int crypto_md5(lua_State* L)
     const char* data = luaL_checklstring(L, 1, &len);
     uint8_t buffer[MD5_DIGEST_LENGTH];
     MD5((const uint8_t*)data, len, buffer);
-    std::string hex = BinaryToHex(buffer, MD5_DIGEST_LENGTH);
-    lua_pushlstring(L, hex.c_str(), hex.size());
+    char hex[MD5_DIGEST_LENGTH * 2];
+    HexDump(buffer, MD5_DIGEST_LENGTH, hex, sizeof(hex));
+    lua_pushlstring(L, hex, sizeof(hex));
     return 1;
 }
 
@@ -348,34 +369,39 @@ static int crypto_sha1(lua_State* L)
     const uint8_t* data = (const uint8_t*)luaL_checklstring(L, 1, &len);
     uint8_t buffer[SHA_DIGEST_LENGTH];
     SHA1(data, len, buffer);
-    std::string hex = BinaryToHex(buffer, SHA_DIGEST_LENGTH);
-    lua_pushlstring(L, hex.c_str(), hex.size());
+    char hex[SHA_DIGEST_LENGTH * 2];
+    HexDump(buffer, SHA_DIGEST_LENGTH, hex, sizeof(hex));
+    lua_pushlstring(L, hex, sizeof(hex));
     return 1;
 }
 
 static int crypto_hmac_md5(lua_State* L)
 {
-    size_t key_len, md_len, size;
+    size_t key_len, size;
     const char* key = luaL_checklstring(L, 1, &key_len);
     const char* data = luaL_checklstring(L, 2, &size);
-    auto evp_md = EVP_md5();
+    const EVP_MD* evp_md = EVP_md5();
+    unsigned int md_len = 0;
     uint8_t md[EVP_MAX_MD_SIZE];
-    HMAC(evp_md, key, key_len, (const uint8_t*)data, size, md, &md_len);
-    auto str = BinaryToHex(md, md_len);
-    lua_pushlstring(L, str.data(), str.size());
+    HMAC(evp_md, key, (int)key_len, (const uint8_t*)data, size, md, &md_len);
+    char hex[EVP_MAX_MD_SIZE * 2];
+    HexDump(md, md_len, hex, sizeof(hex));
+    lua_pushlstring(L, hex, md_len*2);
     return 1;
 }
 
 static int crypto_hmac_sha1(lua_State* L)
 {
-    size_t key_len, md_len, size;
+    size_t key_len, size;
     const char* key = luaL_checklstring(L, 1, &key_len);
     const char* data = luaL_checklstring(L, 2, &size);
-    auto evp_md = EVP_sha1();
+    const EVP_MD* evp_md = EVP_sha1();
+    unsigned int md_len = 0;
     uint8_t md[EVP_MAX_MD_SIZE];
-    HMAC(evp_md, key, key_len, (const uint8_t*)data, size, md, &md_len);
-    auto str = BinaryToHex(md, md_len);
-    lua_pushlstring(L, str.data(), str.size());
+    HMAC(evp_md, key, (int)key_len, (const uint8_t*)data, size, md, &md_len);
+    char hex[EVP_MAX_MD_SIZE * 2];
+    HexDump(md, md_len, hex, sizeof(hex));
+    lua_pushlstring(L, hex, md_len*2);
     return 1;
 }
 
@@ -419,8 +445,7 @@ static void make_meta(lua_State* L)
     create_meta(L, RSA_HANDLE, rsa_lib);
 }
 
-extern "C" 
-int luaopen_crypto(lua_State* L)
+LUALIB_API int luaopen_crypto(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {

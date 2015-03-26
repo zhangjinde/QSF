@@ -6,7 +6,7 @@
 #include <vector>
 #include <lua.hpp>
 #include "service/Context.h"
-#include "QSF.h"
+#include "qsf.h"
 
 
 // send message to a named service
@@ -63,7 +63,7 @@ static int mq_launch(lua_State* L)
     std::string ident = luaL_checkstring(L, 1);
     std::string args = luaL_checkstring(L, 2);
     int top = lua_gettop(L);
-    for (int i = 4; i <= top; i++)
+    for (int i = 3; i <= top; i++)
     {
         const char* value = luaL_checkstring(L, i);
         args.append(" ");
@@ -93,13 +93,11 @@ int luaopen_mq(lua_State* L)
         { "shutdown", mq_shutdown },
         {NULL, NULL},
     };
+
     luaL_newlibtable(L, lib);
     lua_getfield(L, LUA_REGISTRYINDEX, "mq_ctx");
     Context* self = (Context*)lua_touserdata(L, -1);
-    if (self == nullptr)
-    {
-        return luaL_error(L, "Context pointer is null");
-    }
+    luaL_argcheck(L, self != nullptr, 1, "invalid context pointer");
     luaL_setfuncs(L, lib, 1);
     return 1;
 }

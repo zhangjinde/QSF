@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
-#include <lua.hpp>
-#include "core/Logging.h"
+#include <lua.h>
+#include <lauxlib.h>
 
 #ifdef _WIN32
 #include <Objbase.h>
@@ -39,7 +39,7 @@ inline int uuid_comp(const void* uuid1, const void* uuid2)
 #endif
 }
 
-inline void uuid_tostring(const void* uuid, char* out, int len)
+inline void uuid_to_string(const void* uuid, char* out, int len)
 {
 #ifdef _WIN32
     const GUID* guid = (const GUID*)uuid;
@@ -74,8 +74,8 @@ static int uuid_gc(lua_State* L)
 static int uuid_tostring(lua_State* L)
 {
     void* uuid = check_uuid(L, 1);
-    char buffer[40] = {};
-    uuid_tostring(uuid, buffer, 40);
+    char buffer[40];
+    uuid_to_string(uuid, buffer, 40);
     lua_pushstring(L, buffer);
     return 1;
 }
@@ -132,14 +132,14 @@ static void make_uuid_meta(lua_State* L)
     lua_pop(L, 1);  /* pop new metatable */
 }
 
-extern "C" 
-int luaopen_uuid(lua_State* L)
+LUALIB_API int luaopen_uuid(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
         { "create", new_uuid },
         { NULL, NULL },
     };
+ 
     luaL_newlib(L, lib);
     make_uuid_meta(L);
     return 1;

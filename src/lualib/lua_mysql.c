@@ -4,10 +4,10 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 #include <assert.h>
 #include <mysql.h>
-#include <lua.hpp>
+#include <lua.h>
+#include <lauxlib.h>
 
 
 #define LUAMYSQL_CONN       "Connection*"
@@ -487,7 +487,7 @@ static void push_mysql_constant(lua_State* L)
     push_literal(L, "CLIENT_SSL", CLIENT_SSL);
     push_literal(L, "CLIENT_IGNORE_SIGPIPE", CLIENT_IGNORE_SIGPIPE);
     push_literal(L, "CLIENT_TRANSACTIONS", CLIENT_TRANSACTIONS);
-    push_literal(L, "CLIENT_SECURE_CONNECTION", CLIENT_SECURE_CONNECTION);
+    //push_literal(L, "CLIENT_SECURE_CONNECTION", CLIENT_SECURE_CONNECTION);
     push_literal(L, "CLIENT_MULTI_STATEMENTS", CLIENT_MULTI_STATEMENTS);
     push_literal(L, "CLIENT_MULTI_RESULTS", CLIENT_MULTI_RESULTS);
     push_literal(L, "CLIENT_PS_MULTI_RESULTS", CLIENT_PS_MULTI_RESULTS);
@@ -546,15 +546,14 @@ static void make_mysql_meta(lua_State* L)
     create_metatable(L, LUAMYSQL_CURSOR, cursor_methods);
 }
 
-extern "C" 
-int luaopen_mysql(lua_State* L)
+LUALIB_API int luaopen_mysql(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
         { "newclient", conn_create },
         { NULL, NULL },
     };
-    luaL_checkversion(L);
+
     make_mysql_meta(L);
     luaL_newlib(L, lib);
     push_mysql_constant(L);

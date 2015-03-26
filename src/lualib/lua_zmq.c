@@ -2,14 +2,15 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include "Platform.h"
 #include <stdio.h>
 #include <assert.h>
 #include <zmq.h>
 #include <zmq_utils.h>
-#include <lua.hpp>
-#include "QSF.h"
+#include <lua.h>
+#include <lauxlib.h>
 
+
+extern void* GlobalZMQContext();
 
 #define LZMQ_SOCKET     "socket*"
 #define check_socket(L) (*(void**)luaL_checkudata(L, 1, LZMQ_SOCKET))
@@ -23,8 +24,7 @@
 static int lzmq_create_socket(lua_State* L)
 {
     int type = (int)luaL_checkinteger(L, 1);
-    void* context = qsf::GlobalContext();
-    void* socket = zmq_socket(context, type);
+    void* socket = zmq_socket(GlobalZMQContext(), type);
     if (socket == NULL)
     {
         return luaL_error(L, "create socket failed: %d", zmq_errno());
@@ -615,8 +615,7 @@ static void create_metatable(lua_State* L)
     }
 }
 
-extern "C" 
-int luaopen_zmq(lua_State* L)
+LUALIB_API int luaopen_zmq(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
@@ -628,8 +627,6 @@ int luaopen_zmq(lua_State* L)
         { "sleep", lzmq_sleep },
         { NULL, NULL },
     };
-
-    luaL_checkversion(L);
     luaL_newlib(L, lib);
     push_socket_constant(L);
     create_metatable(L);
