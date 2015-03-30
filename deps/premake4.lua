@@ -47,6 +47,20 @@ solution '3rdlibs'
             'lua/src/luac.c',
         }
         
+    project 'msgpack'
+        language 'C'
+        kind 'StaticLib'
+        location 'build'
+        includedirs 
+        {
+            'msgpack/include'
+        }
+        files
+        {
+            'msgpack/**.h',
+            'msgpack/**.c',
+        }
+        
     if os.get() ~= 'windows' then return end
     
     project 'libuv'
