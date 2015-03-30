@@ -4,7 +4,8 @@
 
 assert(os.get() == 'windows' or os.get() == 'linux')
 
-local USR_DIR = os.getenv('USR_DIR') or 'E:/Library/usr'
+-- git clone https://github.com/ichenq/usr
+local USR_DIR = os.getenv('USR_DIR') or 'E:/usr'
 
 solution 'qsf'
     configurations {'Debug', 'Release'}
@@ -30,7 +31,12 @@ solution 'qsf'
             '_SCL_SECURE_NO_WARNINGS',
             '_WINSOCK_DEPRECATED_NO_WARNINGS',
             'NOMINMAX',
-            '_ALLOW_KEYWORD_MACROS',         
+            '_ALLOW_KEYWORD_MACROS',
+            'inline=__inline',
+            'alignof=__alignof',
+            'noexcept=_NOEXCEPT',            
+            'snprintf=_snprintf',
+            'strncasecmp=_strnicmp',            
         }        
         includedirs { USR_DIR .. '/include' }
         libdirs { USR_DIR .. '/lib/x86' }
@@ -75,6 +81,7 @@ solution 'qsf'
             'src',
             'deps/cppzmq',
             'deps/lua/src',
+            'deps/msgpack/include',
         }
         libdirs 'bin'
         if os.get() == 'windows' then
@@ -84,6 +91,7 @@ solution 'qsf'
             'libuv', 
             'zlib', 
             'lua5.3',
+            'msgpack',
             'libeay32',
             'libmysql',
         }
@@ -99,6 +107,8 @@ solution 'qsf'
             'z', 
             'uuid', 
             'lua5.3',
+            'msgpack',
+            'crypto',
             'mysqlclient',
         }
         end
