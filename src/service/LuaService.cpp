@@ -1,4 +1,4 @@
-// Copyright (C) 2014 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -87,7 +87,7 @@ int LuaService::Run(const std::string& args)
     int r = luaL_loadfile(L, filename.c_str());
     if (r != LUA_OK)
     {
-        fprintf(stderr, "%s\n", id.c_str(), lua_tostring(L, -1));
+        fprintf(stderr, "%s: %s\n", id.c_str(), lua_tostring(L, -1));
         return 1;
     }
     lua_pushlstring(L, loader.c_str(), loader.size());
