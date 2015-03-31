@@ -22,7 +22,7 @@ static void mp_unpack_array(lua_State* L, const msgpack_object* value);
 static void mp_unpack_map(lua_State* L, const msgpack_object* value);
 
 // is this table an array or hash
-static inline bool table_is_array(lua_State* L)
+static bool table_is_array(lua_State* L)
 {
     assert(lua_type(L, -1) == LUA_TTABLE);
     int len = 0;
@@ -43,7 +43,7 @@ static inline bool table_is_array(lua_State* L)
     return true;
 }
 
-static inline size_t table_size(lua_State* L)
+static size_t table_size(lua_State* L)
 {
     assert(lua_type(L, -1) == LUA_TTABLE);
     size_t len = 0;
@@ -57,7 +57,7 @@ static inline size_t table_size(lua_State* L)
 }
 
 // pack Lua number value 
-inline void mp_pack_number(lua_State* L, msgpack_packer* packer)
+static void mp_pack_number(lua_State* L, msgpack_packer* packer)
 {
     if (lua_isinteger(L, -1))
     {
