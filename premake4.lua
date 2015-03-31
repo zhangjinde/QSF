@@ -12,7 +12,7 @@ solution 'qsf'
     language 'C++'
     --flags {'ExtraWarnings'}
     targetdir 'bin'
-    platforms {'x32', 'x64'}
+    platforms {'x64'}
 
     configuration 'Debug'
         defines { 'DEBUG' }
@@ -39,7 +39,7 @@ solution 'qsf'
             'strncasecmp=_strnicmp',            
         }        
         includedirs { USR_DIR .. '/include' }
-        libdirs { USR_DIR .. '/lib/x86' }
+        libdirs { USR_DIR .. '/lib/x64' }
 
     configuration 'gmake'
         buildoptions '-std=c++11 -std=c99 -mcrc32 -msse4.2'
