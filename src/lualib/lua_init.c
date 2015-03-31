@@ -10,7 +10,7 @@
 int luaopen_mq(lua_State* L);
 int luaopen_process(lua_State* L);
 int luaopen_zmq(lua_State* L);
-int luaopen_net(lua_State* L);
+int luaopen_uv(lua_State* L);
 int luaopen_uuid(lua_State* L);
 int luaopen_mysql(lua_State* L);
 int luaopen_crypto(lua_State* L);
@@ -32,6 +32,7 @@ void lua_initlibs(lua_State* L)
         { "mysql", luaopen_mysql },
         { "zlib", luaopen_zlib },
         { "fs", luaopen_fs },
+        { "uv", luaopen_uv },
         { "cjson", luaopen_cjson },
         { "msgpack", luaopen_msgpack },
         { NULL, NULL },
