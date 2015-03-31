@@ -5,8 +5,9 @@
 
 #include <assert.h>
 #include <malloc.h>
+#include <lua.h>
+#include <lauxlib.h>
 #include <uv.h>
-#include <lua.hpp>
 #include "luv.h"
 
 int luv_check_ref(lua_State* L, int idx)
@@ -67,7 +68,7 @@ static int luv_now(lua_State* L)
     return 1;
 }
 
-int luaopen_uv(lua_State* L)
+LUALIB_API int luaopen_uv(lua_State* L)
 {
     static const luaL_Reg lib[] =
     { 
