@@ -32,7 +32,7 @@ static qsf_context_t  qsf_context;
 
 void* qsf_create_dealer(const char* identity)
 {
-    void* dealer = zmq_socket(&qsf_context.context, ZMQ_DEALER);
+    void* dealer = zmq_socket(qsf_context.context, ZMQ_DEALER);
     if (dealer == NULL)
     {
         fprintf(stderr, "create dealer failed.\n");
