@@ -12,7 +12,7 @@ int luaopen_zmq(lua_State* L);
 int luaopen_uuid(lua_State* L);
 int luaopen_msgpack(lua_State* L);
 int luaopen_crypto(lua_State* L);
-
+int luaopen_mysql(lua_State* L);
 
 void lua_initlibs(lua_State* L)
 {
@@ -21,7 +21,8 @@ void lua_initlibs(lua_State* L)
         { "mq", luaopen_mq },
         { "zmq", luaopen_zmq },
         { "uuid", luaopen_uuid },
-        { "crypto", luaopen_crypto },
+        { "crypto", luaopen_crypto }, 
+        { "mysql", luaopen_mysql },
         { "msgpack", luaopen_msgpack },
         { NULL, NULL },
     };
