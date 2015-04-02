@@ -8,7 +8,7 @@
 
 // forward declarations
 int luaopen_mq(lua_State* L);
-
+int luaopen_zmq(lua_State* L);
 
 
 void lua_initlibs(lua_State* L)
@@ -16,6 +16,7 @@ void lua_initlibs(lua_State* L)
     static const luaL_Reg libs[] =
     {
         { "mq", luaopen_mq },
+        { "zmq", luaopen_zmq },
         { NULL, NULL },
     };
 
