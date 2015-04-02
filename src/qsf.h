@@ -4,5 +4,9 @@
 
 #pragma once
 
+
+// Start framework
 int qsf_start(const char* file);
+
+// Create a ZMQ dealer object
 void* qsf_create_dealer(const char* name);

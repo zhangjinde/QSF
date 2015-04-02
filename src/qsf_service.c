@@ -13,7 +13,6 @@
 #include "qsf_malloc.h"
 
 
-
 typedef struct qsf_service_s
 {
     RB_ENTRY(qsf_service_s) tree_entry;
@@ -40,43 +39,10 @@ typedef struct qsf_service_context_s
     uv_mutex_t  mutex;
 }qsf_service_context_t;
 
-
+// Global service context
 static qsf_service_context_t    service_context;
 
-static void service_thread_callback(void* args);
-
-int qsf_create_service(const char* name, const char* path, const char* args)
-{
-    assert(name && path && args);
-    size_t len = strlen(name);
-    if (len >= MAX_ID_LENGTH)
-    {
-        return 1;
-    }
-    if (strcmp(name, "sys") == 0) // "sys" is reserved name
-    {
-        return 2;
-    }
-    qsf_service_t* s = qsf_malloc(sizeof(qsf_service_t));
-    memset(s, 0, sizeof(qsf_service_t));
-    strncpy(s->name, name, len);
-    strncpy(s->path, path, strlen(path));
-    strncpy(s->args, args, strlen(args));
-
-    uv_mutex_lock(&service_context.mutex);
-    qsf_service_t* old = RB_FIND(qsf_service_tree_s, &service_context.service_map, s);
-    if (old)
-    {
-        qsf_free(s);
-        return 3;
-    }
-    uv_thread_create(&s->thread, service_thread_callback, s);
-    old = RB_INSERT(qsf_service_tree_s, &service_context.service_map, s);
-    assert(old == NULL);
-    uv_mutex_unlock(&service_context.mutex);
-    return 0;
-}
-
+// Load Lua path and Lua cpath
 static int load_service_path(lua_State* L)
 {
     char chunk[512];
@@ -105,18 +71,21 @@ static int load_service_path(lua_State* L)
     return 0;
 }
 
+void lua_initlibs(lua_State* L);
+
 static int init_service(qsf_service_t* s)
 {
     lua_State* L = luaL_newstate();
     lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
     luaL_openlibs(L);
+    lua_initlibs(L);
     int r = load_service_path(L);
     if (r != 0)
     {
         lua_close(L);
         return r;
     }
-    lua_pushlightuserdata(L, s->dealer);
+    lua_pushlightuserdata(L, s);
     lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
     lua_gc(L, LUA_GCRESTART, 0);
     s->L = L;
@@ -186,6 +155,98 @@ void service_thread_callback(void* args)
     RB_REMOVE(qsf_service_tree_s, &service_context.service_map, s);
     cleanup_service(s);
     uv_mutex_unlock(&service_context.mutex);
+}
+
+int qsf_create_service(const char* name, const char* path, const char* args)
+{
+    assert(name && path && args);
+    size_t len = strlen(name);
+    if (len >= MAX_ID_LENGTH)
+    {
+        return 1;
+    }
+    if (strcmp(name, "sys") == 0) // "sys" is reserved name
+    {
+        return 2;
+    }
+    qsf_service_t* s = qsf_malloc(sizeof(qsf_service_t));
+    memset(s, 0, sizeof(qsf_service_t));
+    strncpy(s->name, name, len);
+    strncpy(s->path, path, strlen(path));
+    strncpy(s->args, args, strlen(args));
+
+    uv_mutex_lock(&service_context.mutex);
+    qsf_service_t* old = RB_FIND(qsf_service_tree_s, &service_context.service_map, s);
+    if (old)
+    {
+        qsf_free(s);
+        return 3;
+    }
+    uv_thread_create(&s->thread, service_thread_callback, s);
+    old = RB_INSERT(qsf_service_tree_s, &service_context.service_map, s);
+    assert(old == NULL);
+    uv_mutex_unlock(&service_context.mutex);
+    return 0;
+}
+
+void qsf_service_send(qsf_service_t* s,
+                      const char* name, size_t len, 
+                      const char* data, size_t size)
+{
+    assert(s && name && len && data && size);
+
+    int r = zmq_send(s->dealer, name, len, ZMQ_SNDMORE);
+    if (r == len)
+    {
+        r = zmq_send(s->dealer, data, size, ZMQ_SNDMORE);
+        assert(r == size);
+    }
+}
+
+int qsf_service_recv(struct qsf_service_s* s, 
+                     service_recv_handler func, 
+                     int nowait, void* ud)
+{
+    assert(s && func && nowait);
+
+    zmq_msg_t from;
+    zmq_msg_t msg;
+
+    int r = zmq_msg_init(&from);
+    assert(r == 0);
+    r = zmq_msg_init(&msg);
+    assert(r == 0);
+
+    int flag = (nowait != 0 ? ZMQ_DONTWAIT : 0);
+    r = zmq_msg_recv(&from, s->dealer, flag);
+    if (r > 0)
+    {
+        r = zmq_msg_init(&msg);
+        assert(r == 0);
+        const char* name = zmq_msg_data(&from);
+        size_t len = zmq_msg_size(&from);
+        assert(len < MAX_ID_LENGTH);
+
+        r = zmq_msg_recv(&msg, s->dealer, flag);
+        if (r > 0)
+        {
+            const char* data = zmq_msg_data(&msg);
+            size_t size = zmq_msg_size(&msg);
+            return func(ud, name, len, data, size);
+        }
+
+        r = zmq_msg_close(&msg);
+        assert(r == 0);
+    }
+    r = zmq_msg_close(&from);
+    assert(r == 0);
+    return 0;
+}
+
+const char* qsf_service_name(struct qsf_service_s* s)
+{
+    assert(s);
+    return s->name;
 }
 
 int qsf_service_init()
