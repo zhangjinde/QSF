@@ -10,3 +10,5 @@ int qsf_start(const char* file);
 
 // Create a ZMQ dealer object
 void* qsf_create_dealer(const char* name);
+
+void* qsf_zmq_context(void);

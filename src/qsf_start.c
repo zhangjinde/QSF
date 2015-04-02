@@ -157,6 +157,11 @@ static void qsf_exit(void)
     zmq_ctx_term(qsf_context.context);
 }
 
+void* qsf_zmq_context(void)
+{
+    return qsf_context.context;
+}
+
 int qsf_start(const char* file)
 {
     int major, minor, patch;
