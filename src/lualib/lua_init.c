@@ -9,6 +9,7 @@
 // forward declarations
 int luaopen_mq(lua_State* L);
 int luaopen_zmq(lua_State* L);
+int luaopen_uuid(lua_State* L);
 int luaopen_msgpack(lua_State* L);
 int luaopen_crypto(lua_State* L);
 
@@ -19,6 +20,7 @@ void lua_initlibs(lua_State* L)
     {
         { "mq", luaopen_mq },
         { "zmq", luaopen_zmq },
+        { "uuid", luaopen_uuid },
         { "crypto", luaopen_crypto },
         { "msgpack", luaopen_msgpack },
         { NULL, NULL },
