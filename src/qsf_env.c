@@ -9,6 +9,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#include "qsf_log.h"
 
 typedef struct qsf_env_s
 {
@@ -16,7 +17,9 @@ typedef struct qsf_env_s
     lua_State*  L;
 }qsf_env_t;
 
+// global envrionment object, thread-safe
 static qsf_env_t  global_env;
+
 
 const char* qsf_getenv(const char* key)
 {
@@ -56,7 +59,7 @@ int qsf_env_init(const char* file)
     int r = uv_mutex_init(&global_env.mutex);
     if (r != 0)
     {
-        fprintf(stderr, "init env mutex failed.\n");
+        qsf_log("env: uv_mutex_init() failed.");
         return r;
     }
     lua_State* L = luaL_newstate();
@@ -64,7 +67,7 @@ int qsf_env_init(const char* file)
     r = luaL_dofile(L, file);
     if (r != LUA_OK)
     {
-        fprintf(stderr, "%s.\n", lua_tostring(L, -1));
+        qsf_log(lua_tostring(L, -1));
         lua_close(L);
         return r;
     }
