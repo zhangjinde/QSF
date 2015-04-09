@@ -7,74 +7,54 @@
 #include <string.h>
 #include <assert.h>
 #include <zmq.h>
+#include "qsf_log.h"
 #include "qsf_env.h"
 #include "qsf_service.h"
 
 #define QSF_ROUTER_ADDRESS  ("inproc://qsf.router")
 
+#define qsf_zmq_assert(cond) \
+    qsf_assert((cond), "zmq error: %d, %s", zmq_errno(), zmq_strerror(zmq_errno()))
+
+
 typedef struct qsf_context_s
 {
-    uv_mutex_t mutex;
     void* context;
     void* router;
 }qsf_context_t;
 
+// global  qsf context object
 static qsf_context_t  qsf_context;
 
-
-#define CHECK_ZMQ_MSG(r)    do {                                \
-                                if ((r) < 0) {                  \
-                                (r) = zmq_errno();              \
-                                if ((r) != EAGAIN) return (r);} \
-                            }while(0)
-
-#define CHECK_ZMQ_RET(r)    do {if ((r) != 0) return zmq_errno();} while(0)
-
+// create a zmq dealer object connected to router
 void* qsf_create_dealer(const char* identity)
 {
+    assert(identity);
     void* dealer = zmq_socket(qsf_context.context, ZMQ_DEALER);
-    if (dealer == NULL)
-    {
-        fprintf(stderr, "create dealer failed.\n");
-        return NULL;
-    }
+    qsf_zmq_assert(dealer != NULL);
+
     int r = zmq_setsockopt(dealer, ZMQ_IDENTITY, identity, strlen(identity));
-    if (r != 0)
-    {
-        fprintf(stderr, "%s\n", zmq_strerror(zmq_errno()));
-        return NULL;
-    }
+    qsf_zmq_assert(r == 0);
+
     int linger = 0;
     r = zmq_setsockopt(dealer, ZMQ_LINGER, &linger, sizeof(linger));
-    if (r != 0)
-    {
-        fprintf(stderr, "%s\n", zmq_strerror(zmq_errno()));
-        return NULL;
-    }
+    qsf_zmq_assert(r == 0);
+
     int max_recv_timeout = (int)qsf_getenv_int("max_recv_timeout");
     r = zmq_setsockopt(dealer, ZMQ_RCVTIMEO, &max_recv_timeout, sizeof(max_recv_timeout));
-    if (r != 0)
-    {
-        fprintf(stderr, "%s\n", zmq_strerror(zmq_errno()));
-        return NULL;
-    }
+    qsf_zmq_assert(r == 0);
+
     int64_t max_msg_size = qsf_getenv_int("max_ipc_msg_size");
     r = zmq_setsockopt(dealer, ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
-    if (r != 0)
-    {
-        fprintf(stderr, "%s\n", zmq_strerror(zmq_errno()));
-        return NULL;
-    }
+    qsf_zmq_assert(r == 0);
+
     r = zmq_connect(dealer, QSF_ROUTER_ADDRESS);
-    if (r != 0)
-    {
-        fprintf(stderr, "%s\n", zmq_strerror(zmq_errno()));
-        return NULL;
-    }
+    qsf_zmq_assert(r == 0);
 
     return dealer;
 }
 
+// dispatch dealer message to peer
 static int dispatch_message(void)
 {
     zmq_msg_t from;
@@ -82,74 +62,69 @@ static int dispatch_message(void)
     zmq_msg_t msg;
 
     void* router = qsf_context.router;
-    int r = 0;
+    assert(router != NULL);
 
-    r = zmq_msg_init(&from);
-    assert(r == 0);
-    r = zmq_msg_init(&to);
-    assert(r == 0);
-    r = zmq_msg_init(&msg);
-    assert(r == 0);
+    qsf_zmq_assert(zmq_msg_init(&from) == 0);
+    qsf_zmq_assert(zmq_msg_init(&to) == 0);
+    qsf_zmq_assert(zmq_msg_init(&msg) == 0);
 
-    r = zmq_msg_recv(&from, router, 0);
-    CHECK_ZMQ_MSG(r);
-    r = zmq_msg_recv(&to, router, 0);
-    CHECK_ZMQ_MSG(r);
-    r = zmq_msg_recv(&msg, router, 0);
-    CHECK_ZMQ_MSG(r);
+    int bytes = zmq_msg_recv(&from, router, 0);
+    if (bytes < 0) 
+        goto cleanup;
+    bytes = zmq_msg_recv(&to, router, 0);
+    if (bytes < 0) 
+        goto cleanup;
+    bytes = zmq_msg_recv(&msg, router, 0);
+    if (bytes < 0) 
+        goto cleanup;
 
-    r = zmq_msg_send(&to, router, ZMQ_SNDMORE);
-    CHECK_ZMQ_MSG(r);
-    r = zmq_msg_send(&from, router, ZMQ_SNDMORE);
-    CHECK_ZMQ_MSG(r);
-    r = zmq_msg_send(&msg, router, ZMQ_SNDMORE);
-    CHECK_ZMQ_MSG(r);
+    bytes = zmq_msg_send(&to, router, ZMQ_SNDMORE);
+    if (bytes < 0) 
+        goto cleanup;
+    bytes = zmq_msg_send(&from, router, ZMQ_SNDMORE);
+    if (bytes < 0) 
+        goto cleanup;
+    bytes = zmq_msg_send(&msg, router, 0);
+    if (bytes < 0) 
+        goto cleanup;
 
-    r = zmq_msg_close(&msg);
-    assert(r == 0);
-    r = zmq_msg_close(&from);
-    assert(r == 0);
-    r = zmq_msg_close(&to);
-    assert(r == 0);
+cleanup:
+    qsf_zmq_assert(zmq_msg_close(&msg) == 0);
+    qsf_zmq_assert(zmq_msg_close(&to) == 0);
+    qsf_zmq_assert(zmq_msg_close(&from) == 0);
 
-    return 0;
+    return bytes;
 }
 
-
-static int qsf_init(void)
+// initialize qsf framework
+static void qsf_init(void)
 {
     void* ctx = zmq_ctx_new();
-    if (ctx == NULL)
-    {
-        return zmq_errno();
-    }
+    qsf_zmq_assert(ctx != NULL);
 
     void* router = zmq_socket(ctx, ZMQ_ROUTER);
-    if (router == NULL)
-    {
-        return zmq_errno();
-    }
+    qsf_zmq_assert(router != NULL);
     
     int linger = 0;
     int r = zmq_setsockopt(router, ZMQ_LINGER, &linger, sizeof(linger));
-    CHECK_ZMQ_RET(r);
+    qsf_zmq_assert(r == 0);
 
     int mandatory = 1;
     r = zmq_setsockopt(router, ZMQ_ROUTER_MANDATORY, &mandatory, sizeof(mandatory));
-    CHECK_ZMQ_RET(r);
+    qsf_zmq_assert(r == 0);
 
     int64_t max_msg_size = qsf_getenv_int("max_ipc_msg_size");
     r = zmq_setsockopt(router, ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
-    CHECK_ZMQ_RET(r);
+    qsf_zmq_assert(r == 0);
 
     r = zmq_bind(router, QSF_ROUTER_ADDRESS);
-    CHECK_ZMQ_RET(r);
+    qsf_zmq_assert(r == 0);
 
     qsf_context.context = ctx;
     qsf_context.router = router;
-    return 0;
 }
 
+// cleanup qsf framework
 static void qsf_exit(void)
 {
     qsf_env_exit();
@@ -157,48 +132,39 @@ static void qsf_exit(void)
     zmq_ctx_term(qsf_context.context);
 }
 
+// global zmq context object
 void* qsf_zmq_context(void)
 {
+    assert(qsf_context.context);
     return qsf_context.context;
 }
 
+// start qsf framework with a config file
 int qsf_start(const char* file)
 {
     int major, minor, patch;
     zmq_version(&major, &minor, &patch);
-    if (major != ZMQ_VERSION_MAJOR)
-    {
-        fprintf(stderr, "invalid zmq version %d/%d", major, ZMQ_VERSION_MAJOR);
-        return 1;
-    }
+    qsf_assert(major == ZMQ_VERSION_MAJOR, "invalid zmq version %d/%d.", major, ZMQ_VERSION_MAJOR);
 
-    int r = 0;
-    r = qsf_env_init(file);
-    if (r != 0)
-        return r;
+    int r = qsf_env_init(file);
+    qsf_assert(r == 0, "qsf_env_init() failed.");
 
-    r = qsf_init();
-    if (r != 0)
-    {
-        fprintf(stderr, "zmq error: %s\n", zmq_strerror(r));
-        return r;
-    }
-
+    qsf_init();
+    
     r = qsf_service_init();
-    if (r != 0) 
-        return r;
+    qsf_assert(r == 0, "qsf_service_init() failed.");
 
     const char* name = qsf_getenv("start_name");
     const char* path = qsf_getenv("start_file");
     r = qsf_create_service(name, path, "sys");
-    if (r != 0) return r;
+    qsf_assert(r == 0, "create service 'sys' failed, %d.", r);
 
     while (1)
     {
         int r = dispatch_message();
-        if (r != 0)
+        if (r < 0)
         {
-            fprintf(stderr, "%s\n", zmq_strerror(r));
+            qsf_log("zmq message error: %d, %s", zmq_errno(), zmq_strerror(zmq_errno()));
             break;
         }
     }

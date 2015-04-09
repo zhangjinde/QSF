@@ -4,11 +4,11 @@
 
 #pragma once
 
-
-// Start framework
+// start qsf framework with a config file
 int qsf_start(const char* file);
 
-// Create a ZMQ dealer object
+// create a zmq dealer object connected to router
 void* qsf_create_dealer(const char* name);
 
+// global zmq context object
 void* qsf_zmq_context(void);
