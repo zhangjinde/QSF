@@ -10,86 +10,144 @@
 #include <lauxlib.h>
 #include "qsf.h"
 #include "qsf_env.h"
+#include "qsf_log.h"
 #include "qsf_malloc.h"
 
+#define qsf_zmq_assert(cond) \
+    qsf_assert((cond), "zmq error: %d, %s", zmq_errno(), zmq_strerror(zmq_errno()))
 
-typedef struct qsf_service_s
+// qsf service type definition
+struct qsf_service_s
 {
-    RB_ENTRY(qsf_service_s) tree_entry;
+    struct qsf_service_s* next;
+
+    void* dealer;                       // zmq dealer
+    struct lua_State* L;                // lua VM
+    char name[MAX_ID_LENGTH];           // service name
+    char path[MAX_PATH];                // lua file path
+    char args[MAX_ARG_LENGTH];          // arguments pass to
     uv_thread_t thread;
-    void* dealer;
-    char name[MAX_ID_LENGTH];
-    char path[MAX_PATH];
-    char args[MAX_ARG_LENGTH];
-    struct lua_State* L;
-}qsf_service_t;
+};
 
-static int service_compare(qsf_service_t* a, qsf_service_t* b)
+struct qsf_service_context_s
 {
-    assert(a && b);
-    return strcmp(a->name, b->name);
-}
-
-RB_HEAD(qsf_service_tree_s, qsf_service_s);
-RB_GENERATE_STATIC(qsf_service_tree_s, qsf_service_s, tree_entry, service_compare);
-
-typedef struct qsf_service_context_s
-{
-    struct qsf_service_tree_s service_map;
+    qsf_service_t* list;
+    int count;
     uv_mutex_t  mutex;
-}qsf_service_context_t;
+};
 
-// Global service context
+typedef struct qsf_service_context_s qsf_service_context_t;
+
+
+// global service context
 static qsf_service_context_t    service_context;
 
-// Load Lua path and Lua cpath
-static int load_service_path(lua_State* L)
+// forward declaration
+void lua_initlibs(lua_State* L);
+
+static qsf_service_t* find_from_service_list(const char* name)
+{
+    assert(name);
+    qsf_service_t* phead = service_context.list;
+    while (phead)
+    {
+        if (strcmp(phead->name, name) != 0)
+        {
+            phead = phead->next;
+        }
+        else
+        {
+            return phead;
+        }
+    }
+    return NULL;
+}
+
+static int remove_from_service_list(qsf_service_t* s)
+{
+    assert(s);
+    qsf_service_t* phead = service_context.list;
+    if (strcmp(phead->name, s->name) != 0)
+    {
+        qsf_service_t* prev = phead;
+        phead = phead->next;
+        while (phead)
+        {
+            if (strcmp(phead->name, s->name) == 0)
+            {
+                prev->next = phead->next;
+                break;
+            }
+            phead = phead->next;
+        }
+    }
+    else
+    {
+        service_context.list = NULL;
+    }
+    qsf_free(phead);
+    service_context.count--;
+    return 0;
+}
+
+static qsf_service_t* create_from_service_list(const char* name, const char* path, const char* args)
+{
+    assert(name && path && args);
+    qsf_service_t* s = qsf_malloc(sizeof(qsf_service_t));
+    memset(s, 0, sizeof(*s));
+    strncpy(s->name, name, sizeof(s->name));
+    strncpy(s->path, path, sizeof(s->path));
+    strncpy(s->args, args, sizeof(s->args));
+
+    qsf_service_t* phead = service_context.list;
+    if (phead)
+    {
+        while (phead->next)
+        {
+            phead = phead->next;
+        }
+        phead->next = s;
+    }
+    else
+    {
+        service_context.list = s;
+    }
+    service_context.count++;
+    return s;
+}
+
+// load Lua path and Lua cpath
+static void load_service_path(lua_State* L)
 {
     char chunk[512];
     const char* path = qsf_getenv("lua_path");
     if (strlen(path) > 0)
     {
-        snprintf(chunk, 1024, "package.path = package.path .. ';' .. '%s'", path);
+        snprintf(chunk, sizeof(chunk), "package.path = package.path .. ';' .. '%s'", path);
         int r = luaL_dostring(L, chunk);
-        if (r != LUA_OK)
-        {
-            fprintf(stderr, "%s\n", lua_tostring(L, -1));
-            return r;
-        }
+        qsf_assert(r == LUA_OK, "load cpath chunk failed.");
     }
     const char* cpath = qsf_getenv("lua_cpath");
     if (strlen(cpath) > 0)
     {
-        snprintf(chunk, 1024, "package.cpath = package.cpath .. ';' .. '%s'", cpath);
+        snprintf(chunk, sizeof(chunk), "package.cpath = package.cpath .. ';' .. '%s'", cpath);
         int r = luaL_dostring(L, chunk);
-        if (r != LUA_OK)
-        {
-            fprintf(stderr, "%s\n", lua_tostring(L, -1));
-            return r;
-        }
+        qsf_assert(r == LUA_OK, "load cpath chunk failed.");
     }
-    return 0;
 }
 
-void lua_initlibs(lua_State* L);
-
-static int init_service(qsf_service_t* s)
+static void init_service(qsf_service_t* s)
 {
     lua_State* L = luaL_newstate();
     lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
     luaL_openlibs(L);
     lua_initlibs(L);
-    int r = load_service_path(L);
-    if (r != 0)
-    {
-        lua_close(L);
-        return r;
-    }
+    load_service_path(L);
     lua_pushlightuserdata(L, s);
     lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
     lua_gc(L, LUA_GCRESTART, 0);
     s->L = L;
-    return 0;
+    s->dealer = qsf_create_dealer(s->name);
 }
 
 static void cleanup_service(qsf_service_t* s)
@@ -103,7 +161,9 @@ static void cleanup_service(qsf_service_t* s)
     {
         lua_close(s->L);
     }
-    qsf_free(s);
+    uv_mutex_lock(&service_context.mutex);
+    remove_from_service_list(s);
+    uv_mutex_unlock(&service_context.mutex);
 }
 
 static int traceback(lua_State *L)
@@ -120,15 +180,16 @@ static int traceback(lua_State *L)
     return 1;
 }
 
-static void run_service(qsf_service_t* s)
+// execute service's lua VM instructions
+static int run_service(qsf_service_t* s)
 {
     lua_State* L = s->L;
     assert(L);
     int r = luaL_loadfile(L, s->path);
     if (r != LUA_OK)
     {
-        fprintf(stderr, "%s: %s\n", s->name, lua_tostring(L, -1));
-        return ;
+        qsf_log("%s: %s", s->name, lua_tostring(L, -1));
+        return 1;
     }
     lua_pushstring(L, s->args);
     int index = lua_gettop(L) - 1;
@@ -138,23 +199,20 @@ static void run_service(qsf_service_t* s)
     lua_remove(L, index); // remove traceback function
     if (r != LUA_OK)
     {
-        fprintf(stderr, "%s: %s\n", s->name, lua_tostring(L, -1));
-        return ;
+        qsf_log("%s: %s", s->name, lua_tostring(L, -1));
+        return 2;
     }
+    return 0;
 }
 
 void service_thread_callback(void* args)
 {
+    assert(args != NULL);
     qsf_service_t* s = (qsf_service_t*)args;
-    s->dealer = qsf_create_dealer(s->name);
-    if (s->dealer && init_service(s) == 0)
-    {
-        run_service(s);
-    }    
-    uv_mutex_lock(&service_context.mutex);
-    RB_REMOVE(qsf_service_tree_s, &service_context.service_map, s);
+    
+    init_service(s);
+    run_service(s);
     cleanup_service(s);
-    uv_mutex_unlock(&service_context.mutex);
 }
 
 int qsf_create_service(const char* name, const char* path, const char* args)
@@ -163,30 +221,24 @@ int qsf_create_service(const char* name, const char* path, const char* args)
     size_t len = strlen(name);
     if (len >= MAX_ID_LENGTH)
     {
-        return 1;
+        return 1; // invalid name size
     }
-    if (strcmp(name, "sys") == 0) // "sys" is reserved name
+    if (strcmp(name, "sys") == 0)
     {
-        return 2;
+        return 2; // reserved name
     }
-    qsf_service_t* s = qsf_malloc(sizeof(qsf_service_t));
-    memset(s, 0, sizeof(qsf_service_t));
-    strncpy(s->name, name, len);
-    strncpy(s->path, path, strlen(path));
-    strncpy(s->args, args, strlen(args));
-
+    
     uv_mutex_lock(&service_context.mutex);
-    qsf_service_t* old = RB_FIND(qsf_service_tree_s, &service_context.service_map, s);
-    if (old)
+    qsf_service_t* s = find_from_service_list(name);
+    if (s != NULL)
     {
-        qsf_free(s);
-        return 3;
+        uv_mutex_unlock(&service_context.mutex);
+        return 3; // service already exists
     }
-    uv_thread_create(&s->thread, service_thread_callback, s);
-    old = RB_INSERT(qsf_service_tree_s, &service_context.service_map, s);
-    assert(old == NULL);
+    s = create_from_service_list(name, path, args);
+    int r = uv_thread_create(&s->thread, service_thread_callback, s);
     uv_mutex_unlock(&service_context.mutex);
-    return 0;
+    return r;
 }
 
 void qsf_service_send(qsf_service_t* s,
@@ -196,54 +248,48 @@ void qsf_service_send(qsf_service_t* s,
     assert(s && name && len && data && size);
 
     int r = zmq_send(s->dealer, name, len, ZMQ_SNDMORE);
-    if (r == len)
-    {
-        r = zmq_send(s->dealer, data, size, ZMQ_SNDMORE);
-        assert(r == size);
-    }
+    qsf_assert(r == len, "send zmq dealer identity failed.");
+    r = zmq_send(s->dealer, data, size, 0);
+    qsf_assert(r == size, "send dealer message failed.");
 }
 
 int qsf_service_recv(struct qsf_service_s* s, 
                      service_recv_handler func, 
                      int nowait, void* ud)
 {
-    assert(s && func && nowait);
+    assert(s && func);
 
     zmq_msg_t from;
     zmq_msg_t msg;
 
-    int r = zmq_msg_init(&from);
-    assert(r == 0);
-    r = zmq_msg_init(&msg);
-    assert(r == 0);
+    qsf_zmq_assert(zmq_msg_init(&from) == 0);
 
     int flag = (nowait != 0 ? ZMQ_DONTWAIT : 0);
-    r = zmq_msg_recv(&from, s->dealer, flag);
+    int r = zmq_msg_recv(&from, s->dealer, flag);
     if (r > 0)
     {
-        r = zmq_msg_init(&msg);
-        assert(r == 0);
         const char* name = zmq_msg_data(&from);
         size_t len = zmq_msg_size(&from);
-        assert(len < MAX_ID_LENGTH);
+        qsf_assert(len < MAX_ID_LENGTH, "invalid zmq peer name size: %d", len);
 
+        qsf_zmq_assert(zmq_msg_init(&msg) == 0);
         r = zmq_msg_recv(&msg, s->dealer, flag);
         if (r > 0)
         {
             const char* data = zmq_msg_data(&msg);
             size_t size = zmq_msg_size(&msg);
-            return func(ud, name, len, data, size);
+            r = func(ud, name, len, data, size);
         }
-
-        r = zmq_msg_close(&msg);
-        assert(r == 0);
+        qsf_zmq_assert(zmq_msg_close(&from) == 0);
+        qsf_zmq_assert(zmq_msg_close(&msg) == 0);
+        return r;
     }
-    r = zmq_msg_close(&from);
-    assert(r == 0);
+    
+    qsf_zmq_assert(zmq_msg_close(&from) == 0);
     return 0;
 }
 
-const char* qsf_service_name(struct qsf_service_s* s)
+const char* qsf_service_name(qsf_service_t* s)
 {
     assert(s);
     return s->name;
@@ -254,9 +300,12 @@ int qsf_service_init()
     int r = uv_mutex_init(&service_context.mutex);
     if (r != 0)
     {
-        fprintf(stderr, "init service mutex failed.\n");
+        qsf_log("service: uv_mutex_init() failed.");
         return r;
     }
+
+    service_context.count = 0;
+    service_context.list = NULL;
     return 0;
 }
 
