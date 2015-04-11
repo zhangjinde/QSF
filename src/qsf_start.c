@@ -7,9 +7,7 @@
 #include <string.h>
 #include <assert.h>
 #include <zmq.h>
-#include "qsf_log.h"
-#include "qsf_env.h"
-#include "qsf_service.h"
+
 
 #define QSF_ROUTER_ADDRESS  ("inproc://qsf.router")
 
@@ -92,7 +90,6 @@ cleanup:
     qsf_zmq_assert(zmq_msg_close(&msg) == 0);
     qsf_zmq_assert(zmq_msg_close(&to) == 0);
     qsf_zmq_assert(zmq_msg_close(&from) == 0);
-
     return bytes;
 }
 
@@ -157,7 +154,7 @@ int qsf_start(const char* file)
     const char* name = qsf_getenv("start_name");
     const char* path = qsf_getenv("start_file");
     r = qsf_create_service(name, path, "sys");
-    qsf_assert(r == 0, "create service 'sys' failed, %d.", r);
+    qsf_assert(r == 0, "create service '%s' failed, %d.", name, r);
 
     while (1)
     {

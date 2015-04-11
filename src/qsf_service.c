@@ -5,13 +5,15 @@
 #include "qsf_service.h"
 #include <assert.h>
 #include <zmq.h>
+#include <uv.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 #include "qsf.h"
-#include "qsf_env.h"
-#include "qsf_log.h"
-#include "qsf_malloc.h"
+
+// max dealer identity size
+#define MAX_ID_LENGTH       16
+#define MAX_ARG_LENGTH      512
 
 #define qsf_zmq_assert(cond) \
     qsf_assert((cond), "zmq error: %d, %s", zmq_errno(), zmq_strerror(zmq_errno()))
@@ -19,21 +21,20 @@
 // qsf service type definition
 struct qsf_service_s
 {
-    struct qsf_service_s* next;
-
-    void* dealer;                       // zmq dealer
-    struct lua_State* L;                // lua VM
-    char name[MAX_ID_LENGTH];           // service name
-    char path[MAX_PATH];                // lua file path
-    char args[MAX_ARG_LENGTH];          // arguments pass to
-    uv_thread_t thread;
+    qsf_service_t*    next;         // linked list
+    uv_thread_t       thread;       // service thread
+    struct lua_State* L;            // lua VM
+    void*   dealer;                 // zmq dealer
+    char    name[MAX_ID_LENGTH];    // service name
+    char    path[MAX_PATH];         // lua file path
+    char    args[MAX_ARG_LENGTH];   // passed arguments
 };
 
 struct qsf_service_context_s
 {
-    qsf_service_t* list;
-    int count;
-    uv_mutex_t  mutex;
+    int             count;      // number of services
+    qsf_service_t*  list;       // single list container
+    uv_mutex_t      mutex;      // service mutex
 };
 
 typedef struct qsf_service_context_s qsf_service_context_t;
@@ -43,7 +44,7 @@ typedef struct qsf_service_context_s qsf_service_context_t;
 static qsf_service_context_t    service_context;
 
 // forward declaration
-void lua_initlibs(lua_State* L);
+extern void lua_initlibs(lua_State* L);
 
 static qsf_service_t* find_from_service_list(const char* name)
 {
@@ -67,6 +68,7 @@ static int remove_from_service_list(qsf_service_t* s)
 {
     assert(s);
     qsf_service_t* phead = service_context.list;
+    assert(phead);
     if (strcmp(phead->name, s->name) != 0)
     {
         qsf_service_t* prev = phead;
@@ -139,15 +141,16 @@ static void load_service_path(lua_State* L)
 static void init_service(qsf_service_t* s)
 {
     lua_State* L = luaL_newstate();
-    lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
+    lua_gc(L, LUA_GCSTOP, 0);  // stop collector during initialization
     luaL_openlibs(L);
     lua_initlibs(L);
     load_service_path(L);
-    lua_pushlightuserdata(L, s);
+    lua_pushlightuserdata(L, s); // thus `s` cannot be moved before lua_close()
     lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
     lua_gc(L, LUA_GCRESTART, 0);
     s->L = L;
     s->dealer = qsf_create_dealer(s->name);
+    assert(s->dealer);
 }
 
 static void cleanup_service(qsf_service_t* s)
@@ -168,13 +171,13 @@ static void cleanup_service(qsf_service_t* s)
 
 static int traceback(lua_State *L)
 {
-    if (!lua_isstring(L, 1))  /* Non-string error object? Try metamethod. */
+    if (!lua_isstring(L, 1))  // Non-string error object? Try metamethod.
     {
         if (lua_isnoneornil(L, 1) ||
             !luaL_callmeta(L, 1, "__tostring") ||
             !lua_isstring(L, -1))
-            return 1;  /* Return non-string error object. */
-        lua_remove(L, 1);  /* Replace object by result of __tostring metamethod. */
+            return 1;  // Return non-string error object.
+        lua_remove(L, 1);  // Replace object by result of __tostring metamethod.
     }
     luaL_traceback(L, L, lua_tostring(L, 1), 1);
     return 1;
@@ -205,11 +208,10 @@ static int run_service(qsf_service_t* s)
     return 0;
 }
 
-void service_thread_callback(void* args)
+static void service_thread_callback(void* args)
 {
     assert(args != NULL);
     qsf_service_t* s = (qsf_service_t*)args;
-    
     init_service(s);
     run_service(s);
     cleanup_service(s);
@@ -233,7 +235,7 @@ int qsf_create_service(const char* name, const char* path, const char* args)
     if (s != NULL)
     {
         uv_mutex_unlock(&service_context.mutex);
-        return 3; // service already exists
+        return 3; // service already exist
     }
     s = create_from_service_list(name, path, args);
     int r = uv_thread_create(&s->thread, service_thread_callback, s);
@@ -254,7 +256,7 @@ void qsf_service_send(qsf_service_t* s,
 }
 
 int qsf_service_recv(struct qsf_service_s* s, 
-                     service_recv_handler func, 
+                     msg_recv_handler func, 
                      int nowait, void* ud)
 {
     assert(s && func);
@@ -270,7 +272,7 @@ int qsf_service_recv(struct qsf_service_s* s,
     {
         const char* name = zmq_msg_data(&from);
         size_t len = zmq_msg_size(&from);
-        qsf_assert(len < MAX_ID_LENGTH, "invalid zmq peer name size: %d", len);
+        qsf_assert(len < MAX_ID_LENGTH, "invalid zmq peer name: %s", name);
 
         qsf_zmq_assert(zmq_msg_init(&msg) == 0);
         r = zmq_msg_recv(&msg, s->dealer, flag);
@@ -298,7 +300,7 @@ const char* qsf_service_name(qsf_service_t* s)
 int qsf_service_init()
 {
     int r = uv_mutex_init(&service_context.mutex);
-    if (r != 0)
+    if (r < 0)
     {
         qsf_log("service: uv_mutex_init() failed.");
         return r;
@@ -311,5 +313,6 @@ int qsf_service_init()
 
 void qsf_service_exit()
 {
+	assert(service_context.count == 0);
     uv_mutex_destroy(&service_context.mutex);
 }

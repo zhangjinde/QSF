@@ -9,7 +9,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
-#include "qsf_log.h"
+#include "qsf.h"
 
 typedef struct qsf_env_s
 {
@@ -17,7 +17,7 @@ typedef struct qsf_env_s
     lua_State*  L;
 }qsf_env_t;
 
-// global envrionment object, thread-safe
+// global envrionment object, thread-safe access
 static qsf_env_t  global_env;
 
 

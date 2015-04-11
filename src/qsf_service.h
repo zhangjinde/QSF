@@ -4,22 +4,13 @@
 
 #pragma once
 
-#include "qsf.h"
-#include <uv.h>
-
-#ifndef MAX_PATH
-#define MAX_PATH    256
-#endif
-
-// max dealer identity size
-#define MAX_ID_LENGTH       16
-#define MAX_ARG_LENGTH      512
+#include <stdint.h>
 
 struct qsf_service_s;
 typedef struct qsf_service_s qsf_service_t;
 
 // message handler
-typedef int (*service_recv_handler)(void* ud, const char*, size_t, const char*, size_t);
+typedef int(*msg_recv_handler)(void* ud, const char*, size_t, const char*, size_t);
 
 // create a new servce
 int qsf_create_service(const char* name, const char* path, const char* args);
@@ -31,7 +22,7 @@ void qsf_service_send(qsf_service_t* s,
 
 // recv message from peer service
 int qsf_service_recv(qsf_service_t* s,
-                     service_recv_handler func, 
+                     msg_recv_handler func, 
                      int nowait, void* ud);
 
 // name of current service
