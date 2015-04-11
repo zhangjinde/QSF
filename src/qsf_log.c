@@ -23,14 +23,14 @@
 
 #define LOG_BUFSIZE     8196
 
-QSF_TLS char global_log_buffer[LOG_BUFSIZE];
 static const char* qsf_file_name = "qsf.log";
 static volatile int qsf_enable_log_to_file = 1;
 
+// global thread local log buffer
+QSF_TLS char global_log_buffer[LOG_BUFSIZE];
+
 void write_log_to_file(const char* msg, int size)
 {
-    if (!qsf_enable_log_to_file)
-        return;
     FILE* fp = fopen(qsf_file_name, "a");
     if (fp)
     {
@@ -69,10 +69,14 @@ void qsf_vlog(const char* file, int line, const char* fmt, ...)
     if (bytes > 0)
     {
         int size = ch + bytes;
+        assert(size + 2 < LOG_BUFSIZE);
         global_log_buffer[size] = '\n';
         global_log_buffer[size + 1] = '\0';
         fprintf(stderr, global_log_buffer);
-        write_log_to_file(global_log_buffer, size);
+        if (qsf_enable_log_to_file)
+        {
+            write_log_to_file(global_log_buffer, size);
+        }
 #ifdef _WIN32
         OutputDebugStringA(global_log_buffer);
 #endif

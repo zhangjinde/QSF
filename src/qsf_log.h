@@ -6,15 +6,11 @@
 
 #include <stdio.h>
 
-/*
- * Turn A into a string literal without expanding macro definitions
- * (however, if invoked from a macro, macro arguments are expanded).
- */
+// Turn A into a string literal without expanding macro definitions
+// (however, if invoked from a macro, macro arguments are expanded).
 #define QSF_STRINGIZE_NX(x) #x
 
-/*
- * Turn A into a string literal after macro-expanding it.
- */
+// Turn A into a string literal after macro-expanding it.
 #define QSF_STRINGIZE(A)    QSF_STRINGIZE_NX(A)
 
 // Compiler specific attribute translation
@@ -47,10 +43,11 @@
         qsf_abort(); \
     }}while(0)
 
+// abort current process
+void qsf_abort(void);
 
 void qsf_vlog(const char* file, int line, const char* fmt, ...)
     PRINTF_FORMAT_ATTR(3,4);
 
+// enable/disable `qsf_vlog` write to file
 int qsf_log_to_file(int enable);
-
-void qsf_abort(void);
