@@ -4,14 +4,18 @@
 
 #pragma once
 
-#include <malloc.h>
-
 #ifdef USE_JEMALLOC
+# include <jemalloc/jemalloc.h>
 # define qsf_malloc     je_malloc
 # define qsf_free       je_free
 # define qsf_realloc    je_realloc
-#else
+#else 
+# ifdef __APPLE__
+#  include <malloc/malloc.h>
+# else
+#  include <malloc.h>
+# endif
 # define qsf_malloc     malloc
 # define qsf_free       free
 # define qsf_realloc    realloc
-#endif
+#endif 
