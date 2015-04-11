@@ -30,10 +30,10 @@ static uv_loop_t* global_loop;
 static int create_server(lua_State* L)
 {
     assert(global_loop != NULL);
-    uint32_t heart_beat_sec = NET_DEFAULT_HEARTBEAT;
-    uint32_t heart_beat_check_sec = NET_DEFAULT_HEARTBEAT_CHECK;
-    uint32_t max_connections = NET_DEFAULT_MAX_CONN;
-    uint32_t max_buffer_size = NET_MAX_PACKET_SIZE;
+    uint16_t heart_beat_sec = NET_DEFAULT_HEARTBEAT;
+    uint16_t heart_beat_check_sec = NET_DEFAULT_HEARTBEAT_CHECK;
+    uint16_t max_connections = NET_DEFAULT_MAX_CONN;
+    uint16_t max_buffer_size = NET_MAX_PACKET_SIZE;
     if (lua_istable(L, 1))
     {
         int top = lua_gettop(L);
@@ -128,6 +128,52 @@ static int server_start(lua_State* L)
 
 static int server_stop(lua_State* L)
 {
+    net_server_t* server = check_server(L);
+    qsf_net_server_stop(server->s);
+    return 0;
+}
+
+static int server_write(lua_State* L)
+{
+    net_server_t* server = check_server(L);
+    uint32_t serial = (uint32_t)luaL_checkinteger(L, 2);
+    size_t size;
+    const char* data = luaL_checklstring(L, 3, &size);
+    if (size < UINT16_MAX)
+    {
+        qsf_net_server_write(server->s, serial, data, (uint16_t)size);
+        return 0;
+    }
+    return luaL_error(L, "too big packet to write: %d/%d", size, UINT16_MAX);
+}
+
+static int server_write_all(lua_State* L)
+{
+    net_server_t* server = check_server(L);
+    size_t size;
+    const char* data = luaL_checklstring(L, 3, &size);
+    if (size < UINT16_MAX)
+    {
+        qsf_net_server_write_all(server->s, data, (uint16_t)size);
+        return 0;
+    }
+    
+    return 0;
+}
+
+static int server_shutdown(lua_State* L)
+{
+    net_server_t* server = check_server(L);
+    uint32_t serial = (uint32_t)luaL_checkinteger(L, 2);
+    qsf_net_server_shutdown(server->s, serial);
+    return 0;
+}
+
+static int server_close(lua_State* L)
+{
+    net_server_t* server = check_server(L);
+    uint32_t serial = (uint32_t)luaL_checkinteger(L, 2);
+    qsf_net_server_close(server->s, serial);
     return 0;
 }
 
@@ -153,7 +199,11 @@ static void make_meta(lua_State* L)
     {
         { "__gc", server_gc },
         { "start", server_start },
-
+        { "stop", server_stop },
+        { "write", server_write },
+        { "write_all", server_write_all },
+        { "shutdown", server_shutdown},
+        { "close", server_close },
         { NULL, NULL },
     };
     luaL_newmetatable(L, SERVER_HANDLE);
