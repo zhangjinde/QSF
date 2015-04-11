@@ -8,24 +8,29 @@
 
 // forward declarations
 int luaopen_mq(lua_State* L);
+int luaopen_net(lua_State* L);
 int luaopen_zmq(lua_State* L);
 int luaopen_uuid(lua_State* L);
 int luaopen_msgpack(lua_State* L);
 int luaopen_crypto(lua_State* L);
 int luaopen_mysql(lua_State* L);
 int luaopen_zlib(lua_State* L);
+int luaopen_process(lua_State* L);
+
 
 void lua_initlibs(lua_State* L)
 {
     static const luaL_Reg libs[] =
     {
         { "mq", luaopen_mq },
+        { "net", luaopen_net },
         { "zmq", luaopen_zmq },
         { "uuid", luaopen_uuid },
         { "zlib", luaopen_zlib },
         { "crypto", luaopen_crypto }, 
         { "mysql", luaopen_mysql },
         { "msgpack", luaopen_msgpack },
+        { "process", luaopen_process },
         { NULL, NULL },
     };
 

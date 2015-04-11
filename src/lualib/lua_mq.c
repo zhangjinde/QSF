@@ -3,10 +3,10 @@
 // See accompanying files LICENSE.
 
 #include <assert.h>
+#include <string.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include "qsf_service.h"
-#include "qsf_malloc.h"
+#include "qsf.h"
 
 
 // Send message to a named service
@@ -40,7 +40,7 @@ static int handle_recv(void* ud,
 // Recv new message from another service
 static int mq_recv(lua_State* L)
 {
-    struct qsf_service_s* self = lua_touserdata(L, lua_upvalueindex(1));
+    qsf_service_t* self = lua_touserdata(L, lua_upvalueindex(1));
     assert(self);
     int nowait = 0;
     const char* option = lua_tostring(L, -1);
@@ -54,7 +54,7 @@ static int mq_recv(lua_State* L)
 
 static int mq_name(lua_State* L)
 {
-    struct qsf_service_s* self = lua_touserdata(L, lua_upvalueindex(1));
+    qsf_service_t* self = lua_touserdata(L, lua_upvalueindex(1));
     assert(self);
     const char* name = qsf_service_name(self);
     lua_pushstring(L, name);
@@ -64,7 +64,7 @@ static int mq_name(lua_State* L)
 // Launch a new service
 static int mq_launch(lua_State* L)
 {
-    struct qsf_service_s* self = lua_touserdata(L, lua_upvalueindex(1));
+    qsf_service_t* self = lua_touserdata(L, lua_upvalueindex(1));
     assert(self);
     const char* ident = luaL_checkstring(L, 1);
     const char* path = luaL_checkstring(L, 2);
