@@ -18,13 +18,13 @@ static int mq_send(lua_State* L)
     size_t size = 0;
     const char* name = luaL_checklstring(L, 1, &len);
     const char* data = luaL_checklstring(L, 2, &size);
-    qsf_service_send(self, name, len, data, size);
+    qsf_service_send(self, name, (int)len, data, (int)size);
     return 0;
 }
 
 static int handle_recv(void* ud,
-                       const char* name, size_t len,
-                       const char* data, size_t size)
+                       const char* name, int len,
+                       const char* data, int size)
 {
     assert(ud && name && len && data && size);
     lua_State* L = ud;

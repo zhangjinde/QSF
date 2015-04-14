@@ -4,6 +4,7 @@
 
 #include "qsf_service.h"
 #include <assert.h>
+#include <string.h>
 #include <zmq.h>
 #include <uv.h>
 #include <lua.h>
@@ -24,6 +25,7 @@ struct qsf_service_s
     qsf_service_t*    next;         // linked list
     uv_thread_t       thread;       // service thread
     struct lua_State* L;            // lua VM
+
     void*   dealer;                 // zmq dealer
     char    name[MAX_ID_LENGTH];    // service name
     char    path[MAX_PATH];         // lua file path
@@ -52,13 +54,13 @@ static qsf_service_t* find_from_service_list(const char* name)
     qsf_service_t* phead = service_context.list;
     while (phead)
     {
-        if (strcmp(phead->name, name) != 0)
+        if (strcmp(phead->name, name) == 0)
         {
-            phead = phead->next;
+            return phead;
         }
         else
         {
-            return phead;
+            phead = phead->next;
         }
     }
     return NULL;
@@ -127,14 +129,14 @@ static void load_service_path(lua_State* L)
     {
         snprintf(chunk, sizeof(chunk), "package.path = package.path .. ';' .. '%s'", path);
         int r = luaL_dostring(L, chunk);
-        qsf_assert(r == LUA_OK, "load cpath chunk failed.");
+        qsf_assert(r == LUA_OK, "%s", lua_tostring(L, -1));
     }
     const char* cpath = qsf_getenv("lua_cpath");
     if (strlen(cpath) > 0)
     {
         snprintf(chunk, sizeof(chunk), "package.cpath = package.cpath .. ';' .. '%s'", cpath);
         int r = luaL_dostring(L, chunk);
-        qsf_assert(r == LUA_OK, "load cpath chunk failed.");
+        qsf_assert(r == LUA_OK, "%s", lua_tostring(L, -1));
     }
 }
 
@@ -183,7 +185,7 @@ static int traceback(lua_State *L)
     return 1;
 }
 
-// execute service's lua VM instructions
+// execute service's lua code
 static int run_service(qsf_service_t* s)
 {
     lua_State* L = s->L;
@@ -244,8 +246,8 @@ int qsf_create_service(const char* name, const char* path, const char* args)
 }
 
 void qsf_service_send(qsf_service_t* s,
-                      const char* name, size_t len, 
-                      const char* data, size_t size)
+                      const char* name, int len, 
+                      const char* data, int size)
 {
     assert(s && name && len && data && size);
 
@@ -276,11 +278,11 @@ int qsf_service_recv(struct qsf_service_s* s,
 
         qsf_zmq_assert(zmq_msg_init(&msg) == 0);
         r = zmq_msg_recv(&msg, s->dealer, flag);
-        if (r > 0)
+        if (LIKELY(r > 0))
         {
             const char* data = zmq_msg_data(&msg);
             size_t size = zmq_msg_size(&msg);
-            r = func(ud, name, len, data, size);
+            r = func(ud, name, (int)len, data, (int)size);
         }
         qsf_zmq_assert(zmq_msg_close(&from) == 0);
         qsf_zmq_assert(zmq_msg_close(&msg) == 0);

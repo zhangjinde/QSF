@@ -5,6 +5,7 @@
 #include "qsf_env.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <uv.h>
 #include <lua.h>
 #include <lualib.h>
@@ -27,7 +28,7 @@ const char* qsf_getenv(const char* key)
     assert(L && key);
     uv_mutex_lock(&global_env.mutex);
     lua_getglobal(L, key);
-    const char* s = luaL_optstring(L, -1, "");
+    const char* s = lua_tostring(L, -1);
     lua_pop(L, -1);
     uv_mutex_unlock(&global_env.mutex);
     return s;
@@ -36,7 +37,11 @@ const char* qsf_getenv(const char* key)
 int64_t qsf_getenv_int(const char* key)
 {
     const char* s = qsf_getenv(key);
-    return atoll(s);
+    if (s)
+    {
+        return atoll(s);
+    }
+    return 0;
 }
 
 void qsf_setenv(const char* key, const char* value)
@@ -67,7 +72,7 @@ int qsf_env_init(const char* file)
     r = luaL_dofile(L, file);
     if (r != LUA_OK)
     {
-        qsf_log(lua_tostring(L, -1));
+        qsf_log("%s\n", lua_tostring(L, -1));
         lua_close(L);
         return r;
     }

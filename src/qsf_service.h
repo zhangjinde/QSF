@@ -4,21 +4,19 @@
 
 #pragma once
 
-#include <stdint.h>
-
 struct qsf_service_s;
 typedef struct qsf_service_s qsf_service_t;
 
 // message handler
-typedef int(*msg_recv_handler)(void* ud, const char*, size_t, const char*, size_t);
+typedef int(*msg_recv_handler)(void* ud, const char*, int, const char*, int);
 
 // create a new servce
 int qsf_create_service(const char* name, const char* path, const char* args);
 
 // send message to another service
 void qsf_service_send(qsf_service_t* s,
-                      const char* name, size_t len, 
-                      const char* data, size_t size);
+                      const char* name, int len, 
+                      const char* data, int size);
 
 // recv message from peer service
 int qsf_service_recv(qsf_service_t* s,
