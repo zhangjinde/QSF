@@ -31,26 +31,31 @@ solution 'qsf'
             '_SCL_SECURE_NO_WARNINGS',
             '_WINSOCK_DEPRECATED_NO_WARNINGS',
             'NOMINMAX',
-            '_ALLOW_KEYWORD_MACROS',
             'inline=__inline',
             'alignof=__alignof',
-            'noexcept=_NOEXCEPT',            
+            'noexcept=_NOEXCEPT',
             'snprintf=_snprintf',
-            'strncasecmp=_strnicmp',            
-        }        
+            'strncasecmp=_strnicmp',
+        }
         includedirs { USR_DIR .. '/include' }
         libdirs { USR_DIR .. '/lib/x64' }
+        links
+        {
+            'ws2_32',
+            'iphlpapi',
+            'psapi',
+        }        
 
     configuration 'gmake'
-        buildoptions '-std=c99 -mcrc32 -msse4.2'
+        buildoptions '-std=c99'
         defines
         {
-            '__STDC_LIMIT_MACROS',
-            '_POSIX_C_SOURCE=200112L',
+            '_GNU_SOURCE',
+            'USE_JEMALLOC',
         }
-        includedirs 
+        includedirs
         {
-            '/usr/include/mysql', 
+            '/usr/include/mysql',
         }
         links
         {
@@ -75,17 +80,17 @@ solution 'qsf'
         includedirs
         {
             'src',
-            'deps/cppzmq',
             'deps/lua/src',
+            'deps/libuv/include',
             'deps/msgpack/include',
         }
         libdirs 'bin'
         if os.get() == 'windows' then
-        links 
+        links
         {
-            'libzmq', 
-            'libuv', 
-            'zlib', 
+            'libzmq',
+            'libuv',
+            'zlib',
             'lua5.3',
             'msgpack',
             'libeay32',
@@ -93,21 +98,22 @@ solution 'qsf'
         }
         includedirs
         {
-            'deps/libuv/include',        
+            'deps/libuv/include',
         }
         else
-        links 
+        links
         {
-            'zmq', 
-            'uv', 
-            'z', 
-            'uuid', 
+            'z',
+            'uv',
+            'zmq',
+            'uuid',
             'lua5.3',
             'msgpack',
             'crypto',
+            'jemalloc',
             'mysqlclient',
         }
         end
 
 
-        
+
