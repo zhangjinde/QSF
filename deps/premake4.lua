@@ -61,6 +61,7 @@ solution '3rdlibs'
             'msgpack/**.c',
         }
         
+    -- take `./configure && make` in linux 
     if os.get() ~= 'windows' then return end
     
     project 'libuv'

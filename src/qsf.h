@@ -4,31 +4,24 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-#include <zmq.hpp>
+#include "qsf_malloc.h"
+#include "qsf_log.h"
+#include "qsf_env.h"
+#include "qsf_service.h"
+#include "qsf_version.h"
 
+#ifndef MAX_PATH
+#define MAX_PATH    260
+#endif
 
-enum
-{
-    // Max size for identity of each dealer
-    MAX_NAME_SIZE = 16,
-};
+// start qsf framework with a config file
+int qsf_start(const char* file);
 
-namespace qsf {
+// create a zmq dealer object connected to router
+void* qsf_create_dealer(const char* name);
 
-// Create a dealer object, this function is thread-safe
-std::unique_ptr<zmq::socket_t> CreateDealer(const std::string& id);
+// global zmq context object
+void* qsf_zmq_context(void);
 
-// Create a named service
-bool CreateService(const std::string& type, 
-                   const std::string& name, 
-                   const std::string& args);
-
-// Run services and message dispatching
-int  Start(const char* config);
-
-// Exit all service
-void Exit();
-
-};
+// qsf version info, <major.minor.patch>
+void qsf_version(int* major, int* minor, int* patch);

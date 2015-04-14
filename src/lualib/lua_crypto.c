@@ -13,7 +13,7 @@
 #include <openssl/aes.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
-#include "core/Checksum.h"
+
 
 #define RSA_BITS        1024
 #define MAX_RSA_BUF     16384
@@ -146,6 +146,7 @@ static int crypto_aes_decrypt(lua_State* L)
 static int crypto_rsa_new(lua_State* L)
 {
     cryptRSA* rsa = (cryptRSA*)lua_newuserdata(L, sizeof(cryptRSA));
+    memset(rsa, 0, sizeof(*rsa));
     luaL_getmetatable(L, RSA_HANDLE);
     lua_setmetatable(L, -2);
     return 1;
@@ -341,16 +342,6 @@ static int crypto_rsa_decrypt(lua_State* L)
     return 0;
 }
 
-static int crypto_crc32c(lua_State* L)
-{
-    size_t len;
-    const char* data = luaL_checklstring(L, 1, &len);
-    uint32_t init_value = (uint32_t)luaL_optinteger(L, 2, 0);
-    uint32_t checksum = crc32c(data, len, init_value);
-    lua_pushinteger(L, checksum);
-    return 1;
-}
-
 static int crypto_md5(lua_State* L)
 {
     size_t len;
@@ -449,7 +440,6 @@ LUALIB_API int luaopen_crypto(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
-        { "crc32c", crypto_crc32c },
         { "md5", crypto_md5 },
         { "sha1", crypto_sha1 },
         { "hmac_md5", crypto_hmac_md5 },

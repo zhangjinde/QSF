@@ -9,7 +9,7 @@ local USR_DIR = os.getenv('USR_DIR') or 'E:/usr'
 
 solution 'qsf'
     configurations {'Debug', 'Release'}
-    language 'C++'
+    language 'C'
     --flags {'ExtraWarnings'}
     targetdir 'bin'
     platforms {'x64'}
@@ -31,26 +31,31 @@ solution 'qsf'
             '_SCL_SECURE_NO_WARNINGS',
             '_WINSOCK_DEPRECATED_NO_WARNINGS',
             'NOMINMAX',
-            '_ALLOW_KEYWORD_MACROS',
             'inline=__inline',
             'alignof=__alignof',
-            'noexcept=_NOEXCEPT',            
+            'noexcept=_NOEXCEPT',
             'snprintf=_snprintf',
-            'strncasecmp=_strnicmp',            
-        }        
+            'strncasecmp=_strnicmp',
+        }
         includedirs { USR_DIR .. '/include' }
         libdirs { USR_DIR .. '/lib/x64' }
+        links
+        {
+            'ws2_32',
+            'iphlpapi',
+            'psapi',
+        }        
 
     configuration 'gmake'
-        buildoptions '-std=c++11 -std=c99 -mcrc32 -msse4.2'
+        buildoptions '-std=c99'
         defines
         {
-            '__STDC_LIMIT_MACROS',
-            '_POSIX_C_SOURCE=200112L',
+            '_GNU_SOURCE',
+            'USE_JEMALLOC',
         }
-        includedirs 
+        includedirs
         {
-            '/usr/include/mysql', 
+            '/usr/include/mysql',
         }
         links
         {
@@ -63,13 +68,9 @@ solution 'qsf'
         location 'build'
         kind 'ConsoleApp'
         uuid '65BCF1EB-A936-4688-B1F4-7073B4ACE736'
-        defines
-        {
-        }
         files
         {
             'src/**.h',
-            'src/**.cpp',
             'src/**.c',
         }
         excludes
@@ -79,17 +80,17 @@ solution 'qsf'
         includedirs
         {
             'src',
-            'deps/cppzmq',
             'deps/lua/src',
+            'deps/libuv/include',
             'deps/msgpack/include',
         }
         libdirs 'bin'
         if os.get() == 'windows' then
-        links 
+        links
         {
-            'libzmq', 
-            'libuv', 
-            'zlib', 
+            'libzmq',
+            'libuv',
+            'zlib',
             'lua5.3',
             'msgpack',
             'libeay32',
@@ -97,43 +98,22 @@ solution 'qsf'
         }
         includedirs
         {
-            'deps/libuv/include',        
+            'deps/libuv/include',
         }
         else
-        links 
+        links
         {
-            'zmq', 
-            'uv', 
-            'z', 
-            'uuid', 
+            'z',
+            'uv',
+            'zmq',
+            'uuid',
             'lua5.3',
             'msgpack',
             'crypto',
+            'jemalloc',
             'mysqlclient',
         }
         end
 
-    project 'unittest'
-        location 'build'
-        kind 'ConsoleApp'
-        uuid '9E30CCC3-DA13-47FB-9902-7BF6D4792380'
-        files
-        {
-            'src/core/*.cpp',
-            'src/test/*.cpp',
-            'deps/gtest/src/gtest-all.cc',
-        }
-        includedirs
-        {
-            'src',
-            'deps/libuv/include',
-            'deps/gtest/include',
-            'deps/gtest',
-        }
-        libdirs 'bin'
-        if os.get() == 'windows' then
-        links {'libuv', 'zlib'}
-        else
-        links {'uv', 'z'}
-        end
-        
+
+
