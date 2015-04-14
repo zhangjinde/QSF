@@ -72,7 +72,7 @@ void qsf_vlog(const char* file, int line, const char* fmt, ...)
         assert(size + 2 < LOG_BUFSIZE);
         global_log_buffer[size] = '\n';
         global_log_buffer[size + 1] = '\0';
-        fprintf(stderr, global_log_buffer);
+        fprintf(stderr, "%s", global_log_buffer);
         if (qsf_enable_log_to_file)
         {
             write_log_to_file(global_log_buffer, size);

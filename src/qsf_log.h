@@ -6,12 +6,14 @@
 
 #include <stdio.h>
 
-// Turn A into a string literal without expanding macro definitions
-// (however, if invoked from a macro, macro arguments are expanded).
-#define QSF_STRINGIZE_NX(x) #x
-
-// Turn A into a string literal after macro-expanding it.
-#define QSF_STRINGIZE(A)    QSF_STRINGIZE_NX(A)
+ 
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define LIKELY(x)   (__builtin_expect((x), 1))
+#define UNLIKELY(x) (__builtin_expect((x), 0))
+#else
+#define LIKELY(x)   (x)
+#define UNLIKELY(x) (x)
+#endif
 
 // Compiler specific attribute translation
 // msvc should come first, so if clang is in msvc mode it gets the right defines
@@ -22,24 +24,21 @@
 # endif
 # define _USE_ATTRIBUTES_FOR_SAL 1
 # include <sal.h>
-# define PRINTF_FORMAT _Printf_format_string_
+# define PRINTF_FORMAT  _Printf_format_string_
 # define PRINTF_FORMAT_ATTR(format_param, dots_param) /**/
 #else
 # define PRINTF_FORMAT /**/
 # define PRINTF_FORMAT_ATTR(format_param, dots_param) \
-  __attribute__((format(printf, format_param, dots_param)))
+    __attribute__((format(printf, format_param, dots_param)))
 #endif
 
-
 #define qsf_log(fmt, ...) \
-    qsf_vlog(__FILE__, __LINE__, fmt, __VA_ARGS__)
+    qsf_vlog(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 #define qsf_assert(expr, fmt, ...) \
     do { \
-    if (!(expr)){ \
-        char format[100]; \
-        snprintf(format, sizeof(format), "expr: %s, %s", QSF_STRINGIZE((expr)), fmt); \
-        qsf_vlog(__FILE__, __LINE__, format, __VA_ARGS__); \
+    if (UNLIKELY(!(expr))){ \
+        qsf_vlog(__FILE__, __LINE__, fmt, ##__VA_ARGS__); \
         qsf_abort(); \
     }}while(0)
 
@@ -47,7 +46,7 @@
 void qsf_abort(void);
 
 void qsf_vlog(const char* file, int line, const char* fmt, ...)
-    PRINTF_FORMAT_ATTR(3,4);
+    PRINTF_FORMAT_ATTR(3, 4);
 
 // enable/disable `qsf_vlog` write to file
 int qsf_log_to_file(int enable);
