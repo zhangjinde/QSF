@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 struct qsf_net_server_s;
@@ -41,20 +42,24 @@ int qsf_net_server_write(qsf_net_server_t* s,
                          const void* data,
                          uint16_t size);
 
-
 // send message to all sessions
 int qsf_net_server_write_all(qsf_net_server_t* s,
                              const void* data,
                              uint16_t size);
 
+// shutdown read and send
 void qsf_net_server_shutdown(qsf_net_server_t* s, uint32_t serial);
 
+// close this session
 void qsf_net_server_close(qsf_net_server_t* s, uint32_t serial);
 
+// session peer name
 int qsf_net_server_session_address(qsf_net_server_t* s,
                                    uint32_t serial,
                                    char* address,
                                    size_t length);
+// session count
+int qsf_net_server_size(qsf_net_server_t* s);
 
 // server reference
 void qsf_net_set_server_udata(qsf_net_server_t* s, void* ud);

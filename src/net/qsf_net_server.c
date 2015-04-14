@@ -4,6 +4,7 @@
 
 #include "qsf_net_server.h"
 #include <time.h>
+#include <string.h>
 #include <assert.h>
 #include <uv.h>
 #include "uthash.h"
@@ -32,15 +33,6 @@ typedef struct write_buffer_s
     char        data[1];            // data buffer
 }write_buffer_t;
 
-typedef struct shared_write_buffer_s
-{
-    uv_write_t  req;                // request handle
-    uv_buf_t    buf;                // buffer object
-    uint16_t    ref;                // reference count
-    uint16_t    size;               // data size
-    char        data[1];            // data buffer
-}shared_write_buffer_t;
-
 struct qsf_net_server_s
 {
     uint16_t max_connection;        // max alive connections
@@ -61,7 +53,7 @@ static void set_session_serial(qsf_net_server_t* server, qsf_net_session_t* sess
 {
     assert(server);
     uint32_t serial = server->next_serial;
-    while (1)
+    for (;;)
     {
         qsf_net_session_t* s = NULL;
         HASH_FIND_INT(server->session_map, &serial, s);
@@ -133,12 +125,13 @@ static void on_session_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* 
     qsf_net_session_t* session = stream->data;
     qsf_net_server_t* server = session->server;
     s_read_cb cb = server->on_read;
+    assert(session && server && cb);
     if (nread <= 0)
     {
         if (nread < 0)
         {
-            const char* msg = uv_strerror(nread);
-            cb(nread, session->serial, msg, strlen(msg), server->udata);
+            const char* msg = uv_strerror((int)nread);
+            cb((int)nread, session->serial, msg, (uint16_t)strlen(msg), server->udata);
             HASH_DEL(server->session_map, session);
             session_destroy(session);
         }
@@ -157,7 +150,7 @@ static void on_session_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* 
             if (session->head_size > server->max_buffer_size)
             {
                 const char* msg = "content size limit";
-                cb(nread, session->serial, msg, strlen(msg), server->udata);
+                cb((int)nread, session->serial, msg, (uint16_t)strlen(msg), server->udata);
                 HASH_DEL(server->session_map, session);
                 session_destroy(session);
             }
@@ -184,11 +177,11 @@ static void on_connection(uv_stream_t* stream, int err)
     }
     qsf_net_server_t* server = stream->data;
     assert(server);
-
     int count = HASH_COUNT(server->session_map);
     if (count >= server->max_connection)
-        return ;
-
+    {
+        return; // max connection count limit
+    }
     qsf_net_session_t* session = session_create(stream->loop, server);
     uv_stream_t* handle = (uv_stream_t*)&session->handle;
     int r = uv_accept(stream, handle);
@@ -220,15 +213,6 @@ static void session_write_cb(uv_write_t* req, int err)
     qsf_free(buffer);
 }
 
-static void session_shared_write_cb(uv_write_t* req, int err)
-{
-    shared_write_buffer_t* buffer = req->data;
-    if (buffer->ref-- == 0)
-    {
-        qsf_free(buffer);
-    }
-}
-
 // heart beat checking
 static void hearbeat_timer_cb(uv_timer_t* timer)
 {
@@ -242,7 +226,7 @@ static void hearbeat_timer_cb(uv_timer_t* timer)
         if (now - session->last_recv_time > server->max_heart_beat)
         {
             const char* msg = "session timeout";
-            server->on_read(NET_ERR_TIMEOUT, session->serial, msg, strlen(msg), server->udata);
+            server->on_read(NET_ERR_TIMEOUT, session->serial, msg, (uint16_t)strlen(msg), server->udata);
             HASH_DEL(server->session_map, session);
             session_destroy(session);
         }
@@ -264,6 +248,7 @@ qsf_net_server_t* qsf_create_net_server(uv_loop_t* loop,
 {
     assert(loop);
     qsf_net_server_t* server = qsf_malloc(sizeof(qsf_net_server_t));
+    memset(server, 0, sizeof(*server));
     int r = uv_tcp_init(loop, &server->acceptor);
     qsf_assert(r == 0, "uv_tcp_init() failed.");
     r = uv_timer_init(loop, &server->timer);
@@ -276,8 +261,6 @@ qsf_net_server_t* qsf_create_net_server(uv_loop_t* loop,
     server->heart_beat_check = heart_beat_check;
     server->max_buffer_size = max_buffer_size;
     server->next_serial = 1000;
-    server->on_read = NULL;
-    server->session_map = NULL;
     return server;
 }
 
@@ -322,7 +305,12 @@ int qsf_net_server_start(qsf_net_server_t* s,
         return r;
     }
     int64_t timeout = s->heart_beat_check * 1000;
-    return uv_timer_start(&s->timer, hearbeat_timer_cb, timeout, timeout);
+    r = uv_timer_start(&s->timer, hearbeat_timer_cb, timeout, timeout);
+    if (r < 0)
+    {
+        return r;
+    }
+    return 0;
 }
 
 void qsf_net_server_stop(qsf_net_server_t* s)
@@ -337,6 +325,25 @@ void qsf_net_server_stop(qsf_net_server_t* s)
     }
 }
 
+int do_session_write(qsf_net_session_t* session, const void* data, uint16_t size)
+{
+    assert(session && data && size);
+    write_buffer_t* buffer = qsf_malloc(sizeof(write_buffer_t) + size);
+    buffer->req.data = buffer;
+    buffer->size = htons(size); //network order
+    memcpy(buffer->data, data, size);
+    buffer->buf.base = (char*)&buffer->size; // memory layout dependency
+    buffer->buf.len = sizeof(size) + size;
+    int r = uv_write(&buffer->req, (uv_stream_t*)&session->handle, &buffer->buf,
+        1, session_write_cb);
+    if (r < 0)
+    {
+        qsf_free(buffer);
+        return r;
+    }
+    return 0;
+}
+
 int qsf_net_server_write(qsf_net_server_t* s,
                          uint32_t serial,
                          const void* data,
@@ -349,48 +356,17 @@ int qsf_net_server_write(qsf_net_server_t* s,
     {
         return -1;
     }
-    write_buffer_t* buffer = qsf_malloc(sizeof(write_buffer_t) + size);
-    buffer->req.data = buffer;
-    buffer->size = htons(size); //network order
-    memcpy(buffer->data, data, size);
-    buffer->buf.base = (char*)&buffer->size; // memory layout dependency
-    buffer->buf.len = sizeof(size) + size;
-    int r = uv_write(&buffer->req, (uv_stream_t*)&session->handle, &buffer->buf, 
-        1, session_write_cb);
-    if (r < 0)
-    {
-        qsf_free(buffer);
-    }
-    return r;
+    return do_session_write(session, data, size);
 }
 
-int qsf_net_server_write_all(qsf_net_server_t* s,
-                             const void* data,
-                             uint16_t size)
+int qsf_net_server_write_all(qsf_net_server_t* s, const void* data, uint16_t size)
 {
     assert(s && data && size);
     qsf_net_session_t* session = NULL;
     qsf_net_session_t* tmp = NULL;
-    size_t count = HASH_COUNT(s->session_map);
-    if (count == 0)
-    {
-        return 0;
-    }
-    shared_write_buffer_t* buffer = qsf_malloc(sizeof(shared_write_buffer_t) + size);
-    buffer->req.data = buffer;
-    buffer->ref = 0;
-    buffer->size = htons(size);
-    memcpy(buffer->data, data, size);
-    buffer->buf.base = (char*)&buffer->size;
-    buffer->buf.len = sizeof(size) + size;
     HASH_ITER(hh, s->session_map, session, tmp)
     {
-        int r = uv_write(&buffer->req, (uv_stream_t*)&session->handle, &buffer->buf, 
-            1, session_shared_write_cb);
-        if (r == 0)
-        {
-            buffer->ref++;
-        }
+        do_session_write(session, data, size);
     }
     return 0;
 }
@@ -404,7 +380,9 @@ void qsf_net_server_shutdown(qsf_net_server_t* s, uint32_t serial)
     {
         return;
     }
+    uv_read_stop((uv_stream_t*)&session->handle);
     uv_shutdown_t* req = qsf_malloc(sizeof(uv_shutdown_t));
+    req->data = session;
     int r = uv_shutdown(req, (uv_stream_t*)&session->handle, on_session_shutdown);
     if (r < 0)
     {
@@ -438,6 +416,12 @@ int qsf_net_server_session_address(qsf_net_server_t* s,
         return -1;
     }
     return uv_ip4_name(&session->peer_addr, address, length);
+}
+
+int qsf_net_server_size(qsf_net_server_t* s)
+{
+    assert(s);
+    return HASH_COUNT(s->session_map);
 }
 
 void qsf_net_set_server_udata(qsf_net_server_t* s, void* ud)
