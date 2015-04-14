@@ -4,6 +4,7 @@
 
 #include "qsf_net_client.h"
 #include <assert.h>
+#include <string.h>
 #include <uv.h>
 #include "qsf.h"
 
@@ -37,7 +38,9 @@ static void on_client_close(uv_handle_t* handle)
 
 static void on_client_connect(uv_connect_t* req, int status)
 {
-
+    qsf_net_client_t* c = req->data;
+    assert(c->on_connect);
+    c->on_connect(status, c->udata);
 }
 
 static void on_client_alloc(uv_handle_t* handle, size_t size, uv_buf_t* buf)
@@ -64,8 +67,8 @@ static void on_client_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* b
     {
         if (nread < 0)
         {
-            const char* msg = uv_strerror(nread);
-            c->on_read(nread, msg, strlen(msg), c->udata);
+            const char* msg = uv_strerror((int)nread);
+            c->on_read((int)nread, msg, (uint16_t)strlen(msg), c->udata);
         }
         return;
     }
