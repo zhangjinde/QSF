@@ -1178,6 +1178,7 @@ static void create_metatable(lua_State* L)
         { "set_identity", zsocket_set_identity },
         { "set_rate", zsocket_set_rate },
         { "set_recovery_interval", zsocket_set_recovery_interval },
+        { "set_reconnect_interval", zsocket_set_reconnect_interval },
         { "set_reconnect_interval_max", zsocket_set_reconnect_interval_max },
         { "set_backlog", zsocket_set_backlog },
         { "set_accept_filter", zsocket_set_accept_filter },
