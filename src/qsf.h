@@ -8,6 +8,7 @@
 #include "qsf_log.h"
 #include "qsf_env.h"
 #include "qsf_service.h"
+#include "qsf_version.h"
 
 #ifndef MAX_PATH
 #define MAX_PATH    260
@@ -21,3 +22,6 @@ void* qsf_create_dealer(const char* name);
 
 // global zmq context object
 void* qsf_zmq_context(void);
+
+// qsf version info, <major.minor.patch>
+void qsf_version(int* major, int* minor, int* patch);

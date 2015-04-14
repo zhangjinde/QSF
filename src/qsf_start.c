@@ -55,9 +55,9 @@ void* qsf_create_dealer(const char* identity)
 // dispatch dealer message to peer
 static int dispatch_message(void)
 {
-    zmq_msg_t from;
-    zmq_msg_t to;
-    zmq_msg_t msg;
+    zmq_msg_t from;     // where does this message came from
+    zmq_msg_t to;       // where is this message going to
+    zmq_msg_t msg;      // the message itself
 
     void* router = qsf_context.router;
     assert(router != NULL);
@@ -106,7 +106,7 @@ static void qsf_init(void)
     int r = zmq_setsockopt(router, ZMQ_LINGER, &linger, sizeof(linger));
     qsf_zmq_assert(r == 0);
 
-    int mandatory = 1;
+    int mandatory = (int)qsf_getenv_int("router_mandatory");
     r = zmq_setsockopt(router, ZMQ_ROUTER_MANDATORY, &mandatory, sizeof(mandatory));
     qsf_zmq_assert(r == 0);
 
@@ -136,6 +136,16 @@ void* qsf_zmq_context(void)
     return qsf_context.context;
 }
 
+void qsf_version(int* major, int* minor, int* patch)
+{
+    if (major)
+        *major = QSF_VERSION_MAJOR;
+    if (minor)
+        *minor = QSF_VERSION_MINOR;
+    if (patch)
+        *patch = QSF_VERSION_PATCH;
+}
+
 // start qsf framework with a config file
 int qsf_start(const char* file)
 {
@@ -153,6 +163,7 @@ int qsf_start(const char* file)
 
     const char* name = qsf_getenv("start_name");
     const char* path = qsf_getenv("start_file");
+    qsf_assert(name && path, "name and path cannot be null");
     r = qsf_create_service(name, path, "sys");
     qsf_assert(r == 0, "create service '%s' failed, %d.", name, r);
 
