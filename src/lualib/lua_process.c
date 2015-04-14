@@ -2,7 +2,7 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-
+#include <string.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <uv.h>
@@ -71,6 +71,14 @@ static int process_pid(lua_State* L)
     return 1;
 }
 
+static int process_kill(lua_State* L)
+{
+    int pid = (int)luaL_checkinteger(L, 1);
+    int sig = (int)luaL_checkinteger(L, 2);
+    uv_kill(pid, sig);
+    return 0;
+}
+
 static int process_free_memory(lua_State* L)
 {
     int64_t bytes = uv_get_free_memory();
@@ -117,25 +125,6 @@ static int process_chdir(lua_State* L)
     return 0;
 }
 
-static int process_mkdir(lua_State* L)
-{
-    const char *path = luaL_checkstring(L, 1);
-    int fail;
-#ifdef _WIN32
-    fail = _mkdir(path);
-#else
-    fail = mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP |
-        S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH);
-#endif
-    if (fail) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "%s", strerror(errno));
-        return 2;
-    }
-    lua_pushboolean(L, 1);
-    return 1;
-}
-
 LUALIB_API int luaopen_process(lua_State* L)
 {
     static const luaL_Reg lib[] =
@@ -145,13 +134,13 @@ LUALIB_API int luaopen_process(lua_State* L)
         { "gettick", process_gettick }, 
         { "hrtime", process_hrtime },
         { "pid", process_pid },
+        { "kill", process_kill },
         { "free_memory", process_free_memory }, 
         { "total_memory", process_total_memory },
         { "set_title", process_set_title },
         { "exepath", process_exepath },
         { "cwd", process_cwd },
         { "chdir", process_chdir },
-        { "mkdir", process_mkdir },
         { NULL, NULL },
     };
     luaL_newlib(L, lib);
