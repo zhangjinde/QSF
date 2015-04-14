@@ -146,6 +146,7 @@ static int crypto_aes_decrypt(lua_State* L)
 static int crypto_rsa_new(lua_State* L)
 {
     cryptRSA* rsa = (cryptRSA*)lua_newuserdata(L, sizeof(cryptRSA));
+    memset(rsa, 0, sizeof(*rsa));
     luaL_getmetatable(L, RSA_HANDLE);
     lua_setmetatable(L, -2);
     return 1;
