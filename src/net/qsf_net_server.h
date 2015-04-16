@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <stddef.h>
 #include <stdint.h>
 
 struct qsf_net_server_s;
@@ -17,12 +16,10 @@ typedef struct uv_loop_s uv_loop_t;
 typedef void(*s_read_cb)(int, uint32_t, const char*, uint16_t, void* ud);
 
 // create an net server instance
-struct qsf_net_server_s*
-qsf_create_net_server(uv_loop_t* loop,
-                      uint16_t max_connection, 
-                      uint16_t max_heart_beat,
-                      uint16_t heart_beat_check,
-                      uint16_t max_buffer_size);
+qsf_net_server_t* qsf_create_net_server(uv_loop_t* loop,
+                                        uint16_t max_connection, 
+                                        uint16_t max_heart_beat,
+                                        uint16_t heart_beat_check);
 
 // destroy this instance
 void qsf_net_server_destroy(struct qsf_net_server_s* s);
@@ -57,7 +54,7 @@ void qsf_net_server_close(qsf_net_server_t* s, uint32_t serial);
 int qsf_net_server_session_address(qsf_net_server_t* s,
                                    uint32_t serial,
                                    char* address,
-                                   size_t length);
+                                   int length);
 // session count
 int qsf_net_server_size(qsf_net_server_t* s);
 
