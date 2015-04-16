@@ -69,28 +69,22 @@ static qsf_service_t* find_from_service_list(const char* name)
 static int remove_from_service_list(qsf_service_t* s)
 {
     assert(s);
-    qsf_service_t* phead = service_context.list;
-    assert(phead);
-    if (strcmp(phead->name, s->name) != 0)
+    qsf_service_t** pph = &service_context.list;
+    while (*pph)
     {
-        qsf_service_t* prev = phead;
-        phead = phead->next;
-        while (phead)
+        if (strcmp((*pph)->name, s->name) == 0)
         {
-            if (strcmp(phead->name, s->name) == 0)
-            {
-                prev->next = phead->next;
-                break;
-            }
-            phead = phead->next;
+            qsf_service_t* p = *pph;
+            *pph = p->next;
+            qsf_free(p);
+            service_context.count--;
+            break;
+        }
+        else
+        {
+            pph = &(*pph)->next;
         }
     }
-    else
-    {
-        service_context.list = NULL;
-    }
-    qsf_free(phead);
-    service_context.count--;
     return 0;
 }
 
@@ -103,19 +97,12 @@ static qsf_service_t* create_from_service_list(const char* name, const char* pat
     strncpy(s->path, path, sizeof(s->path));
     strncpy(s->args, args, sizeof(s->args));
 
-    qsf_service_t* phead = service_context.list;
-    if (phead)
+    qsf_service_t** pph = &service_context.list;
+    while (*pph)
     {
-        while (phead->next)
-        {
-            phead = phead->next;
-        }
-        phead->next = s;
+        pph = &(*pph)->next;
     }
-    else
-    {
-        service_context.list = s;
-    }
+    *pph = s;
     service_context.count++;
     return s;
 }
