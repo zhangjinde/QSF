@@ -11,7 +11,7 @@
 # include <jemalloc/jemalloc.h>
 #endif
 
-// `malloc` functions are defined as a weak symbols in glibc.
+// `malloc` functions are defined as weak symbols in glibc.
 #define qsf_malloc     malloc
 #define qsf_free       free
 #define qsf_realloc    realloc

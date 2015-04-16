@@ -15,6 +15,6 @@ int64_t qsf_getenv_int(const char* key);
 // set qsf environment vairable
 void qsf_setenv(const char* key, const char* value);
 
-
+// init and exit env module
 int qsf_env_init(const char* file);
 void qsf_env_exit(void);
