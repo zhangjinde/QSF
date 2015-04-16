@@ -17,7 +17,7 @@ typedef void(*c_connect_cb)(int, void* ud);
 typedef void(*c_read_cb)(int, const char*, uint16_t, void* ud);
 
 // create a client instance
-qsf_net_client_t* qsf_create_net_client(uv_loop_t* loop, uint16_t max_buffer_size);
+qsf_net_client_t* qsf_create_net_client(uv_loop_t* loop);
 
 // start connect to server
 int qsf_net_client_connect(qsf_net_client_t* c, const char* host, int port, c_connect_cb cb);

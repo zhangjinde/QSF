@@ -8,25 +8,26 @@
 #include <uv.h>
 #include "qsf.h"
 
+#define DEFAULT_RECV_BUF_SIZE   128
 
 struct qsf_net_client_s
 {
-    uv_tcp_t        handle;
-    c_connect_cb    on_connect;
-    c_read_cb       on_read;
-    void*           udata;
-    uint32_t        max_buffer_size;
-    uint16_t        head_size; 
-    uint16_t        recv_bytes;
-    char            recv_buf[1];
+    uv_tcp_t        handle;         // uv tcp handle
+    c_connect_cb    on_connect;     // connect callback
+    c_read_cb       on_read;        // read callback
+    void*           udata;          // user defined data pointer
+    uint16_t        buf_size;       // recv buffer size
+    uint16_t        recv_bytes;     // recv bytes
+    uint16_t        head_size;      // header size
+    char*           recv_buf;       // recv data buffer
 };
 
 typedef struct write_buffer_s
 {
-    uv_write_t  req;
-    uv_buf_t    buf;
-    uint16_t    size;
-    char        data[1];
+    uv_write_t  req;        // write request
+    uv_buf_t    buf;        // buffer object
+    uint16_t    size;       // buffer size
+    char        data[];     // buffer data
 }write_buffer_t;
 
 static void on_client_close(uv_handle_t* handle)
@@ -81,6 +82,12 @@ static void on_client_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* b
             memcpy(&size, c->recv_buf, sizeof(size));
             c->head_size = ntohs(size); // network order
             c->recv_bytes = 0;
+            if (c->head_size > c->buf_size)
+            {
+                qsf_free(c->recv_buf);
+                c->recv_buf = qsf_malloc(c->head_size);
+                c->buf_size = c->head_size;
+            }
         }
     }
     else // fill body content
@@ -100,14 +107,16 @@ static void client_write_cb(uv_write_t* req, int err)
     qsf_free(buffer);
 }
 
-qsf_net_client_t* qsf_create_net_client(uv_loop_t* loop, uint16_t max_buffer_size)
+qsf_net_client_t* qsf_create_net_client(uv_loop_t* loop)
 {
-    assert(loop && max_buffer_size);
-    qsf_net_client_t* c = qsf_malloc(sizeof(qsf_net_client_t) + max_buffer_size);
+    assert(loop);
+    qsf_net_client_t* c = qsf_malloc(sizeof(qsf_net_client_t));
     memset(c, 0, sizeof(*c));
     int r = uv_tcp_init(loop, &c->handle);
     qsf_assert(r == 0, "uv_tcp_init() failed.");
-    c->max_buffer_size = max_buffer_size;
+    c->handle.data = c;
+    c->buf_size = DEFAULT_RECV_BUF_SIZE;
+    c->recv_buf = qsf_malloc(DEFAULT_RECV_BUF_SIZE);
     return c;
 }
 
