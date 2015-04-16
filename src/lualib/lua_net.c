@@ -43,7 +43,6 @@ static int create_server(lua_State* L)
     uint16_t heart_beat_sec = NET_DEFAULT_HEARTBEAT;
     uint16_t heart_beat_check_sec = NET_DEFAULT_HEARTBEAT_CHECK;
     uint16_t max_connections = NET_DEFAULT_MAX_CONN;
-    uint16_t max_buffer_size = NET_MAX_PACKET_SIZE;
     if (lua_istable(L, 1))
     {
         int top = lua_gettop(L);
@@ -62,16 +61,11 @@ static int create_server(lua_State* L)
         {
             max_connections = (uint16_t)luaL_checkinteger(L, -1);
         }
-        lua_getfield(L, 1, "buffer_size");
-        if (lua_isinteger(L, -1))
-        {
-            max_buffer_size = (uint16_t)luaL_checkinteger(L, -1);
-        }
         lua_pop(L, lua_gettop(L) - top);
     }
 
     struct qsf_net_server_s* s = qsf_create_net_server(global_loop, max_connections,
-        heart_beat_sec, heart_beat_check_sec, max_buffer_size);
+        heart_beat_sec, heart_beat_check_sec);
     net_server_t* server = lua_newuserdata(L, sizeof(net_server_t));
     server->s = s;
     server->L = L;
@@ -151,7 +145,7 @@ static int server_write(lua_State* L)
     uint32_t serial = (uint32_t)luaL_checkinteger(L, 2);
     size_t size;
     const char* data = luaL_checklstring(L, 3, &size);
-    if (size < UINT16_MAX)
+    if (size <= UINT16_MAX)
     {
         qsf_net_server_write(server->s, serial, data, (uint16_t)size);
         return 0;
@@ -164,7 +158,7 @@ static int server_broadcast(lua_State* L)
     net_server_t* server = check_server(L);
     size_t size;
     const char* data = luaL_checklstring(L, 2, &size);
-    if (size < UINT16_MAX)
+    if (size <= UINT16_MAX)
     {
         qsf_net_server_write_all(server->s, data, (uint16_t)size);
         return 0;
@@ -211,12 +205,7 @@ static int server_size(lua_State* L)
 
 static int create_client(lua_State* L)
 {
-    uint16_t max_buffer_size = NET_MAX_PACKET_SIZE;
-    if (lua_gettop(L) > 0)
-    {
-        max_buffer_size = (uint16_t)luaL_checkinteger(L, 1);
-    }
-    qsf_net_client_t* c = qsf_create_net_client(global_loop, max_buffer_size);
+    qsf_net_client_t* c = qsf_create_net_client(global_loop);
     net_client_t* client = lua_newuserdata(L, sizeof(net_client_t));
     client->c = c;
     client->L = L;
@@ -261,6 +250,8 @@ static void on_client_connect(int error, void* ud)
         {
             qsf_log("%s\n", lua_tostring(L, -1));
         }
+        luaL_unref(L, LUA_REGISTRYINDEX, client->connect_ref);
+        client->connect_ref = LUA_NOREF;
     }
 }
 
