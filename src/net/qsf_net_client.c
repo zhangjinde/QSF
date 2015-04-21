@@ -8,20 +8,23 @@
 #include <uv.h>
 #include "qsf.h"
 
-#define DEFAULT_RECV_BUF_SIZE   128
+#define DEFAULT_RECV_BUF_SIZE   512
 
+#pragma pack(push, 4)
 struct qsf_net_client_s
 {
     uv_tcp_t        handle;         // uv tcp handle
     c_connect_cb    on_connect;     // connect callback
     c_read_cb       on_read;        // read callback
     void*           udata;          // user defined data pointer
-    uint16_t        buf_size;       // recv buffer size
+    uint32_t        buf_size;       // recv buffer size
     uint16_t        recv_bytes;     // recv bytes
     uint16_t        head_size;      // header size
     char*           recv_buf;       // recv data buffer
 };
+#pragma pack(pop)
 
+#pragma pack(push, 1)
 typedef struct write_buffer_s
 {
     uv_write_t  req;        // write request
@@ -29,6 +32,8 @@ typedef struct write_buffer_s
     uint16_t    size;       // buffer size
     char        data[];     // buffer data
 }write_buffer_t;
+#pragma pack(pop)
+
 
 static void on_client_close(uv_handle_t* handle)
 {

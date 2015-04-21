@@ -11,23 +11,41 @@
 #include "qsf.h"
 #include "qsf_net_def.h"
 
+#define DEFAULT_SERIAL_NUMBER   1000
 #define DEFAULT_RECV_BUF_SIZE   128
 
+#pragma pack(push, 4)
 // an session object present a TCP connection
 typedef struct qsf_net_session_s
 {
     UT_hash_handle      hh;                 // hash table entry
     uint32_t            serial;             // serial no.
     qsf_net_server_t*   server;             // server pointer
-    time_t              last_recv_time;     // last recv time
+    uint64_t            last_recv_time;     // last recv time
     uv_tcp_t            handle;             // tcp handle
     struct sockaddr_in  peer_addr;          // peer address
-    uint16_t            buf_size;           // recv buffer size
+    uint32_t            buf_size;           // recv buffer size
     uint16_t            recv_bytes;         // total recieved bytes
     uint16_t            head_size;          // head bytes
     char*               recv_buf;           // recv buffer
 }qsf_net_session_t;
 
+struct qsf_net_server_s
+{
+    uint32_t    max_connection;     // max alive connections
+    uint16_t    max_heart_beat;     // max heart beat seconds
+    uint16_t    heart_beat_check;   // max check heart beat seconds
+    int         stopped;            // is server stopped
+    uint32_t    next_serial;        // next session serial no.
+    void*       udata;              // user data pointer
+    s_read_cb   on_read;            // read handler
+    uv_tcp_t    acceptor;           // tcp accept handle
+    uv_timer_t  timer;              // timer handle
+    qsf_net_session_t* session_map; // session hash map
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 typedef struct write_buffer_s
 {
     uv_write_t  req;        // request handle
@@ -35,20 +53,7 @@ typedef struct write_buffer_s
     uint16_t    size;       // data size
     char        data[];     // data buffer
 }write_buffer_t;
-
-struct qsf_net_server_s
-{
-    uint16_t    max_connection;     // max alive connections
-    uint16_t    max_heart_beat;     // max heart beat seconds
-    uint16_t    heart_beat_check;   // max check heart beat seconds
-    int         stopped;            // is server stopped
-    void*       udata;              // user data pointer
-    uint32_t    next_serial;        // next session serial no.
-    s_read_cb   on_read;            // read handler
-    uv_tcp_t    acceptor;           // tcp accept handle
-    uv_timer_t  timer;              // timer handle
-    qsf_net_session_t* session_map; // session hash map
-};
+#pragma pack(pop)
 
 // set a unique serial number to this session
 static void set_session_serial(qsf_net_server_t* server, qsf_net_session_t* session)
@@ -75,13 +80,6 @@ static void on_session_close(uv_handle_t* handle)
     qsf_free(session);
 }
 
-void on_session_shutdown(uv_shutdown_t* req, int err)
-{
-    qsf_net_session_t* session = req->data;
-    assert(session);
-    qsf_free(req);
-}
-
 static void session_destroy(qsf_net_session_t* session)
 {
     uv_handle_t* handle = (uv_handle_t*)&session->handle;
@@ -96,14 +94,13 @@ static void session_destroy(qsf_net_session_t* session)
 static qsf_net_session_t* session_create(uv_loop_t* loop, qsf_net_server_t* server)
 {
     assert(loop && server);
-    size_t bytes = sizeof(qsf_net_session_t);
-    qsf_net_session_t* session = qsf_malloc(bytes);
+    qsf_net_session_t* session = qsf_malloc(sizeof(qsf_net_session_t));
     memset(session, 0, sizeof(*session));
     int r = uv_tcp_init(loop, &session->handle);
     qsf_assert(r == 0, "session: uv_tcp_init() failed");
     session->handle.data = session;
     session->server = server;
-    session->last_recv_time = time(NULL);
+    session->last_recv_time = uv_now(loop);
     session->buf_size = DEFAULT_RECV_BUF_SIZE;
     session->recv_buf = qsf_malloc(DEFAULT_RECV_BUF_SIZE);
     return session;
@@ -142,7 +139,7 @@ static void on_session_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* 
         }
         return;
     }
-    session->last_recv_time = time(NULL);
+    session->last_recv_time = uv_now(stream->loop);
     session->recv_bytes += (uint16_t)nread;
     uint16_t size = session->head_size;
     if (size == 0) // header not full-filled
@@ -176,7 +173,7 @@ static void on_connection(uv_stream_t* stream, int err)
 {
     if (err != 0)
     {
-        qsf_log("accept failed, %d: %s", err, uv_strerror(err));
+        qsf_log("listen failed, %d: %s\n", err, uv_strerror(err));
         return;
     }
     qsf_net_server_t* server = stream->data;
@@ -185,7 +182,7 @@ static void on_connection(uv_stream_t* stream, int err)
     {
         return;
     }
-    int count = HASH_COUNT(server->session_map);
+    uint32_t count = HASH_COUNT(server->session_map);
     if (count >= server->max_connection)
     {
         return; // max connection count limit
@@ -196,6 +193,7 @@ static void on_connection(uv_stream_t* stream, int err)
     if (r < 0)
     {
         session_destroy(session);
+        qsf_log("accept failed, %d: %s\n", r, uv_strerror(r));
         return;
     }
     int namelen = sizeof(session->peer_addr);
@@ -203,22 +201,18 @@ static void on_connection(uv_stream_t* stream, int err)
     if (r < 0)
     {
         session_destroy(session);
+        qsf_log("getpeername failed, %d: %s\n", r, uv_strerror(r));
         return;
     }
     r = uv_read_start(handle, on_session_alloc, on_session_read);
     if (r < 0)
     {
         session_destroy(session);
+        qsf_log("getpeername failed, %d: %s\n", r, uv_strerror(r));
         return;
     }
     set_session_serial(server, session);
     HASH_ADD_INT(server->session_map, serial, session);
-}
-
-static void session_write_cb(uv_write_t* req, int err)
-{
-    write_buffer_t* buffer = req->data;
-    qsf_free(buffer);
 }
 
 // heart beat checking
@@ -228,10 +222,11 @@ static void hearbeat_timer_cb(uv_timer_t* timer)
     assert(server);
     qsf_net_session_t* session = NULL;
     qsf_net_session_t* tmp = NULL;
-    time_t now = time(NULL);
+    uint64_t now = uv_now(timer->loop);
+    uint64_t max_expire = server->max_heart_beat * 1000;
     HASH_ITER(hh, server->session_map, session, tmp)
     {
-        if (now - session->last_recv_time > server->max_heart_beat)
+        if (now - session->last_recv_time > max_expire)
         {
             const char* msg = "session timeout";
             server->on_read(NET_ERR_TIMEOUT, session->serial, msg, (uint16_t)strlen(msg), server->udata);
@@ -242,15 +237,16 @@ static void hearbeat_timer_cb(uv_timer_t* timer)
 }
 
 qsf_net_server_t* qsf_create_net_server(uv_loop_t* loop,
-                                        uint16_t max_connection,
+                                        uint32_t max_connection,
                                         uint16_t max_heart_beat,
                                         uint16_t heart_beat_check)
 {
     assert(loop);
     qsf_net_server_t* server = qsf_malloc(sizeof(qsf_net_server_t));
+    qsf_assert(server != NULL, "create_server() failed.");
     memset(server, 0, sizeof(*server));
     int r = uv_tcp_init(loop, &server->acceptor);
-    qsf_assert(r == 0, "uv_tcp_init() failed.");
+    qsf_assert(r == 0, "uv_tcp_init() failed."); 
     r = uv_timer_init(loop, &server->timer);
     qsf_assert(r == 0, "uv_tcp_init() failed.");
     
@@ -259,7 +255,7 @@ qsf_net_server_t* qsf_create_net_server(uv_loop_t* loop,
     server->max_connection = max_connection;
     server->max_heart_beat = max_heart_beat;
     server->heart_beat_check = heart_beat_check;
-    server->next_serial = 1000;
+    server->next_serial = DEFAULT_SERIAL_NUMBER;
     return server;
 }
 
@@ -293,7 +289,7 @@ int qsf_net_server_start(qsf_net_server_t* s,
     {
         return r;
     }
-    int64_t timeout = s->heart_beat_check * 1000;
+    uint64_t timeout = s->heart_beat_check * 1000;
     r = uv_timer_start(&s->timer, hearbeat_timer_cb, timeout, timeout);
     if (r < 0)
     {
@@ -324,6 +320,12 @@ void qsf_net_server_stop(qsf_net_server_t* s)
     {
         uv_close(acceptor, NULL);
     }
+}
+
+static void session_write_cb(uv_write_t* req, int err)
+{
+    write_buffer_t* buffer = req->data;
+    qsf_free(buffer);
 }
 
 int do_session_write(qsf_net_session_t* session, const void* data, uint16_t size)
@@ -372,6 +374,13 @@ int qsf_net_server_write_all(qsf_net_server_t* s, const void* data, uint16_t siz
     return 0;
 }
 
+static void on_session_shutdown(uv_shutdown_t* req, int err)
+{
+    qsf_net_session_t* session = req->data;
+    assert(session);
+    qsf_free(req);
+}
+
 void qsf_net_server_shutdown(qsf_net_server_t* s, uint32_t serial)
 {
     assert(s);
@@ -388,7 +397,7 @@ void qsf_net_server_shutdown(qsf_net_server_t* s, uint32_t serial)
     if (r < 0)
     {
         qsf_free(req);
-        qsf_log("shutdown session failed: %d", session->serial);
+        qsf_log("shutdown session failed: %d\n", session->serial);
     }
 }
 

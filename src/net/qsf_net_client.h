@@ -14,7 +14,7 @@ typedef struct uv_loop_s uv_loop_t;
 
 // callback typedef
 typedef void(*c_connect_cb)(int, void* ud);
-typedef void(*c_read_cb)(int, const char*, uint16_t, void* ud);
+typedef void(*c_read_cb)(int, const char*, uint16_t, void*);
 
 // create a client instance
 qsf_net_client_t* qsf_create_net_client(uv_loop_t* loop);

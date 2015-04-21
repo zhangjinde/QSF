@@ -13,11 +13,11 @@ struct uv_loop_s;
 typedef struct uv_loop_s uv_loop_t;
 
 // callbacks
-typedef void(*s_read_cb)(int, uint32_t, const char*, uint16_t, void* ud);
+typedef void(*s_read_cb)(int, uint32_t, const char*, uint16_t, void*);
 
 // create an net server instance
 qsf_net_server_t* qsf_create_net_server(uv_loop_t* loop,
-                                        uint16_t max_connection, 
+                                        uint32_t max_connection, 
                                         uint16_t max_heart_beat,
                                         uint16_t heart_beat_check);
 
@@ -61,7 +61,3 @@ int qsf_net_server_size(qsf_net_server_t* s);
 // server reference
 void qsf_net_set_server_udata(qsf_net_server_t* s, void* ud);
 void* qsf_net_get_server_udata(qsf_net_server_t* s);
-
-
-int qsf_net_init();
-void qsf_net_exit();
