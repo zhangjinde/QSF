@@ -64,7 +64,7 @@ int qsf_env_init(const char* file)
     int r = uv_mutex_init(&global_env.mutex);
     if (r != 0)
     {
-        qsf_log("env: uv_mutex_init() failed.");
+        qsf_log("env: uv_mutex_init() failed.\n");
         return r;
     }
     lua_State* L = luaL_newstate();

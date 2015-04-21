@@ -180,7 +180,7 @@ static int run_service(qsf_service_t* s)
     int r = luaL_loadfile(L, s->path);
     if (r != LUA_OK)
     {
-        qsf_log("%s: %s", s->name, lua_tostring(L, -1));
+        qsf_log("%s: %s\n", s->name, lua_tostring(L, -1));
         return 1;
     }
     lua_pushstring(L, s->args);
@@ -191,7 +191,7 @@ static int run_service(qsf_service_t* s)
     lua_remove(L, index); // remove traceback function
     if (r != LUA_OK)
     {
-        qsf_log("%s: %s", s->name, lua_tostring(L, -1));
+        qsf_log("%s: %s\n", s->name, lua_tostring(L, -1));
         return 2;
     }
     return 0;
@@ -291,7 +291,7 @@ int qsf_service_init()
     int r = uv_mutex_init(&service_context.mutex);
     if (r < 0)
     {
-        qsf_log("service: uv_mutex_init() failed.");
+        qsf_log("service: uv_mutex_init() failed.\n");
         return r;
     }
 
