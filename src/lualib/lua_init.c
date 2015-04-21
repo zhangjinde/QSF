@@ -16,7 +16,7 @@ int luaopen_crypto(lua_State* L);
 int luaopen_mysql(lua_State* L);
 int luaopen_zlib(lua_State* L);
 int luaopen_process(lua_State* L);
-int luaopen_fs(lua_State* L);
+int luaopen_lfs(lua_State* L);
 int luaopen_cjson(lua_State* L);
 
 void lua_initlibs(lua_State* L)
@@ -24,7 +24,7 @@ void lua_initlibs(lua_State* L)
     static const luaL_Reg libs[] =
     {
         { "mq", luaopen_mq },
-        { "fs", luaopen_fs },
+        { "lfs", luaopen_lfs },
         { "net", luaopen_net },
         { "zmq", luaopen_zmq },
         { "uuid", luaopen_uuid },
