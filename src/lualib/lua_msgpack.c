@@ -18,7 +18,7 @@
 #define MP_PACK_FINAL(pk)   msgpack_sbuffer_destroy((msgpack_sbuffer*)(pk)->data)
 
 #define MP_VALIDATE_NUMBER(pk, v) \
-    if (mp_config.validate_number && (isinf(val) || isnan(val))) \
+    if (!mp_config.no_validate_number && (isinf(v) || isnan(v))) \
     { \
         MP_PACK_FINAL(pk);\
         luaL_error(L, "number is NaN or Infinity");\
@@ -27,7 +27,7 @@
 typedef struct mp_config_s
 {
     int sparse_array_as_map;
-    int validate_number;
+    int no_validate_number;
     int encode_str_bin;
 }mp_config_t;
 
@@ -96,8 +96,11 @@ static void mp_pack_number(lua_State* L, msgpack_packer* packer)
     else
     {
         double val = luaL_checknumber(L, -1);
-        MP_VALIDATE_NUMBER(packer, v);
-        msgpack_pack_double(packer, val);
+        MP_VALIDATE_NUMBER(packer, val);
+        if (val > FLT_MIN && val < FLT_MAX)
+            msgpack_pack_float(packer, (float)val);
+        else
+            msgpack_pack_double(packer, val);
     }
 }
 
@@ -374,20 +377,25 @@ static int mp_unpack(lua_State* L)
 static int mp_set_option(lua_State* L)
 {
     const char* option = luaL_checkstring(L, 1);
+    int old_value = 0;
     int enable = lua_toboolean(L, 2);
     if (strcmp(option, "encode_array_as_map") == 0)
     {
+        old_value = mp_config.sparse_array_as_map;
         mp_config.sparse_array_as_map = enable;
     }
     else if (strcmp(option, "validate_number") == 0)
     {
-        mp_config.validate_number = enable;
+        old_value = !mp_config.no_validate_number;
+        mp_config.no_validate_number = !enable;
     }
     else if (strcmp(option, "encode_str_bin") == 0)
     {
+        old_value = mp_config.encode_str_bin;
         mp_config.encode_str_bin = enable;
     }
-    return 0;
+    lua_pushinteger(L, old_value);
+    return 1;
 }
 
 LUALIB_API int luaopen_msgpack(lua_State* L)
@@ -399,7 +407,7 @@ LUALIB_API int luaopen_msgpack(lua_State* L)
         { "set_option", mp_set_option },
         { NULL, NULL },
     };
-    mp_config.validate_number = 1;
+
     luaL_newlib(L, lib);
     return 1;
 }
