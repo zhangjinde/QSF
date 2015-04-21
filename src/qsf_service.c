@@ -144,7 +144,7 @@ static void init_service(qsf_service_t* s)
 
 static void cleanup_service(qsf_service_t* s)
 {
-    fprintf(stdout, "service [%s] exit.\n", s->name);
+    qsf_log("service [%s] exit.\n", s->name);
     if (s->dealer)
     {
         zmq_close(s->dealer);
