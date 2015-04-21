@@ -166,7 +166,7 @@ int qsf_start(const char* file)
     qsf_assert(name && path, "name and path cannot be null");
     r = qsf_create_service(name, path, "sys");
     qsf_assert(r == 0, "create service '%s' failed, %d.", name, r);
-
+    
     while (1)
     {
         int r = dispatch_message();
