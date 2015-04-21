@@ -42,7 +42,7 @@ static int create_server(lua_State* L)
     assert(global_loop != NULL);
     uint16_t heart_beat_sec = NET_DEFAULT_HEARTBEAT;
     uint16_t heart_beat_check_sec = NET_DEFAULT_HEARTBEAT_CHECK;
-    uint16_t max_connections = NET_DEFAULT_MAX_CONN;
+    uint32_t max_connections = NET_DEFAULT_MAX_CONN;
     if (lua_istable(L, 1))
     {
         int top = lua_gettop(L);
