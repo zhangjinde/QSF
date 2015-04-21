@@ -40,7 +40,7 @@ typedef struct cryptRSA
 }cryptRSA;
 
 
-inline void HexDump(const void* data, size_t len, void* out, size_t outlen)
+inline void hex_dump(const void* data, size_t len, void* out, size_t outlen)
 {
     assert(data && len > 0 && outlen >= len*2);
     static const char dict[] = "0123456789abcdef";
@@ -349,7 +349,7 @@ static int crypto_md5(lua_State* L)
     uint8_t buffer[MD5_DIGEST_LENGTH];
     MD5((const uint8_t*)data, len, buffer);
     char hex[MD5_DIGEST_LENGTH * 2];
-    HexDump(buffer, MD5_DIGEST_LENGTH, hex, sizeof(hex));
+    hex_dump(buffer, MD5_DIGEST_LENGTH, hex, sizeof(hex));
     lua_pushlstring(L, hex, sizeof(hex));
     return 1;
 }
@@ -361,7 +361,7 @@ static int crypto_sha1(lua_State* L)
     uint8_t buffer[SHA_DIGEST_LENGTH];
     SHA1(data, len, buffer);
     char hex[SHA_DIGEST_LENGTH * 2];
-    HexDump(buffer, SHA_DIGEST_LENGTH, hex, sizeof(hex));
+    hex_dump(buffer, SHA_DIGEST_LENGTH, hex, sizeof(hex));
     lua_pushlstring(L, hex, sizeof(hex));
     return 1;
 }
@@ -376,7 +376,7 @@ static int crypto_hmac_md5(lua_State* L)
     uint8_t md[EVP_MAX_MD_SIZE];
     HMAC(evp_md, key, (int)key_len, (const uint8_t*)data, size, md, &md_len);
     char hex[EVP_MAX_MD_SIZE * 2];
-    HexDump(md, md_len, hex, sizeof(hex));
+    hex_dump(md, md_len, hex, sizeof(hex));
     lua_pushlstring(L, hex, md_len*2);
     return 1;
 }
@@ -391,7 +391,7 @@ static int crypto_hmac_sha1(lua_State* L)
     uint8_t md[EVP_MAX_MD_SIZE];
     HMAC(evp_md, key, (int)key_len, (const uint8_t*)data, size, md, &md_len);
     char hex[EVP_MAX_MD_SIZE * 2];
-    HexDump(md, md_len, hex, sizeof(hex));
+    hex_dump(md, md_len, hex, sizeof(hex));
     lua_pushlstring(L, hex, md_len*2);
     return 1;
 }
