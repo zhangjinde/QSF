@@ -3,6 +3,7 @@
 // See accompanying files LICENSE.
 
 #include "qsf_log.h"
+#include "qsf.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -11,14 +12,6 @@
 
 #ifdef _WIN32
 #include <Windows.h>
-#endif
-
-#if defined(_MSC_VER)
-# define QSF_TLS    __declspec(thread)
-#elif defined(__GNUC__) || defined(__clang__)
-# define QSF_TLS    __thread
-#else
-# error cannot define platform specific thread local storage
 #endif
 
 #define LOG_BUFSIZE     8196
