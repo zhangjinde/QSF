@@ -170,26 +170,6 @@ static void mp_pack_map(lua_State* L, msgpack_packer* packer)
     }
 }
 
-// `k` for lua_setfield must be a null-terminated string
-inline void mp_set_map_key(lua_State* L, const msgpack_object_str* key)
-{
-    char short_str[MP_SHORT_STR_SIZE];
-    if (key->size < sizeof(short_str))
-    {
-        strncpy(short_str, key->ptr, key->size);
-        short_str[key->size] = '\0';
-        lua_setfield(L, -2, short_str);
-    }
-    else
-    {
-        char* buf = malloc(key->size + 1);
-        strncpy(buf, key->ptr, key->size);
-        buf[key->size] = '\0';
-        lua_setfield(L, -2, buf);
-        free(buf);
-    }
-}
-
 // unpack msgpack map(dictionary) to Lua table
 static int mp_unpack_map(lua_State* L, const msgpack_object* value)
 {
@@ -200,15 +180,21 @@ static int mp_unpack_map(lua_State* L, const msgpack_object* value)
     {
         const msgpack_object_kv* item = &map->ptr[i];
         const msgpack_object* key = &item->key;
-        assert(key->type == MSGPACK_OBJECT_STR);
-        if (mp_unpack_value(L, &item->val) == 0)
+        luaL_argcheck(L, key->type == MSGPACK_OBJECT_STR
+            || key->type == MSGPACK_OBJECT_BIN
+            || key->type == MSGPACK_OBJECT_POSITIVE_INTEGER
+            || key->type == MSGPACK_OBJECT_NEGATIVE_INTEGER
+            || key->type == MSGPACK_OBJECT_FLOAT,
+            -1, "invalid map key type");
+        if (mp_unpack_value(L, &item->key) == 0)
         {
-            mp_set_map_key(L, &key->via.str);
+            if (mp_unpack_value(L, &item->val) == 0)
+            {
+                lua_rawset(L, -3);
+                continue;
+            }
         }
-        else
-        {
-            return -1;
-        }
+        return -1;
     }
     return 0;
 }
