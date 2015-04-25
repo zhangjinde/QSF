@@ -26,7 +26,6 @@
 
 typedef struct mp_config_s
 {
-    int sparse_array_as_map;
     int no_validate_number;
     int encode_str_bin;
 }mp_config_t;
@@ -35,7 +34,7 @@ static mp_config_t mp_config;
 
 // pack Lua value to msgpack format
 static void mp_pack_value(lua_State* L, msgpack_packer* packer);
-static void mp_pack_array(lua_State* L, msgpack_packer* packer, int size);
+static void mp_pack_array(lua_State* L, msgpack_packer* packer);
 static void mp_pack_map(lua_State* L, msgpack_packer* packer);
 
 // unpack msgpack data to Lua value
@@ -43,39 +42,32 @@ static int mp_unpack_value(lua_State* L, const msgpack_object* value);
 static int mp_unpack_array(lua_State* L, const msgpack_object* value);
 static int mp_unpack_map(lua_State* L, const msgpack_object* value);
 
-static int mp_array_size(lua_State* L)
+static int mp_is_table_array(lua_State* L)
 {
     assert(lua_type(L, -1) == LUA_TTABLE);
-    int k = 0, max = 0, items = 0;
+    int len = 0;
     lua_pushnil(L);
     while (lua_next(L, -2) != 0)
     {
         if (lua_isinteger(L, -2))
         {
-            k = (int)lua_tointeger(L, -2);
-            if (k >= 1)
+            if (lua_tointeger(L, -2) == ++len)
             {
-                max = MP_MAX(k, max);
-                items++;
                 lua_pop(L, 1);
                 continue;
             }
         }
         /* Must not be an array (non integer key) */
         lua_pop(L, 2);
-        return -1;
+        return 0;
     }
-    if (mp_config.sparse_array_as_map && max > items)
-    {
-        return -1;
-    }
-    return max;
+    return 1;
 }
 
-static int mp_table_size(lua_State* L)
+static size_t mp_table_size(lua_State* L)
 {
     assert(lua_type(L, -1) == LUA_TTABLE);
-    int len = 0;
+    size_t len = 0;
     lua_pushnil(L);
     while (lua_next(L, -2) != 0)
     {
@@ -86,16 +78,16 @@ static int mp_table_size(lua_State* L)
 }
 
 // pack Lua number value 
-static void mp_pack_number(lua_State* L, msgpack_packer* packer)
+static void mp_pack_number(lua_State* L, msgpack_packer* packer, int index)
 {
-    if (lua_isinteger(L, -1))
+    if (lua_isinteger(L, index))
     {
-        int64_t val = luaL_checkinteger(L, -1);
+        int64_t val = luaL_checkinteger(L, index);
         msgpack_pack_int64(packer, val);
     }
     else
     {
-        double val = luaL_checknumber(L, -1);
+        double val = luaL_checknumber(L, index);
         MP_VALIDATE_NUMBER(packer, val);
         if (val > FLT_MIN && val < FLT_MAX)
             msgpack_pack_float(packer, (float)val);
@@ -105,9 +97,10 @@ static void mp_pack_number(lua_State* L, msgpack_packer* packer)
 }
 
 // pack Lua array table
-static void mp_pack_array(lua_State* L, msgpack_packer* packer, int size)
+static void mp_pack_array(lua_State* L, msgpack_packer* packer)
 {
     assert(L && packer && lua_type(L, -1) == LUA_TTABLE);
+    size_t size = lua_rawlen(L, -1);
     msgpack_pack_array(packer, size);
     for (size_t i = 1; i <= size; i++)
     {
@@ -142,7 +135,8 @@ static int mp_unpack_array(lua_State* L, const msgpack_object* value)
 static void mp_pack_map(lua_State* L, msgpack_packer* packer)
 {
     assert(L && packer && lua_type(L, -1) == LUA_TTABLE);
-    msgpack_pack_map(packer, mp_table_size(L));
+    size_t size = mp_table_size(L);
+    msgpack_pack_map(packer, size);
     lua_pushnil(L);
     while (lua_next(L, -2) != 0)
     {
@@ -150,7 +144,7 @@ static void mp_pack_map(lua_State* L, msgpack_packer* packer)
         switch (t)
         {
         case LUA_TNUMBER:
-            mp_pack_number(L, packer);
+            mp_pack_number(L, packer, -2);
             break;
         case LUA_TSTRING:
             {
@@ -186,7 +180,7 @@ static int mp_unpack_map(lua_State* L, const msgpack_object* value)
             || key->type == MSGPACK_OBJECT_NEGATIVE_INTEGER
             || key->type == MSGPACK_OBJECT_FLOAT,
             -1, "invalid map key type");
-        if (mp_unpack_value(L, &item->key) == 0)
+        if (mp_unpack_value(L, key) == 0)
         {
             if (mp_unpack_value(L, &item->val) == 0)
             {
@@ -238,15 +232,14 @@ static void mp_pack_value(lua_State* L, msgpack_packer* packer)
         break;
 
     case LUA_TNUMBER:
-        mp_pack_number(L, packer);
+        mp_pack_number(L, packer, -1);
         break;
 
     case LUA_TTABLE:
         {
-            int size = mp_array_size(L);
-            if (size >= 0)
+            if (mp_is_table_array(L))
             {
-                mp_pack_array(L, packer, size);
+                mp_pack_array(L, packer);
             }
             else
             {
@@ -365,12 +358,7 @@ static int mp_set_option(lua_State* L)
     const char* option = luaL_checkstring(L, 1);
     int old_value = 0;
     int enable = lua_toboolean(L, 2);
-    if (strcmp(option, "encode_array_as_map") == 0)
-    {
-        old_value = mp_config.sparse_array_as_map;
-        mp_config.sparse_array_as_map = enable;
-    }
-    else if (strcmp(option, "validate_number") == 0)
+    if (strcmp(option, "validate_number") == 0)
     {
         old_value = !mp_config.no_validate_number;
         mp_config.no_validate_number = !enable;
