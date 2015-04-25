@@ -31,6 +31,8 @@ int qsf_net_client_write(qsf_net_client_t* c, const char* data, uint16_t size);
 // close this client
 void qsf_net_client_close(qsf_net_client_t* c);
 
+void qsf_net_client_shutdown(qsf_net_client_t* c);
+
 // user-defined data
 void qsf_net_client_set_udata(qsf_net_client_t* c, void* udata);
 void* qsf_net_client_get_udata(qsf_net_client_t* c);

@@ -229,7 +229,7 @@ static int client_gc(lua_State* L)
 static int client_close(lua_State* L)
 {
     net_client_t* client = check_client(L);
-    qsf_net_client_close(client->c);
+    qsf_net_client_shutdown(client->c);
     return 0;
 }
 

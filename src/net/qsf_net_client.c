@@ -180,6 +180,26 @@ void qsf_net_client_close(qsf_net_client_t* c)
     }
 }
 
+static void on_shutdown(uv_shutdown_t* req, int err)
+{
+    qsf_net_client_t* c = req->data;
+    assert(c);
+    qsf_free(req);
+}
+
+void qsf_net_client_shutdown(qsf_net_client_t* c)
+{
+    assert(c);
+    uv_read_stop((uv_stream_t*)&c->handle);
+    uv_shutdown_t* req = qsf_malloc(sizeof(uv_shutdown_t));
+    req->data = c;
+    int r = uv_shutdown(req, (uv_stream_t*)&c->handle, on_shutdown);
+    if (r < 0)
+    {
+        qsf_free(req);
+    }
+}
+
 void qsf_net_client_set_udata(qsf_net_client_t* c, void* udata)
 {
     assert(c);
