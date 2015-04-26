@@ -1,3 +1,3 @@
-premake4 --file=deps/premake4.lua vs2013
-premake4 vs2013
+premake5 --file=deps/premake5.lua vs2013
+premake5 vs2013
 pause

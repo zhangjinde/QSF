@@ -1,3 +1,3 @@
-premake4 gmake
-make config=release64
+premake5 gmake
+make config=release_x64
 
