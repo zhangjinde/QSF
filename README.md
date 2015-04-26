@@ -10,7 +10,7 @@ main features:
 
 * Multi-platform(Linux, Windows) asynchronous networking.
 
-* Flexiblity with Lua modules
+* Lua module flexiblity
 
 
 ## Installation
