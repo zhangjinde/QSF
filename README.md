@@ -1,7 +1,16 @@
 # QSF
 
-QSF is a game server framework based on zeromq, still under heavy development.
+QSF is a game server framework based on ZeroMQ and Lua 5.3, still under heavy development.
 
+## Introduction
+
+main features:
+
+* Service-based threading model with message queue.
+
+* Multi-platform(Linux, Windows) asynchronous networking.
+
+* Flexiblity with Lua modules
 
 
 ## Installation
@@ -10,13 +19,13 @@ To build the library and test suits:
 
 ### Build on Windows (Windows 7 x64)
 
-1. Obtain [premake4](http://industriousone.com/premake/download).
+1. Obtain [premake5](http://premake.github.io/download.html).
 2. Run `build-msvc2013.bat` to generate Visual C++ 2013 solution files.
 3. Use Visual Studio 2013 to compile executable binary.
 
 ### Build on Linux (Ubuntu 14.04 x64)
 
-1. Obtain [premake4](http://industriousone.com/premake/download).
+1. Obtain [premake5](http://premake.github.io/download.html).
 2. Type `./build_deps.sh` to install dependency libraries.
 3. Type `./build.sh` to generate makefiles and build executables.
 
