@@ -2,25 +2,23 @@
 -- Premake script (http://premake.github.io)
 --
 
-assert(os.get() == 'windows' or os.get() == 'linux')
-
 -- git clone https://github.com/ichenq/usr
 local USR_DIR = os.getenv('USR_DIR') or 'E:/usr'
 
 solution 'qsf'
-    configurations {'Debug', 'Release'}
-    language 'C'
-    --flags {'ExtraWarnings'}
-    targetdir 'bin'
-    platforms {'x64'}
+    configurations  {'Debug', 'Release'}
+    language        'C'
+    targetdir       'bin'
+    architecture    'x64'
 
-    configuration 'Debug'
-        defines { 'DEBUG' }
-        flags { 'Symbols' }
+    filter 'configurations:Debug'
+        defines     { 'DEBUG' }
+        flags       { 'Symbols' }
 
-    configuration 'Release'
-        defines { 'NDEBUG' }
-        flags { 'Symbols', 'Optimize' }
+    filter 'configurations:Release'
+        defines     { 'NDEBUG' }
+        flags       { 'Symbols'}
+        optimize    'On'
 
     configuration 'vs*'
         defines
@@ -36,7 +34,7 @@ solution 'qsf'
         }
         --buildoptions [[/wd"4127" /wd"4204" /wd"4201"]]
         includedirs { USR_DIR .. '/include' }
-        libdirs { USR_DIR .. '/lib/x64' }
+        libdirs     { USR_DIR .. '/lib/x64' }
         links
         {
             'ws2_32',
@@ -44,18 +42,13 @@ solution 'qsf'
             'psapi',
         }
 
-    if os.get() == 'linux' then
-    configuration 'gmake'
-        buildoptions '-std=c99 -mrdrnd'
-        defines
-        {
-            '_GNU_SOURCE',
-            'USE_JEMALLOC',
-        }
-        includedirs
-        {
-            '/usr/include/mysql',
-        }
+    filter 'action:gmake'
+        buildoptions    '-std=c99 -mrdrnd'
+        defines         '_GNU_SOURCE'
+        
+    filter 'system:linux'
+        defines     'USE_JEMALLOC'
+        includedirs '/usr/include/mysql'
         links
         {
             'm',
@@ -63,19 +56,18 @@ solution 'qsf'
             'dl',
             'pthread',
         }
-    end
 
+    filter 'system:macosx'
+        toolset     'clang'
+        
     project 'qsf'
-        location 'build'
-        kind 'ConsoleApp'
+        targetname  'qsf'
+        location    'build'
+        kind        'ConsoleApp'
         files
         {
             'src/**.h',
             'src/**.c',
-        }
-        excludes
-        {
-            'src/test/*.*',
         }
         includedirs
         {
@@ -86,30 +78,28 @@ solution 'qsf'
         }
         libdirs 'bin'
 
-        if os.get() == 'windows' then
-        links
-        {
-            'lua5.3',
-            'libuv',
-            'msgpack',
-            'libzmq',
-            'zlib',
-            'libmysql',
-            'libeay32'
-        }
-        elseif os.get() == 'linux' then
-        links
-        {
-            'z',
-            'uv',
-            'zmq',
-            'lua5.3',
-            'msgpack',
-            'uuid',
-            'crypto',
-            'jemalloc',
-            'mysqlclient',
-        }
-        end
+        filter 'system:windows'
+            links
+            {
+                'lua5.3',
+                'libuv',
+                'msgpack',
+                'libzmq',
+                'zlib',
+                'libmysql',
+                'libeay32'
+            }
 
-
+        filter 'system:linux'
+            links
+            {
+                'z',
+                'uv',
+                'zmq',
+                'lua5.3',
+                'msgpack',
+                'uuid',
+                'crypto',
+                'jemalloc',
+                'mysqlclient',
+            }
