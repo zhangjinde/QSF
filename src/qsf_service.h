@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 struct qsf_service_s;
 typedef struct qsf_service_s qsf_service_t;
 
@@ -26,6 +28,11 @@ int qsf_service_recv(qsf_service_t* s,
 // name of current service
 const char* qsf_service_name(qsf_service_t* s);
 
+// adapt random integer number closed range to [0, max)
+uint32_t qsf_service_rand32(qsf_service_t* s, uint32_t max);
+
+// random float number open range (0.0, 1.0)
+float qsf_service_randf(qsf_service_t* s);
 
 int qsf_service_init();
 void qsf_service_exit();
