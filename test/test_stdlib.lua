@@ -19,8 +19,20 @@ local function string_endswith()
     assert(s:ends_with(''))
     assert(not s:ends_with('/'))
     assert(not s:ends_with('/usr'))
+    assert(not string.ends_with('include', s))
+end
+
+local function string_startwith()
+    local s = '/usr/local/include'
+    assert(type(string.start_with) == 'function')
+    assert(s:start_with('/usr'))
+    assert(s:start_with('/'))
+    assert(s:start_with(''))
+    assert(not s:start_with('include'))
+    assert(not string.start_with('/usr', s))
 end
 
 math_round()
 string_endswith()
+string_startwith()
 print('stdlib passed')

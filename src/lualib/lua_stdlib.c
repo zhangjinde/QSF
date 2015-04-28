@@ -9,6 +9,21 @@
 #include <lauxlib.h>
 #include "qsf.h"
 
+// string.start_with
+static int string_startwith(lua_State* L)
+{
+    size_t hlen, nlen;
+    const char* haystack = luaL_checklstring(L, 1, &hlen);
+    const char* needle = luaL_checklstring(L, 2, &nlen);
+    if (hlen >= nlen)
+    {
+        int cmp = strncmp(haystack, needle, nlen);
+        lua_pushboolean(L, cmp == 0);
+        return 1;
+    }
+    return 0;
+}
+
 // string.ends_with
 static int string_endswith(lua_State* L)
 {
@@ -17,7 +32,7 @@ static int string_endswith(lua_State* L)
     const char* needle = luaL_checklstring(L, 2, &nlen);
     if (hlen >= nlen)
     {
-        int cmp = strcmp(haystack + hlen - nlen, needle);
+        int cmp = strncmp(haystack + hlen - nlen, needle, nlen);
         lua_pushboolean(L, cmp == 0);
         return 1;
     }
@@ -40,6 +55,7 @@ static int math_round(lua_State* L)
 
 int hook_stdlib(lua_State* L)
 {
+    REGISTER_LIB("string", "start_with", string_startwith);
     REGISTER_LIB("string", "ends_with", string_endswith);
     REGISTER_LIB("math", "round", math_round);
     return 0;
