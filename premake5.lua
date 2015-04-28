@@ -28,15 +28,13 @@ solution 'qsf'
             'WIN32_LEAN_AND_MEAN',
             '_WIN32_WINNT=0x0600',
             '_CRT_SECURE_NO_WARNINGS',
-            '_SCL_SECURE_NO_WARNINGS',
-            '_WINSOCK_DEPRECATED_NO_WARNINGS',
+            '_CRT_RAND_S',
             'NOMINMAX',
             'inline=__inline',
-            'alignof=__alignof',
-            'noexcept=_NOEXCEPT',
             'snprintf=_snprintf',
             'strncasecmp=_strnicmp',
         }
+        --buildoptions [[/wd"4127" /wd"4204" /wd"4201"]]
         includedirs { USR_DIR .. '/include' }
         libdirs { USR_DIR .. '/lib/x64' }
         links
@@ -44,10 +42,11 @@ solution 'qsf'
             'ws2_32',
             'iphlpapi',
             'psapi',
-        }        
+        }
 
+    if os.get() == 'linux' then
     configuration 'gmake'
-        buildoptions '-std=c99'
+        buildoptions '-std=c99 -mrdrnd'
         defines
         {
             '_GNU_SOURCE',
@@ -59,15 +58,16 @@ solution 'qsf'
         }
         links
         {
+            'm',
             'rt',
             'dl',
             'pthread',
         }
+    end
 
     project 'qsf'
         location 'build'
         kind 'ConsoleApp'
-        uuid '65BCF1EB-A936-4688-B1F4-7073B4ACE736'
         files
         {
             'src/**.h',
@@ -85,35 +85,31 @@ solution 'qsf'
             'deps/msgpack/include',
         }
         libdirs 'bin'
+
         if os.get() == 'windows' then
         links
         {
-            'libzmq',
-            'libuv',
-            'zlib',
             'lua5.3',
+            'libuv',
             'msgpack',
-            'libeay32',
+            'libzmq',
+            'zlib',
             'libmysql',
+            'libeay32'
         }
-        includedirs
-        {
-            'deps/libuv/include',
-        }
-        else
+        elseif os.get() == 'linux' then
         links
         {
             'z',
             'uv',
             'zmq',
-            'uuid',
             'lua5.3',
             'msgpack',
+            'uuid',
             'crypto',
             'jemalloc',
             'mysqlclient',
         }
         end
-
 
 

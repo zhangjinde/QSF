@@ -4,11 +4,9 @@
 
 solution '3rdlibs'
     configurations {'Debug', 'Release'}
-    --flags {'ExtraWarnings'}
     targetdir '../bin'
-    location '../'
     platforms {'x64'}
-
+    
     configuration 'Debug'
         defines { 'DEBUG' }
         flags { 'Symbols' }
@@ -30,11 +28,15 @@ solution '3rdlibs'
         language 'C'
         kind 'SharedLib'
         location 'build'
+        
         if os.get() == 'linux' then
         defines 'LUA_USE_LINUX'
-        links{ 'dl', 'libreadline'}
-        else
+        links{ 'dl', 'readline'}
+        elseif os.get() == 'windows' then
         defines 'LUA_BUILD_AS_DLL'
+        elseif os.get() == 'macosx' then
+        defines 'LUA_USE_MAXOSX'
+        links 'readline'
         end
         files
         {
@@ -57,10 +59,10 @@ solution '3rdlibs'
         }
         files
         {
-            'msgpack/**.h',
-            'msgpack/**.c',
+            'msgpack/include/*.h',
+            'msgpack/src/*.c',
         }
-        
+   
     -- take `./configure && make` in linux 
     if os.get() ~= 'windows' then return end
     
@@ -92,3 +94,4 @@ solution '3rdlibs'
             'psapi',
             'iphlpapi',
         }
+        
