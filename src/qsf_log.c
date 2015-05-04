@@ -20,7 +20,7 @@ static const char* qsf_file_name = "qsf.log";
 static volatile int qsf_enable_log_to_file = 1;
 
 // global thread local log buffer
-QSF_TLS char global_log_buffer[LOG_BUFSIZE];
+static QSF_TLS char global_log_buffer[LOG_BUFSIZE];
 
 static void write_log_to_file(const char* msg, int size)
 {
