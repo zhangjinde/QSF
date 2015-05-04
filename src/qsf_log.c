@@ -22,7 +22,7 @@ static volatile int qsf_enable_log_to_file = 1;
 // global thread local log buffer
 QSF_TLS char global_log_buffer[LOG_BUFSIZE];
 
-void write_log_to_file(const char* msg, int size)
+static void write_log_to_file(const char* msg, int size)
 {
     FILE* fp = fopen(qsf_file_name, "a");
     if (fp)
@@ -39,7 +39,9 @@ void write_log_to_file(const char* msg, int size)
 
 void qsf_abort(void)
 {
-    abort();
+    // force segmentation fault with core dump
+    int* p = NULL;
+    *p = 0;
 }
 
 int qsf_log_to_file(int enable)
