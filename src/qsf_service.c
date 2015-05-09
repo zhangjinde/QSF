@@ -4,6 +4,7 @@
 
 #include "qsf_service.h"
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zmq.h>
 #include <uv.h>
@@ -11,6 +12,7 @@
 #include <lualib.h>
 #include <lauxlib.h>
 #include "qsf.h"
+#include "tinymt32.h"
 
 // max dealer identity size
 #define MAX_ID_LENGTH       16
@@ -30,6 +32,8 @@ struct qsf_service_s
     char    name[MAX_ID_LENGTH];    // service name
     char    path[MAX_PATH];         // lua file path
     char    args[MAX_ARG_LENGTH];   // passed arguments
+
+    tinymt32_t prng;                // Mersenne Twister PRNG
 };
 
 struct qsf_service_context_s
@@ -127,8 +131,31 @@ static void load_service_path(lua_State* L)
     }
 }
 
+inline uint32_t rdrand(void)
+{
+    unsigned int value = 0;
+#ifdef _WIN32
+    rand_s(&value);
+#else
+    int retry = 100;
+    while (__builtin_ia32_rdrand32_step(&value) == 0)
+    {
+        if (--retry == 0)
+            break;
+    }
+#endif
+    return value;
+}
+
 static void init_service(qsf_service_t* s)
 {
+    uint32_t seed = rdrand();
+    srand(seed);
+#ifndef _WIN32
+    srandom(seed);
+#endif
+    tinymt32_init(&s->prng, seed);
+
     lua_State* L = luaL_newstate();
     lua_gc(L, LUA_GCSTOP, 0);  // stop collector during initialization
     luaL_openlibs(L);
@@ -228,6 +255,10 @@ int qsf_create_service(const char* name, const char* path, const char* args)
     }
     s = create_from_service_list(name, path, args);
     int r = uv_thread_create(&s->thread, service_thread_callback, s);
+	if (r < 0)
+	{
+		remove_from_service_list(s);
+	}
     uv_mutex_unlock(&service_context.mutex);
     return r;
 }
@@ -273,7 +304,7 @@ int qsf_service_recv(struct qsf_service_s* s,
         }
         qsf_zmq_assert(zmq_msg_close(&from) == 0);
         qsf_zmq_assert(zmq_msg_close(&msg) == 0);
-        return r;
+        return (r > 0 ? r : 0);
     }
     
     qsf_zmq_assert(zmq_msg_close(&from) == 0);
@@ -284,6 +315,44 @@ const char* qsf_service_name(qsf_service_t* s)
 {
     assert(s);
     return s->name;
+}
+
+// closed range to [0, max]
+uint32_t qsf_service_rand32(qsf_service_t* s, uint32_t max)
+{
+    assert(s);
+    if (max == UINT32_MAX)
+    {
+        return tinymt32_generate_uint32(&s->prng);
+    }
+    for (;;)
+    {	// try a sample random value
+        uint32_t ret = 0;	// random bits
+        uint32_t mask = 0;	// 2^N - 1, ret is within [0, mask]
+
+        while (mask < (max - 1))
+        {	// need more random bits
+            ret <<= 32 - 1;	// avoid full shift
+            ret <<= 1;
+            ret |= tinymt32_generate_uint32(&s->prng);
+            mask <<= 32 - 1;	// avoid full shift
+            mask <<= 1;
+            mask |= UINT32_MAX;
+        }
+
+        // ret is [0, mask],  max - 1 <= mask, return if unbiased
+        if (ret / max < mask / max || mask % max == UINT32_MAX)
+        {
+            return (ret % max);
+        }
+    }
+}
+
+// floating point number in range (0.0 < r < 1.0)
+float qsf_service_randf(qsf_service_t* s)
+{
+    assert(s);
+    return tinymt32_generate_float(&s->prng);
 }
 
 int qsf_service_init()

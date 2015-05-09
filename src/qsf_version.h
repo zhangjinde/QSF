@@ -4,6 +4,10 @@
 
 #pragma once
 
+/*
+ * Versions with the same major number are ABI stable. API is allowed to
+ * evolve between minor releases, but only in a backwards compatible way.
+ */
 #define QSF_VERSION_MAJOR   0
 #define QSF_VERSION_MINOR   2
-#define QSF_VERSION_PATCH   0
+#define QSF_VERSION_PATCH   1

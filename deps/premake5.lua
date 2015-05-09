@@ -3,21 +3,20 @@
 --
 
 solution '3rdlibs'
-    configurations {'Debug', 'Release'}
-    --flags {'ExtraWarnings'}
-    targetdir '../bin'
-    location '../'
-    platforms {'x64'}
+    configurations  {'Debug', 'Release'}
+    targetdir       '../bin'
+    architecture    'x64'
+    
+    filter 'configurations:Debug'
+        defines     { 'DEBUG' }
+        flags       { 'Symbols' }
 
-    configuration 'Debug'
-        defines { 'DEBUG' }
-        flags { 'Symbols' }
+    filter 'configurations:Release'
+        defines     { 'NDEBUG' }
+        flags       { 'Symbols' }
+        optimize    'On'
 
-    configuration 'Release'
-        defines { 'NDEBUG' }
-        flags { 'Symbols', 'Optimize' }
-
-    configuration 'vs*'
+    filter 'action:vs*'
         defines
         {
             '_WIN32_WINNT=0x0600',
@@ -27,68 +26,70 @@ solution '3rdlibs'
         }
 
     project 'lua5.3'
-        language 'C'
-        kind 'SharedLib'
-        location 'build'
-        if os.get() == 'linux' then
-        defines 'LUA_USE_LINUX'
-        links{ 'dl', 'libreadline'}
-        else
-        defines 'LUA_BUILD_AS_DLL'
-        end
+        targetname  'lua5.3'
+        language    'C'
+        kind        'SharedLib'
+        location    'build'
+        
         files
         {
             'lua/src/*.h',
             'lua/src/*.c',
         }
-        excludes
+        removefiles
         {
             'lua/src/lua.c',
             'lua/src/luac.c',
         }
+                
+        filter 'system:windows'
+            defines 'LUA_BUILD_AS_DLL'
+            
+        filter 'system:linux'
+            defines 'LUA_USE_LINUX'
+            links   { 'dl', 'readline'}
+        
+        filter 'system:macosx'
+            defines 'DLUA_USE_LINUX'
+            links 'readline'
         
     project 'msgpack'
-        language 'C'
-        kind 'StaticLib'
-        location 'build'
+        targetname  'msgpack'
+        language    'C'
+        kind        'StaticLib'
+        location    'build'
         includedirs 
         {
             'msgpack/include'
         }
         files
         {
-            'msgpack/**.h',
-            'msgpack/**.c',
+            'msgpack/include/*.h',
+            'msgpack/src/*.c',
         }
-        
-    -- take `./configure && make` in linux 
-    if os.get() ~= 'windows' then return end
-    
+       
     project 'libuv'
-        language 'C'
-        kind 'SharedLib'
-        location 'build'
-        defines 'BUILDING_UV_SHARED'
-        files
-        {
-            'libuv/include/uv.h',
-            'libuv/include/tree.h',
-            'libuv/include/uv-version.h',
-            'libuv/include/uv-errno.h',
-            'libuv/src/*.h',
-            'libuv/src/*.c',
-        }
-        files
-        {
-            'libuv/src/win/*.c',
-        }
-        includedirs 
-        {
-            'libuv/include',
-        }
-        links 
-        {
-            'ws2_32',
-            'psapi',
-            'iphlpapi',
-        }
+        language    'C'
+        kind        'SharedLib'
+        location    'build'
+        
+        filter 'action:vs*'
+            defines     'BUILDING_UV_SHARED'
+            includedirs 'libuv/include'
+            files
+            {
+                'libuv/include/uv.h',
+                'libuv/include/tree.h',
+                'libuv/include/uv-version.h',
+                'libuv/include/uv-errno.h',
+                'libuv/src/*.h',
+                'libuv/src/*.c',
+                'libuv/src/win/*.c',
+            }
+            links 
+            {
+                'ws2_32',
+                'psapi',
+                'iphlpapi',
+            }
+        

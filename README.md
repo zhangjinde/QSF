@@ -17,17 +17,17 @@ main features:
 
 To build the library and test suits:
 
+First obtain [premake5](http://premake.github.io/download.html) toolchain.
+
 ### Build on Windows (Windows 7 x64)
 
-1. Obtain [premake5](http://premake.github.io/download.html).
-2. Run `build-msvc2013.bat` to generate Visual C++ 2013 solution files.
-3. Use Visual Studio 2013 to compile executable binary.
+1. Run `build-msvc2013.bat` to generate Visual C++ 2013 solution files.
+2. Use Visual Studio 2013 to compile executable binary.
 
 ### Build on Linux (Ubuntu 14.04 x64)
 
-1. Obtain [premake5](http://premake.github.io/download.html).
-2. Type `./build_deps.sh` to install dependency libraries.
-3. Type `./build.sh` to generate makefiles and build executables.
+1. Type `./build_deps.sh` to install dependency libraries.
+2. Type `./build.sh` to generate makefiles and build executables.
 
 
 ## References
