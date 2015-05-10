@@ -48,7 +48,7 @@ typedef struct qsf_service_context_s qsf_service_context_t;
 static qsf_service_context_t    service_context;
 
 // forward declaration
-extern void lua_initlibs(lua_State* L);
+extern void initlibs(lua_State* L);
 
 static qsf_service_t* find_from_service_list(const char* name)
 {
@@ -112,7 +112,7 @@ static qsf_service_t* create_from_service_list(const char* name, const char* pat
 // load Lua path and Lua cpath
 static void load_service_path(lua_State* L)
 {
-    char chunk[512];
+    char chunk[256];
     const char* path = qsf_getenv("lua_path");
     if (strlen(path) > 0)
     {
@@ -155,8 +155,8 @@ static void init_service(qsf_service_t* s)
 
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
-    lua_initlibs(L);
     load_service_path(L);
+    initlibs(L);
     lua_pushlightuserdata(L, s); // thus `s` cannot be moved before lua_close()
     lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
     s->L = L;
