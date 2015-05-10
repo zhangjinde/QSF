@@ -29,7 +29,7 @@ const char* qsf_getenv(const char* key)
     uv_mutex_lock(&global_env.mutex);
     lua_getglobal(L, key);
     const char* s = lua_tostring(L, -1);
-    lua_pop(L, -1);
+    lua_pop(L, 1);
     uv_mutex_unlock(&global_env.mutex);
     return s;
 }
