@@ -72,7 +72,7 @@ solution 'qsf'
         includedirs
         {
             'src',
-            'deps/lua/src',
+            'deps/luajit/src',
             'deps/libuv/include',
             'deps/msgpack/include',
         }
@@ -81,12 +81,11 @@ solution 'qsf'
         filter 'system:windows'
             links
             {
-                'lua5.3',
+                'lua51',
                 'libuv',
                 'msgpack',
                 'libzmq',
                 'zlib',
-                'libmysql',
                 'libeay32'
             }
 
@@ -96,10 +95,9 @@ solution 'qsf'
                 'z',
                 'uv',
                 'zmq',
-                'lua5.3',
+                'lua51',
                 'msgpack',
                 'uuid',
                 'crypto',
                 'jemalloc',
-                'mysqlclient',
             }

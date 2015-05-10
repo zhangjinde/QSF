@@ -24,34 +24,6 @@ solution '3rdlibs'
             '_CRT_NONSTDC_NO_DEPRECATE',
             'NOMINMAX',
         }
-
-    project 'lua5.3'
-        targetname  'lua5.3'
-        language    'C'
-        kind        'SharedLib'
-        location    'build'
-        
-        files
-        {
-            'lua/src/*.h',
-            'lua/src/*.c',
-        }
-        removefiles
-        {
-            'lua/src/lua.c',
-            'lua/src/luac.c',
-        }
-                
-        filter 'system:windows'
-            defines 'LUA_BUILD_AS_DLL'
-            
-        filter 'system:linux'
-            defines 'LUA_USE_LINUX'
-            links   { 'dl', 'readline'}
-        
-        filter 'system:macosx'
-            defines 'DLUA_USE_LINUX'
-            links 'readline'
         
     project 'msgpack'
         targetname  'msgpack'
