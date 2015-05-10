@@ -128,59 +128,6 @@ static int process_chdir(lua_State* L)
     return 0;
 }
 
-static int process_rand32(lua_State* L)
-{
-    qsf_service_t* self = lua_touserdata(L, lua_upvalueindex(1));
-    assert(self);
-    lua_Integer low = 0, up = 0;
-    switch (lua_gettop(L))
-    {
-    case 1: /* only upper limit */
-        up = luaL_checkinteger(L, 1);
-        break;
-    case 2: /* lower and upper limits */
-        low = luaL_checkinteger(L, 1);
-        up = luaL_checkinteger(L, 2);
-        break;
-    default:
-        return luaL_error(L, "wrong number of arguments");
-    }
-    /* random integer in the interval [low, up] */
-    luaL_argcheck(L, low <= up, 1, "interval is empty");
-    luaL_argcheck(L, low >= 0 || up <= UINT32_MAX + low, 1, "interval too large");
-    lua_Integer r = qsf_service_rand32(self, (uint32_t)(up - low + 1));
-    lua_pushinteger(L, r + low);
-    return 1;
-}
-
-static int process_randf(lua_State* L)
-{
-    qsf_service_t* self = lua_touserdata(L, lua_upvalueindex(1));
-    assert(self);
-    lua_Number low = 0, up = 0;
-    float r = qsf_service_randf(self);
-    switch (lua_gettop(L))
-    {
-    case 0:
-        lua_pushnumber(L, r);
-        return 1;
-    case 1: /* only upper limit */
-        up = luaL_checknumber(L, 1);
-        break;
-    case 2: /* lower and upper limits */
-        low = luaL_checknumber(L, 1);
-        up = luaL_checknumber(L, 2);
-        break;
-    default:
-        return luaL_error(L, "wrong number of arguments");
-    }
-    /* random float number in the interval (low, up) */
-    luaL_argcheck(L, low <= up, 1, "interval is empty");
-    luaL_argcheck(L, low >= 0 || up <= FLT_MAX + low, 1, "interval too large");
-    lua_pushnumber(L, (r * (up - low) + low));
-    return 1;
-}
-
 LUALIB_API int luaopen_process(lua_State* L)
 {
     static const luaL_Reg lib[] =
@@ -197,14 +144,8 @@ LUALIB_API int luaopen_process(lua_State* L)
         { "exepath", process_exepath },
         { "cwd", process_cwd },
         { "chdir", process_chdir },
-        { "rand32", process_rand32 },
-        { "randf", process_randf },
         { NULL, NULL },
     };
-    luaL_newlibtable(L, lib);
-    lua_getfield(L, LUA_REGISTRYINDEX, "mq_ctx");
-    struct qsf_service_s* self = lua_touserdata(L, -1);
-    luaL_argcheck(L, self != NULL, 1, "invalid context pointer");
-    luaL_setfuncs(L, lib, 1);
+    luaL_register(L, "process", lib);
     return 1;
 }

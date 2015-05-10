@@ -399,18 +399,10 @@ static int crypto_hmac_sha1(lua_State* L)
 static void create_meta(lua_State* L, const char* name, const luaL_Reg* methods)
 {
     assert(L && name && methods);
-    if (luaL_newmetatable(L, name))
-    {
-        lua_pushvalue(L, -1);
-        lua_setfield(L, -2, "__index");
-        luaL_setfuncs(L, methods, 0);
-        lua_pushliteral(L, "__metatable");
-        lua_pushliteral(L, "cannot access this metatable");
-        lua_settable(L, -3);
-        lua_pop(L, 1);  /* pop new metatable */
-        return;
-    }
-    luaL_error(L, "`%s` already registered.", name);
+    luaL_newmetatable(L, name);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
+    luaL_register(L, NULL, methods);
 }
 
 static void make_meta(lua_State* L)
@@ -450,7 +442,7 @@ LUALIB_API int luaopen_crypto(lua_State* L)
         { NULL, NULL },
     };
 
-    luaL_newlib(L, lib);
+    luaL_register(L, "crypto", lib);
     make_meta(L);
     return 1;
 }

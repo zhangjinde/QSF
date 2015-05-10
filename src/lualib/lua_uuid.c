@@ -128,8 +128,7 @@ static void make_uuid_meta(lua_State* L)
     luaL_newmetatable(L, UUID_HANDLE);
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
-    luaL_setfuncs(L, metalib, 0);
-    lua_pop(L, 1);  /* pop new metatable */
+    luaL_register(L, NULL, metalib);
 }
 
 LUALIB_API int luaopen_uuid(lua_State* L)
@@ -140,7 +139,7 @@ LUALIB_API int luaopen_uuid(lua_State* L)
         { NULL, NULL },
     };
  
-    luaL_newlib(L, lib);
+    luaL_register(L, "uuid", lib);
     make_uuid_meta(L);
     return 1;
 }

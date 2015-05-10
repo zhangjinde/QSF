@@ -11,13 +11,12 @@ int luaopen_mq(lua_State* L);
 int luaopen_net(lua_State* L);
 int luaopen_zmq(lua_State* L);
 int luaopen_uuid(lua_State* L);
-int luaopen_msgpack(lua_State* L);
 int luaopen_crypto(lua_State* L);
-int luaopen_mysql(lua_State* L);
 int luaopen_zlib(lua_State* L);
 int luaopen_process(lua_State* L);
 int luaopen_lfs(lua_State* L);
-int luaopen_cjson(lua_State* L);
+
+int hook_stdlib(lua_State* L);
 
 void lua_initlibs(lua_State* L)
 {
@@ -30,19 +29,15 @@ void lua_initlibs(lua_State* L)
         { "uuid", luaopen_uuid },
         { "zlib", luaopen_zlib },
         { "crypto", luaopen_crypto }, 
-        { "mysql", luaopen_mysql },
-        { "cjson", luaopen_cjson },
-        { "msgpack", luaopen_msgpack },
         { "process", luaopen_process },
         { NULL, NULL },
     };
 
-    // add open functions into 'package.preload' table
-    luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
-    for (const luaL_Reg *lib = libs; lib->func; lib++)
+    for (const luaL_Reg* lib = libs; lib->func; lib++) 
     {
         lua_pushcfunction(L, lib->func);
-        lua_setfield(L, -2, lib->name);
+        lua_pushstring(L, lib->name);
+        lua_call(L, 1, 0);
     }
-    lua_pop(L, 1);  /* remove _PRELOAD table */
+    hook_stdlib(L);
 }
