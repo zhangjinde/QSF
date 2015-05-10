@@ -1,5 +1,5 @@
-local mq = require 'luamq'
-local zmq = require 'luazmq'
+local mq = require 'mq'
+local zmq = require 'zmq'
 local process = require 'process'
 
 local bind_address = 'tcp://127.0.0.1:6666'

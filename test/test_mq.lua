@@ -8,6 +8,9 @@ local function mq_launch()
     assert(name == 'test')
     assert(mq.launch(node_name, '../test/spawn_child.lua') == true)
     process.sleep(1000)
+    mq.send(node_name, 'hello')
+    local name, s = mq.recv()
+    print(name, s)
 end
 
 local function mq_recv()
@@ -30,7 +33,7 @@ local function mq_recv_nowait()
 end
 
 mq_launch()
-mq_recv()
-mq_recv_nowait()
+--mq_recv()
+--mq_recv_nowait()
 
 print('mq passed')

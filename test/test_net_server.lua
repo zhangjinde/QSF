@@ -24,7 +24,7 @@ local function test_server_poll()
     server:start(host, port, function(err, serial, data)
         read_cb(server, err, serial, data)
     end)
-
+    print('server stared at ', host, port)
     while true do
         net.poll()
         process.sleep(10)

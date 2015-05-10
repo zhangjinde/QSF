@@ -34,13 +34,6 @@ frmAihdFxGlhB3jYjcnyNDza4LuOuQHq/JiverlqQfs=\
 -----END RSA PRIVATE KEY-----\
 "
 
-local function test_crc32c()
-    local checksum = crypto.crc32c('123456')
-    assert(checksum == 1094021510)
-    checksum = crypto.crc32c('c4ca4238a0b923820dcc509a6f75849b')
-    assert(checksum == 3715924231)
-end
-
 local function test_md5()
     local digest = crypto.md5('1')
     assert(digest == 'c4ca4238a0b923820dcc509a6f75849b') 
@@ -106,7 +99,6 @@ local function test_rsa()
 end
 
 
-test_crc32c()
 test_md5()
 test_sha1()
 test_hmac_md5()

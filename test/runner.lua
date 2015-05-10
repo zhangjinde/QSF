@@ -2,16 +2,11 @@
 -- testing case runner
 --
 
-local testing_cases = 
-{
-    'test_process',
-    'test_mq',
-    'test_zmq',    
-    'test_uuid',
-    'test_crypto',
-    --'test_timer',
-}
-
-for _, v in pairs(testing_cases) do 
-    require(v)
-end
+--require 'test_stdlib'
+--require 'test_process'
+--require 'test_uuid'
+--require 'test_mq'
+--require 'test_create_service'
+--require 'test_crypto'
+--require 'test_zmq_monitor'
+--require 'test_net_server'
