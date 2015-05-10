@@ -4,8 +4,14 @@
 
 solution '3rdlibs'
     configurations  {'Debug', 'Release'}
+    platforms       {'Win32', 'Win64'}
     targetdir       '../bin'
-    architecture    'x64'
+    
+    filter 'platforms:Win32'
+        architecture 'x32'
+        
+    filter 'platforms:Win64'
+        architecture 'x64'
     
     filter 'configurations:Debug'
         defines     { 'DEBUG' }
@@ -23,21 +29,6 @@ solution '3rdlibs'
             '_CRT_SECURE_NO_WARNINGS',
             '_CRT_NONSTDC_NO_DEPRECATE',
             'NOMINMAX',
-        }
-        
-    project 'msgpack'
-        targetname  'msgpack'
-        language    'C'
-        kind        'StaticLib'
-        location    'build'
-        includedirs 
-        {
-            'msgpack/include'
-        }
-        files
-        {
-            'msgpack/include/*.h',
-            'msgpack/src/*.c',
         }
        
     project 'libuv'

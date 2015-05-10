@@ -52,14 +52,14 @@ static int process_gettick(lua_State* L)
     clock_gettime(CLOCK_MONOTONIC, &ts);
     int64_t tick = (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
 #endif
-    lua_pushinteger(L, tick);
+    lua_pushnumber(L, tick);
     return 1;
 }
 
 static int process_hrtime(lua_State* L)
 {
     int64_t t = (int64_t)uv_hrtime();
-    lua_pushinteger(L, t);
+    lua_pushnumber(L, t);
     return 1;
 }
 

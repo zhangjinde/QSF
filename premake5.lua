@@ -2,15 +2,18 @@
 -- Premake script (http://premake.github.io)
 --
 
--- git clone https://github.com/ichenq/usr
-local USR_DIR = os.getenv('USR_DIR') or 'E:/usr'
-
 solution 'qsf'
     configurations  {'Debug', 'Release'}
+    platforms       {'Win32', 'Win64'}
     language        'C'
     targetdir       'bin'
-    architecture    'x64'
 
+    filter 'platforms:Win32'
+        architecture 'x32'
+        
+    filter 'platforms:Win64'
+        architecture 'x64'
+        
     filter 'configurations:Debug'
         defines     { 'DEBUG' }
         flags       { 'Symbols' }
@@ -32,9 +35,6 @@ solution 'qsf'
             'snprintf=_snprintf',
             'strncasecmp=_strnicmp',
         }
-        --buildoptions [[/wd"4127" /wd"4204" /wd"4201"]]
-        includedirs { USR_DIR .. '/include' }
-        libdirs     { USR_DIR .. '/lib/x64' }
         links
         {
             'ws2_32',
@@ -47,7 +47,7 @@ solution 'qsf'
         defines         '_GNU_SOURCE'
         
     filter 'system:linux'
-        defines     'USE_JEMALLOC'
+        --defines     'USE_JEMALLOC'
         includedirs '/usr/include/mysql'
         links
         {
@@ -83,10 +83,8 @@ solution 'qsf'
             {
                 'lua51',
                 'libuv',
-                'msgpack',
                 'libzmq',
                 'zlib',
-                'libeay32'
             }
 
         filter 'system:linux'
@@ -96,8 +94,5 @@ solution 'qsf'
                 'uv',
                 'zmq',
                 'lua51',
-                'msgpack',
                 'uuid',
-                'crypto',
-                'jemalloc',
             }
