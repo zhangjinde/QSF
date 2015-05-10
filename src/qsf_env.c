@@ -70,7 +70,7 @@ int qsf_env_init(const char* file)
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
     r = luaL_dofile(L, file);
-    if (r != LUA_OK)
+    if (r != 0)
     {
         qsf_log("%s\n", lua_tostring(L, -1));
         lua_close(L);
