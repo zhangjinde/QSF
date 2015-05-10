@@ -4,15 +4,14 @@
 
 solution '3rdlibs'
     configurations  {'Debug', 'Release'}
-    platforms       {'Win32', 'Win64'}
     targetdir       '../bin'
-    
-    filter 'platforms:Win32'
+
+    filter 'system:windows'
         architecture 'x32'
-        
-    filter 'platforms:Win64'
+
+    filter 'system:linux'
         architecture 'x64'
-    
+
     filter 'configurations:Debug'
         defines     { 'DEBUG' }
         flags       { 'Symbols' }
@@ -30,12 +29,12 @@ solution '3rdlibs'
             '_CRT_NONSTDC_NO_DEPRECATE',
             'NOMINMAX',
         }
-       
+
     project 'libuv'
         language    'C'
         kind        'SharedLib'
         location    'build'
-        
+
         filter 'action:vs*'
             defines     'BUILDING_UV_SHARED'
             includedirs 'libuv/include'
@@ -49,10 +48,31 @@ solution '3rdlibs'
                 'libuv/src/*.c',
                 'libuv/src/win/*.c',
             }
-            links 
+            links
             {
                 'ws2_32',
                 'psapi',
                 'iphlpapi',
             }
+
+    project 'libzmq'
+        targetname  'libzmq'
+        language    'C++'
+        kind        'SharedLib'
+        location    'build'
+        includedirs
+        {
+            'zeromq/include'
+        }
+        files
+        {
+            'zeromq/src/*.hpp',
+            'zeromq/src/*.cpp',
+        }
         
+        filter 'action:vs*'
+            defines     'DLL_EXPORT'
+            includedirs 'zeromq/builds/msvc'
+            links 'ws2_32'
+
+

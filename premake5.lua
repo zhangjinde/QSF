@@ -4,14 +4,13 @@
 
 solution 'qsf'
     configurations  {'Debug', 'Release'}
-    platforms       {'Win32', 'Win64'}
     language        'C'
     targetdir       'bin'
 
-    filter 'platforms:Win32'
+    filter 'system:windows'
         architecture 'x32'
         
-    filter 'platforms:Win64'
+    filter 'system:linux'
         architecture 'x64'
         
     filter 'configurations:Debug'
@@ -74,7 +73,7 @@ solution 'qsf'
             'src',
             'deps/luajit/src',
             'deps/libuv/include',
-            'deps/msgpack/include',
+            'deps/zeromq/include',
         }
         libdirs 'bin'
 
@@ -84,13 +83,11 @@ solution 'qsf'
                 'lua51',
                 'libuv',
                 'libzmq',
-                'zlib',
             }
 
         filter 'system:linux'
             links
             {
-                'z',
                 'uv',
                 'zmq',
                 'lua51',
