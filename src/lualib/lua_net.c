@@ -34,6 +34,8 @@ typedef struct
 
 static uv_loop_t* global_loop;
 
+extern int lua_trace_call(lua_State* L, int narg);
+
 //////////////////////////////////////////////////////////////////////////
 // net.server interface
 
@@ -47,17 +49,17 @@ static int create_server(lua_State* L)
     {
         int top = lua_gettop(L);
         lua_getfield(L, 1, "heart_beat");
-        if (lua_isinteger(L, -1))
+        if (lua_isnumber(L, -1))
         {
             heart_beat_sec = (uint16_t)luaL_checkinteger(L, -1);
         }
         lua_getfield(L, 1, "heart_beat_check");
-        if (lua_isinteger(L, -1))
+        if (lua_isnumber(L, -1))
         {
             heart_beat_check_sec = (uint16_t)luaL_checkinteger(L, -1);
         }
         lua_getfield(L, 1, "max_connection");
-        if (lua_isinteger(L, -1))
+        if (lua_isnumber(L, -1))
         {
             max_connections = (uint16_t)luaL_checkinteger(L, -1);
         }
@@ -103,10 +105,7 @@ static void on_server_read(int err, uint32_t serial, const char* data, uint16_t 
         }
         lua_pushinteger(L, serial);
         lua_pushlstring(L, data, size);
-        if (lua_pcall(L, 3, 0, 0) != LUA_OK)
-        {
-            qsf_log("%s\n", lua_tostring(L, -1));
-        }
+        lua_trace_call(L, 3);
     }
 }
 
@@ -243,13 +242,14 @@ static void on_client_connect(int error, void* ud)
     if (lua_isfunction(L, -1))
     {
         if (error == 0)
-            lua_pushnil(L);
-        else
-            lua_pushinteger(L, error);
-        if (lua_pcall(L, 1, 0, 0) != LUA_OK)
         {
-            qsf_log("%s\n", lua_tostring(L, -1));
+            lua_pushnil(L);
         }
+        else
+        {
+            lua_pushinteger(L, error);
+        }
+        lua_trace_call(L, 1);
         luaL_unref(L, LUA_REGISTRYINDEX, client->connect_ref);
         client->connect_ref = LUA_NOREF;
     }
@@ -287,10 +287,7 @@ static void on_client_read(int error, const char* data, uint16_t size, void* ud)
             lua_pushinteger(L, error);
         }
         lua_pushlstring(L, data, size);
-        if (lua_pcall(L, 2, 0, 0) != LUA_OK)
-        {
-            qsf_log("%s\n", lua_tostring(L, -1));
-        }
+        lua_trace_call(L, 2);
     }
 }
 
@@ -344,11 +341,10 @@ static void create_meta(lua_State* L, const char* name, const luaL_Reg* lib)
     luaL_newmetatable(L, name);
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
-    luaL_setfuncs(L, lib, 0);
-    lua_pop(L, 1);  /* pop new metatable */
+    luaL_register(L, NULL, lib);
 }
 
-static void make_meta(lua_State* L)
+static void make_metatables(lua_State* L)
 {
     static const luaL_Reg server_lib[] =
     {
@@ -387,7 +383,7 @@ LUALIB_API int luaopen_net(lua_State* L)
         { "stop", net_stop },
         {NULL, NULL}
     };
-    luaL_newlib(L, lib);
-    make_meta(L);
+    make_metatables(L);
+    luaL_register(L, "net", lib);
     return 1;
 }

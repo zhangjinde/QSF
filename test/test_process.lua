@@ -11,10 +11,7 @@ local function process_tick()
     assert(s2 >= s1)
 end
 
-local function process_os()
-    local os_name = process.os()
-    print('os name:' .. os_name)
-    assert(type(os_name) == 'string')
+local function process_memory()
     local pid = process.pid()
     print('process id:' .. pid)
     assert(type(pid) == 'number')
@@ -34,8 +31,16 @@ local function procss_dir()
     process.chdir(cwd)
 end
 
+local function process_uuid()
+    local uuid1 = process.new_uuid()
+    local uuid2 = process.new_uuid()
+    assert(uuid1 ~= uuid2)
+    print('uuid len', #uuid1)
+end
+
 process_tick()
-process_os()
+process_memory()
 procss_dir()
+process_uuid()
 
 print('process passed')

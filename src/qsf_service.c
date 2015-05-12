@@ -12,7 +12,6 @@
 #include <lualib.h>
 #include <lauxlib.h>
 #include "qsf.h"
-#include "tinymt32.h"
 
 // max dealer identity size
 #define MAX_ID_LENGTH       16
@@ -32,8 +31,6 @@ struct qsf_service_s
     char    name[MAX_ID_LENGTH];    // service name
     char    path[MAX_PATH];         // lua file path
     char    args[MAX_ARG_LENGTH];   // passed arguments
-
-    tinymt32_t prng;                // Mersenne Twister PRNG
 };
 
 struct qsf_service_context_s
@@ -50,7 +47,8 @@ typedef struct qsf_service_context_s qsf_service_context_t;
 static qsf_service_context_t    service_context;
 
 // forward declaration
-extern void lua_initlibs(lua_State* L);
+extern void initlibs(lua_State* L);
+extern int lua_trace_call(lua_State* L, int narg);
 
 static qsf_service_t* find_from_service_list(const char* name)
 {
@@ -114,52 +112,29 @@ static qsf_service_t* create_from_service_list(const char* name, const char* pat
 // load Lua path and Lua cpath
 static void load_service_path(lua_State* L)
 {
-    char chunk[512];
+    char chunk[256];
     const char* path = qsf_getenv("lua_path");
     if (strlen(path) > 0)
     {
-        snprintf(chunk, sizeof(chunk), "package.path = package.path .. ';' .. '%s'", path);
-        int r = luaL_dostring(L, chunk);
-        qsf_assert(r == LUA_OK, "%s", lua_tostring(L, -1));
+        int r = snprintf(chunk, sizeof(chunk), "package.path = package.path .. ';' .. '%s'", path);
+        r = luaL_dostring(L, chunk);
+        qsf_assert(r == 0, "%s", lua_tostring(L, -1));
     }
     const char* cpath = qsf_getenv("lua_cpath");
     if (strlen(cpath) > 0)
     {
-        snprintf(chunk, sizeof(chunk), "package.cpath = package.cpath .. ';' .. '%s'", cpath);
-        int r = luaL_dostring(L, chunk);
-        qsf_assert(r == LUA_OK, "%s", lua_tostring(L, -1));
+        int r = snprintf(chunk, sizeof(chunk), "package.cpath = package.cpath .. ';' .. '%s'", cpath);
+        r = luaL_dostring(L, chunk);
+        qsf_assert(r == 0, "%s", lua_tostring(L, -1));
     }
-}
-
-inline uint32_t rdrand(void)
-{
-    unsigned int value = 0;
-#ifdef _WIN32
-    rand_s(&value);
-#else
-    int retry = 100;
-    while (__builtin_ia32_rdrand32_step(&value) == 0)
-    {
-        if (--retry == 0)
-            break;
-    }
-#endif
-    return value;
 }
 
 static void init_service(qsf_service_t* s)
 {
-    uint32_t seed = rdrand();
-    srand(seed);
-#ifndef _WIN32
-    srandom(seed);
-#endif
-    tinymt32_init(&s->prng, seed);
-
     lua_State* L = luaL_newstate();
     lua_gc(L, LUA_GCSTOP, 0);  // stop collector during initialization
     luaL_openlibs(L);
-    lua_initlibs(L);
+    initlibs(L);
     load_service_path(L);
     lua_pushlightuserdata(L, s); // thus `s` cannot be moved before lua_close()
     lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
@@ -205,22 +180,13 @@ static int run_service(qsf_service_t* s)
     lua_State* L = s->L;
     assert(L);
     int r = luaL_loadfile(L, s->path);
-    if (r != LUA_OK)
+    if (r != 0)
     {
         qsf_log("%s: %s\n", s->name, lua_tostring(L, -1));
         return 1;
     }
     lua_pushstring(L, s->args);
-    int index = lua_gettop(L) - 1;
-    lua_pushcfunction(L, traceback);  // push traceback function
-    lua_insert(L, index);
-    r = lua_pcall(L, 1, LUA_MULTRET, index);
-    lua_remove(L, index); // remove traceback function
-    if (r != LUA_OK)
-    {
-        qsf_log("%s: %s\n", s->name, lua_tostring(L, -1));
-        return 2;
-    }
+    lua_trace_call(L, 1);
     return 0;
 }
 
@@ -315,44 +281,6 @@ const char* qsf_service_name(qsf_service_t* s)
 {
     assert(s);
     return s->name;
-}
-
-// closed range to [0, max]
-uint32_t qsf_service_rand32(qsf_service_t* s, uint32_t max)
-{
-    assert(s);
-    if (max == UINT32_MAX)
-    {
-        return tinymt32_generate_uint32(&s->prng);
-    }
-    for (;;)
-    {	// try a sample random value
-        uint32_t ret = 0;	// random bits
-        uint32_t mask = 0;	// 2^N - 1, ret is within [0, mask]
-
-        while (mask < (max - 1))
-        {	// need more random bits
-            ret <<= 32 - 1;	// avoid full shift
-            ret <<= 1;
-            ret |= tinymt32_generate_uint32(&s->prng);
-            mask <<= 32 - 1;	// avoid full shift
-            mask <<= 1;
-            mask |= UINT32_MAX;
-        }
-
-        // ret is [0, mask],  max - 1 <= mask, return if unbiased
-        if (ret / max < mask / max || mask % max == UINT32_MAX)
-        {
-            return (ret % max);
-        }
-    }
-}
-
-// floating point number in range (0.0 < r < 1.0)
-float qsf_service_randf(qsf_service_t* s)
-{
-    assert(s);
-    return tinymt32_generate_float(&s->prng);
 }
 
 int qsf_service_init()

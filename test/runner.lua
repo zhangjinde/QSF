@@ -2,16 +2,14 @@
 -- testing case runner
 --
 
-local testing_cases = 
+local test_cases = 
 {
-    'test_process',
-    'test_mq',
-    'test_zmq',    
-    'test_uuid',
-    'test_crypto',
-    --'test_timer',
+    --'test_process',
+    --'test_mq',
+    --'test_utf8',
+    'test_zmq'
 }
 
-for _, v in pairs(testing_cases) do 
+for _, v in pairs(test_cases) do 
     require(v)
 end

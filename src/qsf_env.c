@@ -29,7 +29,7 @@ const char* qsf_getenv(const char* key)
     uv_mutex_lock(&global_env.mutex);
     lua_getglobal(L, key);
     const char* s = lua_tostring(L, -1);
-    lua_pop(L, -1);
+    lua_pop(L, 1);
     uv_mutex_unlock(&global_env.mutex);
     return s;
 }
@@ -70,7 +70,7 @@ int qsf_env_init(const char* file)
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
     r = luaL_dofile(L, file);
-    if (r != LUA_OK)
+    if (r != 0)
     {
         qsf_log("%s\n", lua_tostring(L, -1));
         lua_close(L);

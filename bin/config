@@ -9,7 +9,7 @@ start_file = '../test/runner.lua'
 
 -- lua module searching path
 if os.getenv('windir') then
-    lua_path = './?.lua;./lib/?.lua;'
+    lua_path = './?.lua;./lib/?.lua;../test/?.lua'
     lua_cpath = './bin/win/?.dll;../lib/?.dll;'    
 else
     lua_path = './?.lua;./lib/?.lua;'

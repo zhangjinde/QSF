@@ -2,8 +2,6 @@
 -- Premake script (http://premake.github.io)
 --
 
--- git clone https://github.com/ichenq/usr
-local USR_DIR = os.getenv('USR_DIR') or 'E:/usr'
 
 solution 'qsf'
     configurations  {'Debug', 'Release'}
@@ -33,8 +31,7 @@ solution 'qsf'
             'strncasecmp=_strnicmp',
         }
         --buildoptions [[/wd"4127" /wd"4204" /wd"4201"]]
-        includedirs { USR_DIR .. '/include' }
-        libdirs     { USR_DIR .. '/lib/x64' }
+
         links
         {
             'ws2_32',
@@ -47,8 +44,6 @@ solution 'qsf'
         defines         '_GNU_SOURCE'
         
     filter 'system:linux'
-        defines     'USE_JEMALLOC'
-        includedirs '/usr/include/mysql'
         links
         {
             'm',
@@ -72,34 +67,28 @@ solution 'qsf'
         includedirs
         {
             'src',
-            'deps/lua/src',
+            'deps/luajit/src',
             'deps/libuv/include',
-            'deps/msgpack/include',
+            'deps/zeromq/include',
         }
         libdirs 'bin'
 
         filter 'system:windows'
             links
             {
-                'lua5.3',
+                'lua51',
                 'libuv',
-                'msgpack',
                 'libzmq',
-                'zlib',
-                'libmysql',
-                'libeay32'
             }
 
         filter 'system:linux'
+            defines 'USE_JEMALLOC'
             links
             {
                 'z',
                 'uv',
                 'zmq',
-                'lua5.3',
-                'msgpack',
                 'uuid',
-                'crypto',
+                'luajit-5.1',
                 'jemalloc',
-                'mysqlclient',
             }

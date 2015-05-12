@@ -1072,7 +1072,7 @@ static int lzmq_sleep(lua_State* L)
 }
 
 #define push_literal(L, name, value)\
-    lua_pushstring(L, name);        \
+    lua_pushliteral(L, name);       \
     lua_pushinteger(L, value);      \
     lua_rawset(L, -3);
 
@@ -1207,20 +1207,10 @@ static void create_metatable(lua_State* L)
         { "set_conflate", zsocket_set_conflate },
         { NULL, NULL },
     };
-    if (luaL_newmetatable(L, LZMQ_SOCKET))
-    {
-        lua_pushvalue(L, -1);
-        lua_setfield(L, -2, "__index");
-        luaL_setfuncs(L, methods, 0);
-        lua_pushliteral(L, "__metatable");
-        lua_pushliteral(L, "cannot access this metatable");
-        lua_settable(L, -3);
-        lua_pop(L, 1);  /* pop new metatable */
-    }
-    else
-    {
-        luaL_error(L, "`%s` already registered.", LZMQ_SOCKET);
-    }
+    luaL_newmetatable(L, LZMQ_SOCKET);
+    lua_pushvalue(L, -1); /* push metatable */
+    lua_setfield(L, -2, "__index"); /* metatable.__index = metatable */
+    luaL_register(L, NULL, methods);  /* zmq methods */
 }
 
 LUALIB_API int luaopen_zmq(lua_State* L)
@@ -1235,8 +1225,8 @@ LUALIB_API int luaopen_zmq(lua_State* L)
         { "sleep", lzmq_sleep },
         { NULL, NULL },
     };
-    luaL_newlib(L, lib);
-    push_socket_constant(L);
     create_metatable(L);
+    luaL_register(L, "zmq", lib);
+    push_socket_constant(L);
     return 1;
 }

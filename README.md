@@ -1,6 +1,6 @@
 # QSF
 
-QSF is a game server framework based on ZeroMQ and Lua 5.3, still under heavy development.
+QSF is a game server framework based on ZeroMQ and LuaJIT, still under heavy development.
 
 ## Introduction
 
@@ -10,7 +10,7 @@ main features:
 
 * Multi-platform(Linux, Windows) asynchronous networking.
 
-* Flexiblity with Lua modules
+* Lua module flexiblity
 
 
 ## Installation
@@ -34,4 +34,4 @@ First obtain [premake5](http://premake.github.io/download.html) toolchain.
 
 [1] [ZeroMQ The Guide](http://zguide.zeromq.org/page:all)
 
-[2] [Lua 5.3 Manual Reference](http://www.lua.org/manual/5.3/)
+[2] [Lua 5.1 Manual Reference](http://www.lua.org/manual/5.1/)

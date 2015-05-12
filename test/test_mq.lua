@@ -7,12 +7,14 @@ local function mq_launch()
     local name = mq.name()
     assert(name == 'test')
     assert(mq.launch(node_name, '../test/spawn_child.lua') == true)
-    process.sleep(1000)
+    print('spawn child')
+    process.sleep(1000) -- wait child thread
 end
 
 local function mq_recv()
     mq.send(node_name, 'hello')
     local name, s = mq.recv()
+    print(name, s)
     assert(name == node_name)
     assert(s == 'world')
 end

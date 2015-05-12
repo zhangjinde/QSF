@@ -1,0 +1,27 @@
+
+* Version 0.3.0
+    - Switch Lua VM to LuaJIT 2.0
+    - Remove native Lua modules: msgpack, mysql, crypto, uuid, cjson
+    --New modules: utf8, struct
+
+* Version 0.2.0
+    - Rewrite frame with pure C99
+    - Replace asio with libuv and uthash
+    - Thread-safe PRNG with TinyMT
+    - Fix Lua module bugs
+   
+* Version 0.1.0
+    - ZeroMQ IPC based service
+    - Asio based TCP server
+    - Pre-loaded Lua module:
+        + lua-mysql     
+        + lua-zmq       
+        + lua-zlib      
+        + lua-uuid      
+        + lua-cjson     
+        + lua-msgpack   
+        + lua-process   
+        + lua-net       
+        + lua-fs        
+        + lua-crypto    
+        

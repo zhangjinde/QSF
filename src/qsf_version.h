@@ -9,5 +9,5 @@
  * evolve between minor releases, but only in a backwards compatible way.
  */
 #define QSF_VERSION_MAJOR   0
-#define QSF_VERSION_MINOR   2
-#define QSF_VERSION_PATCH   1
+#define QSF_VERSION_MINOR   3
+#define QSF_VERSION_PATCH   0
