@@ -54,8 +54,11 @@ static int mq_recv(lua_State* L)
     int nowait = 0;
     if (lua_gettop(L) >= 1)
     {
-        const char* option = luaL_checkstring(L, 1);
-        nowait = (strcmp(option, "nowait") == 0);
+        const char* option = lua_tostring(L, 1);
+        if (option)
+        {
+            nowait = (strcmp(option, "nowait") == 0);
+        }
     }
     int r = qsf_service_recv(self, handle_recv, nowait, L);
     return r;
