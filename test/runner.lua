@@ -2,11 +2,14 @@
 -- testing case runner
 --
 
---require 'test_stdlib'
---require 'test_process'
---require 'test_uuid'
---require 'test_mq'
---require 'test_create_service'
---require 'test_crypto'
---require 'test_zmq_monitor'
---require 'test_net_server'
+local test_cases = 
+{
+    --'test_process',
+    --'test_mq',
+    --'test_utf8',
+    'test_zmq'
+}
+
+for _, v in pairs(test_cases) do 
+    require(v)
+end
