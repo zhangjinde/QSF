@@ -13,7 +13,6 @@
 #include <lauxlib.h>
 #include "qsf.h"
 
-
 // max dealer identity size
 #define MAX_ID_LENGTH       16
 #define MAX_ARG_LENGTH      512
@@ -49,6 +48,7 @@ static qsf_service_context_t    service_context;
 
 // forward declaration
 extern void initlibs(lua_State* L);
+extern int lua_trace_call(lua_State* L, int narg);
 
 static qsf_service_t* find_from_service_list(const char* name)
 {
@@ -116,49 +116,29 @@ static void load_service_path(lua_State* L)
     const char* path = qsf_getenv("lua_path");
     if (strlen(path) > 0)
     {
-        snprintf(chunk, sizeof(chunk), "package.path = package.path .. ';' .. '%s'", path);
-        int r = luaL_dostring(L, chunk);
+        int r = snprintf(chunk, sizeof(chunk), "package.path = package.path .. ';' .. '%s'", path);
+        r = luaL_dostring(L, chunk);
         qsf_assert(r == 0, "%s", lua_tostring(L, -1));
     }
     const char* cpath = qsf_getenv("lua_cpath");
     if (strlen(cpath) > 0)
     {
-        snprintf(chunk, sizeof(chunk), "package.cpath = package.cpath .. ';' .. '%s'", cpath);
-        int r = luaL_dostring(L, chunk);
+        int r = snprintf(chunk, sizeof(chunk), "package.cpath = package.cpath .. ';' .. '%s'", cpath);
+        r = luaL_dostring(L, chunk);
         qsf_assert(r == 0, "%s", lua_tostring(L, -1));
     }
 }
 
-inline uint32_t rdrand(void)
-{
-    unsigned int value = 0;
-#ifdef _WIN32
-    rand_s(&value);
-#else
-    int retry = 100;
-    while (__builtin_ia32_rdrand32_step(&value) == 0)
-    {
-        if (--retry == 0)
-            break;
-    }
-#endif
-    return value;
-}
-
 static void init_service(qsf_service_t* s)
 {
-    uint32_t seed = rdrand();
-    srand(seed);
-#ifndef _WIN32
-    srandom(seed);
-#endif
-
     lua_State* L = luaL_newstate();
+    lua_gc(L, LUA_GCSTOP, 0);  // stop collector during initialization
     luaL_openlibs(L);
-    load_service_path(L);
     initlibs(L);
+    load_service_path(L);
     lua_pushlightuserdata(L, s); // thus `s` cannot be moved before lua_close()
     lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
+    lua_gc(L, LUA_GCRESTART, 0);
     s->L = L;
     s->dealer = qsf_create_dealer(s->name);
     assert(s->dealer);
@@ -180,6 +160,20 @@ static void cleanup_service(qsf_service_t* s)
     uv_mutex_unlock(&service_context.mutex);
 }
 
+static int traceback(lua_State *L)
+{
+    if (!lua_isstring(L, 1))  // Non-string error object? Try metamethod.
+    {
+        if (lua_isnoneornil(L, 1) ||
+            !luaL_callmeta(L, 1, "__tostring") ||
+            !lua_isstring(L, -1))
+            return 1;  // Return non-string error object.
+        lua_remove(L, 1);  // Replace object by result of __tostring metamethod.
+    }
+    luaL_traceback(L, L, lua_tostring(L, 1), 1);
+    return 1;
+}
+
 // execute service's lua code
 static int run_service(qsf_service_t* s)
 {
@@ -192,12 +186,7 @@ static int run_service(qsf_service_t* s)
         return 1;
     }
     lua_pushstring(L, s->args);
-    r = lua_pcall(L, 1, 0, 0);
-    if (r != 0)
-    {
-        qsf_log("%s: %s\n", s->name, lua_tostring(L, -1));
-        return 2;
-    }
+    lua_trace_call(L, 1);
     return 0;
 }
 
