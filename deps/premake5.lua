@@ -5,12 +5,7 @@
 solution '3rdlibs'
     configurations  {'Debug', 'Release'}
     targetdir       '../bin'
-
-    filter 'system:windows'
-        architecture 'x32'
-
-    filter 'system:linux'
-        architecture 'x64'
+    architecture    'x64'
 
     filter 'configurations:Debug'
         defines     { 'DEBUG' }
@@ -30,25 +25,38 @@ solution '3rdlibs'
             'NOMINMAX',
         }
 
+    project 'zlib'        
+        language    'C'
+        kind        'SharedLib'
+        location    'build'
+        files 
+        {
+            'zlib/*.h',
+            'zlib/*.c',
+        }
+        
+        filter 'action:vs*'
+            defines 'ZLIB_DLL'
+        
     project 'libuv'
         language    'C'
         kind        'SharedLib'
         location    'build'
-
-        filter 'action:vs*'
-            defines     'BUILDING_UV_SHARED'
-            includedirs 'libuv/include'
-            files
-            {
-                'libuv/include/uv.h',
-                'libuv/include/tree.h',
-                'libuv/include/uv-version.h',
-                'libuv/include/uv-errno.h',
-                'libuv/src/*.h',
-                'libuv/src/*.c',
-                'libuv/src/win/*.c',
-            }
-            links
+        defines     'BUILDING_UV_SHARED'
+        includedirs 'libuv/include'
+        files
+        {
+            'libuv/include/uv.h',
+            'libuv/include/tree.h',
+            'libuv/include/uv-version.h',
+            'libuv/include/uv-errno.h',
+            'libuv/src/*.h',
+            'libuv/src/*.c',
+            'libuv/src/win/*.c',
+        }
+            
+        filter 'action:vs*'            
+            links 
             {
                 'ws2_32',
                 'psapi',

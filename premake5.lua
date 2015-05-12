@@ -2,17 +2,13 @@
 -- Premake script (http://premake.github.io)
 --
 
+
 solution 'qsf'
     configurations  {'Debug', 'Release'}
     language        'C'
     targetdir       'bin'
+    architecture    'x64'
 
-    filter 'system:windows'
-        architecture 'x32'
-        
-    filter 'system:linux'
-        architecture 'x64'
-        
     filter 'configurations:Debug'
         defines     { 'DEBUG' }
         flags       { 'Symbols' }
@@ -34,6 +30,8 @@ solution 'qsf'
             'snprintf=_snprintf',
             'strncasecmp=_strnicmp',
         }
+        --buildoptions [[/wd"4127" /wd"4204" /wd"4201"]]
+
         links
         {
             'ws2_32',
@@ -46,8 +44,6 @@ solution 'qsf'
         defines         '_GNU_SOURCE'
         
     filter 'system:linux'
-        --defines     'USE_JEMALLOC'
-        includedirs '/usr/include/mysql'
         links
         {
             'm',
@@ -86,10 +82,13 @@ solution 'qsf'
             }
 
         filter 'system:linux'
+            defines 'USE_JEMALLOC'
             links
             {
+                'z',
                 'uv',
                 'zmq',
-                'lua51',
                 'uuid',
+                'luajit-5.1',
+                'jemalloc',
             }
