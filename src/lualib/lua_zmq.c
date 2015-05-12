@@ -1072,7 +1072,7 @@ static int lzmq_sleep(lua_State* L)
 }
 
 #define push_literal(L, name, value)\
-    lua_pushstring(L, name);        \
+    lua_pushliteral(L, name);       \
     lua_pushinteger(L, value);      \
     lua_rawset(L, -3);
 
@@ -1225,9 +1225,8 @@ LUALIB_API int luaopen_zmq(lua_State* L)
         { "sleep", lzmq_sleep },
         { NULL, NULL },
     };
-
+    create_metatable(L);
     luaL_register(L, "zmq", lib);
     push_socket_constant(L);
-    create_metatable(L);
     return 1;
 }
