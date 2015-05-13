@@ -7,7 +7,6 @@ solution 'qsf'
     configurations  {'Debug', 'Release'}
     language        'C'
     targetdir       'bin'
-    architecture    'x64'
 
     filter 'configurations:Debug'
         defines     { 'DEBUG' }
@@ -19,6 +18,7 @@ solution 'qsf'
         optimize    'On'
 
     configuration 'vs*'
+        architecture 'x64'
         defines
         {
             'WIN32_LEAN_AND_MEAN',
@@ -51,9 +51,6 @@ solution 'qsf'
             'dl',
             'pthread',
         }
-
-    filter 'system:macosx'
-        toolset     'clang'
         
     project 'qsf'
         targetname  'qsf'
@@ -67,22 +64,28 @@ solution 'qsf'
         includedirs
         {
             'src',
-            'deps/luajit/src',
-            'deps/libuv/include',
-            'deps/zeromq/include',
         }
         libdirs 'bin'
 
         filter 'system:windows'
             links
             {
+                'zlib',
                 'lua51',
                 'libuv',
                 'libzmq',
             }
+            includedirs
+            {
+                'deps/zlib',
+                'deps/luajit/src',
+                'deps/libuv/include',
+                'deps/zeromq/include',
+            }
 
         filter 'system:linux'
             defines 'USE_JEMALLOC'
+            includedirs '/usr/local/include/luajit-2.0'
             links
             {
                 'z',
@@ -92,3 +95,17 @@ solution 'qsf'
                 'luajit-5.1',
                 'jemalloc',
             }
+
+         filter 'system:macosx'
+            includedirs 
+            {
+                '/usr/local/include',
+                '/usr/local/include/luajit-2.0',
+            }
+            links 
+            {
+                'z',
+                'uv',
+                'zmq',
+                'luajit-5.1'
+            }   
