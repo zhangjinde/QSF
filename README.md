@@ -1,23 +1,23 @@
 # QSF
 
-QSF is a game server framework based on ZeroMQ and LuaJIT, still under heavy development.
+QSF is ZeroMQ based multi-thread communicating framework for Lua.
 
-## Introduction
+## Feature highlights
 
-main features:
+* Message queue based IPC model.
 
-* Service-based threading model with message queue.
+* Multi-platform(Linux, Windows, OSX) asynchronous networking.
 
-* Multi-platform(Linux, Windows) asynchronous networking.
-
-* Lua module flexiblity
+* LuaJIT FFI flexibility for writing C bindings.
 
 
 ## Installation
 
-To build the library and test suits:
+Prerequisites:
 
-First obtain [premake5](http://premake.github.io/download.html) toolchain.
+* [Premake5](http://premake.github.io/download.html) toolchain.
+
+* A C99 compiler, I recommend [Visual Studio 2013 Community](https://www.visualstudio.com/en-us/products/visual-studio-community-vs.aspx) for Windows folks.
 
 ### Build on Windows (Windows 7 x64)
 
