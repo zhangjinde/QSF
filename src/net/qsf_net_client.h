@@ -6,18 +6,17 @@
 
 #include <stdint.h>
 
+struct uv_loop_s;
 struct qsf_net_client_s;
 typedef struct qsf_net_client_s qsf_net_client_t;
 
-struct uv_loop_s;
-typedef struct uv_loop_s uv_loop_t;
 
 // callback typedef
 typedef void(*c_connect_cb)(int, void* ud);
 typedef void(*c_read_cb)(int, const char*, uint16_t, void*);
 
 // create a client instance
-qsf_net_client_t* qsf_create_net_client(uv_loop_t* loop);
+qsf_net_client_t* qsf_create_net_client(struct uv_loop_s* loop);
 
 // start connect to server
 int qsf_net_client_connect(qsf_net_client_t* c, const char* host, int port, c_connect_cb cb);

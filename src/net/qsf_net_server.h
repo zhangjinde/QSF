@@ -6,17 +6,16 @@
 
 #include <stdint.h>
 
+struct uv_loop_s;
 struct qsf_net_server_s;
 typedef struct qsf_net_server_s qsf_net_server_t;
 
-struct uv_loop_s;
-typedef struct uv_loop_s uv_loop_t;
 
 // callbacks
 typedef void(*s_read_cb)(int, uint32_t, const char*, uint16_t, void*);
 
 // create an net server instance
-qsf_net_server_t* qsf_create_net_server(uv_loop_t* loop,
+qsf_net_server_t* qsf_create_net_server(struct uv_loop_s* loop,
                                         uint32_t max_connection, 
                                         uint16_t max_heart_beat,
                                         uint16_t heart_beat_check);
