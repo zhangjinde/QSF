@@ -5,7 +5,7 @@
     --New modules: utf8, struct
 
 * Version 0.2.0
-    - Rewrite frame with pure C99
+    - Rewrite framework with pure C99
     - Replace asio with libuv and uthash
     - Thread-safe PRNG with TinyMT
     - Fix Lua module bugs
