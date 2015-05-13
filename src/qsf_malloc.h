@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <malloc.h>
+#include <stdlib.h>
 
 // http://www.canonware.com/download/jemalloc/jemalloc-latest/doc/jemalloc.html
 #ifdef USE_JEMALLOC
