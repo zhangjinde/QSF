@@ -12,6 +12,7 @@
 
 #ifndef _WIN32
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <unistd.h>
@@ -35,12 +36,16 @@ static int process_sleep(lua_State* L)
 
 static int process_gettick(lua_State* L)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     uint64_t tick = GetTickCount64();
-#else
+#elif defined(__linux__)
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     uint64_t tick = (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    uint64_t tick = (tv.tv_sec * 1000 + tv.tv_usec / 1000);
 #endif
     lua_pushnumber(L, (lua_Number)tick);
     return 1;
