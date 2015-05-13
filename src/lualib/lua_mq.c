@@ -8,7 +8,7 @@
 #include <lauxlib.h>
 #include "qsf.h"
 
-inline qsf_service_t* to_context(lua_State* L)
+static qsf_service_t* to_context(lua_State* L)
 {
     lua_pushlstring(L, "mq_ctx", 6);
     lua_rawget(L, LUA_REGISTRYINDEX);
