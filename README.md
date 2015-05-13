@@ -19,6 +19,8 @@ Prerequisites:
 
 * A C99 compiler, I recommend [Visual Studio 2013 Community](https://www.visualstudio.com/en-us/products/visual-studio-community-vs.aspx) for Windows folks.
 
+* Install [LuaJIT](http://luajit.org/download/LuaJIT-2.0.3.tar.gz), [libuv](http://libuv.org/dist/v1.5.0/libuv-v1.5.0.tar.gz), [zeromq](http://download.zeromq.org/zeromq-4.0.5.zip) and [jemalloc](http://www.canonware.com/download/jemalloc/jemalloc-3.6.0.tar.bz2) (for Linux folks)
+
 ### Build on Windows (Windows 7 x64)
 
 1. Run `build-msvc2013.bat` to generate Visual C++ 2013 solution files.
