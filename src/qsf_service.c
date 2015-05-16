@@ -47,8 +47,8 @@ typedef struct qsf_service_context_s qsf_service_context_t;
 static qsf_service_context_t    service_context;
 
 // forward declaration
-extern void initlibs(lua_State* L);
-extern int lua_trace_call(lua_State* L, int narg);
+extern void init_preload_libs(lua_State* L);
+extern int  lua_trace_call(lua_State* L, int narg);
 
 static qsf_service_t* find_from_service_list(const char* name)
 {
@@ -129,21 +129,6 @@ static void load_service_path(lua_State* L)
     }
 }
 
-static void init_service(qsf_service_t* s)
-{
-    lua_State* L = luaL_newstate();
-    lua_gc(L, LUA_GCSTOP, 0);  // stop collector during initialization
-    luaL_openlibs(L);
-    initlibs(L);
-    load_service_path(L);
-    lua_pushlightuserdata(L, s); // thus `s` cannot be moved before lua_close()
-    lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
-    lua_gc(L, LUA_GCRESTART, 0);
-    s->L = L;
-    s->dealer = qsf_create_dealer(s->name);
-    assert(s->dealer);
-}
-
 static void cleanup_service(qsf_service_t* s)
 {
     qsf_log("service [%s] exit.\n", s->name);
@@ -174,28 +159,35 @@ static int traceback(lua_State *L)
     return 1;
 }
 
-// execute service's lua code
-static int run_service(qsf_service_t* s)
-{
-    lua_State* L = s->L;
-    assert(L);
-    int r = luaL_loadfile(L, s->path);
-    if (r != 0)
-    {
-        qsf_log("%s: %s\n", s->name, lua_tostring(L, -1));
-        return 1;
-    }
-    lua_pushstring(L, s->args);
-    lua_trace_call(L, 1);
-    return 0;
-}
-
 static void service_thread_callback(void* args)
 {
     assert(args != NULL);
     qsf_service_t* s = (qsf_service_t*)args;
-    init_service(s);
-    run_service(s);
+
+    // initialize
+    lua_State* L = luaL_newstate();
+    lua_gc(L, LUA_GCSTOP, 0);  // stop collector during initialization
+    luaL_openlibs(L);
+    init_preload_libs(L);
+    load_service_path(L);
+    lua_pushlightuserdata(L, s); // thus `s` cannot be moved before lua_close()
+    lua_setfield(L, LUA_REGISTRYINDEX, "mq_ctx");
+    lua_gc(L, LUA_GCRESTART, 0);
+    s->L = L;
+    s->dealer = qsf_create_dealer(s->name);
+    assert(s->dealer);
+
+    // run lua VM
+    int r = luaL_loadfile(L, s->path);
+    if (r == 0)
+    {
+        lua_pushstring(L, s->args);
+        lua_trace_call(L, 1);
+    }
+    else
+    {
+        qsf_log("%s: %s\n", s->name, lua_tostring(L, -1));
+    }
     cleanup_service(s);
 }
 

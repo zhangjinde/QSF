@@ -45,7 +45,7 @@ extern int luaopen_utf8(lua_State *L);
 extern int luaopen_struct(lua_State *L);
 extern int luaopen_zlib(lua_State* L);
 
-void initlibs(lua_State* L)
+void init_preload_libs(lua_State* L)
 {
     static const luaL_Reg libs[] =
     {
