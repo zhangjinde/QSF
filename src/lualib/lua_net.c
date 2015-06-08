@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -341,7 +341,8 @@ static void create_meta(lua_State* L, const char* name, const luaL_Reg* lib)
     luaL_newmetatable(L, name);
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
-    luaL_register(L, NULL, lib);
+    luaL_setfuncs(L, lib, 0);
+    lua_pop(L, 1);  /* pop new metatable */
 }
 
 static void make_metatables(lua_State* L)
@@ -383,7 +384,7 @@ LUALIB_API int luaopen_net(lua_State* L)
         { "stop", net_stop },
         {NULL, NULL}
     };
+    luaL_newlib(L, lib);
     make_metatables(L);
-    luaL_register(L, "net", lib);
     return 1;
 }

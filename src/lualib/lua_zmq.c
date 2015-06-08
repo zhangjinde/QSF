@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -12,7 +12,7 @@
 
 extern void* qsf_zmq_context(void);
 
-#define LZMQ_SOCKET     "socket*"
+#define LZMQ_SOCKET     "zsock*"
 #define check_socket(L) (*(void**)luaL_checkudata(L, 1, LZMQ_SOCKET))
 
 #define LZMQ_CHECK_THROW(L, rc)     \
@@ -1208,9 +1208,13 @@ static void create_metatable(lua_State* L)
         { NULL, NULL },
     };
     luaL_newmetatable(L, LZMQ_SOCKET);
-    lua_pushvalue(L, -1); /* push metatable */
-    lua_setfield(L, -2, "__index"); /* metatable.__index = metatable */
-    luaL_register(L, NULL, methods);  /* zmq methods */
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
+    luaL_setfuncs(L, methods, 0);
+    lua_pushliteral(L, "__metatable");
+    lua_pushliteral(L, "cannot access this metatable");
+    lua_settable(L, -3);
+    lua_pop(L, 1);  /* pop new metatable */
 }
 
 LUALIB_API int luaopen_zmq(lua_State* L)
@@ -1225,8 +1229,8 @@ LUALIB_API int luaopen_zmq(lua_State* L)
         { "sleep", lzmq_sleep },
         { NULL, NULL },
     };
-    create_metatable(L);
-    luaL_register(L, "zmq", lib);
+    luaL_newlib(L, lib);
     push_socket_constant(L);
+    create_metatable(L);
     return 1;
 }

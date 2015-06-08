@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -158,6 +158,6 @@ LUALIB_API int luaopen_process(lua_State* L)
         { "new_uuid", process_new_uuid },
         { NULL, NULL },
     };
-    luaL_register(L, "process", lib);
+    luaL_newlib(L, lib);
     return 1;
 }

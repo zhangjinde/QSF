@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -6,6 +6,42 @@
 #include <lauxlib.h>
 #include "qsf.h"
 
+
+
+/* forward declarations */
+extern int luaopen_mq(lua_State* L);
+extern int luaopen_net(lua_State* L);
+extern int luaopen_zmq(lua_State* L);
+extern int luaopen_process(lua_State* L);
+extern int luaopen_lfs(lua_State* L);
+extern int luaopen_zlib(lua_State* L); 
+extern int luaopen_mysql(lua_State* L);
+extern int luaopen_crypto(lua_State* L); 
+
+void init_preload_libs(lua_State* L)
+{
+    static const luaL_Reg libs[] =
+    {
+        { "mq", luaopen_mq },
+        { "lfs", luaopen_lfs },
+        { "net", luaopen_net },
+        { "zmq", luaopen_zmq },
+        { "zlib", luaopen_zlib },
+        { "mysql", luaopen_mysql },
+        { "crypto", luaopen_crypto },
+        { "process", luaopen_process },
+        { NULL, NULL },
+    };
+
+    /* add open functions into 'package.preload' table */
+    luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
+    for (const luaL_Reg *lib = libs; lib->func; lib++)
+    {
+        lua_pushcfunction(L, lib->func);
+        lua_setfield(L, -2, lib->name);
+    }
+    lua_pop(L, 1);  /* remove _PRELOAD table */
+}
 
 static int ltraceback(lua_State* L)
 {
@@ -33,40 +69,4 @@ int lua_trace_call(lua_State* L, int narg)
         qsf_log("%s\n", lua_tostring(L, -1));
     }
     return r;
-}
-
-/* forward declarations */
-extern int luaopen_mq(lua_State* L);
-extern int luaopen_net(lua_State* L);
-extern int luaopen_zmq(lua_State* L);
-extern int luaopen_process(lua_State* L);
-extern int luaopen_lfs(lua_State* L);
-extern int luaopen_utf8(lua_State *L);
-extern int luaopen_struct(lua_State *L);
-extern int luaopen_zlib(lua_State* L);
-
-void init_preload_libs(lua_State* L)
-{
-    static const luaL_Reg libs[] =
-    {
-        { "mq", luaopen_mq },
-        { "lfs", luaopen_lfs },
-        { "net", luaopen_net },
-        { "zmq", luaopen_zmq },
-        { "zlib", luaopen_zlib },
-        { "utf8", luaopen_utf8 },
-        { "struct", luaopen_struct },
-        { "process", luaopen_process },
-        { NULL, NULL },
-    };
-
-    /* Pull up the preload table */
-    lua_getglobal(L, "package");
-    lua_getfield(L, -1, "preload");
-    lua_remove(L, -2);
-    for (const luaL_Reg* lib = libs; lib->func; lib++)
-    {
-        lua_pushcfunction(L, lib->func);
-        lua_setfield(L, -2, lib->name);
-    }
 }
