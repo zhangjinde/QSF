@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -118,14 +118,14 @@ static void load_service_path(lua_State* L)
     {
         int r = snprintf(chunk, sizeof(chunk), "package.path = package.path .. ';' .. '%s'", path);
         r = luaL_dostring(L, chunk);
-        qsf_assert(r == 0, "%s", lua_tostring(L, -1));
+        qsf_assert(r == LUA_OK, "%s", lua_tostring(L, -1));
     }
     const char* cpath = qsf_getenv("lua_cpath");
     if (strlen(cpath) > 0)
     {
         int r = snprintf(chunk, sizeof(chunk), "package.cpath = package.cpath .. ';' .. '%s'", cpath);
         r = luaL_dostring(L, chunk);
-        qsf_assert(r == 0, "%s", lua_tostring(L, -1));
+        qsf_assert(r == LUA_OK, "%s", lua_tostring(L, -1));
     }
 }
 
@@ -179,7 +179,7 @@ static void service_thread_callback(void* args)
 
     // run lua VM
     int r = luaL_loadfile(L, s->path);
-    if (r == 0)
+    if (r == LUA_OK)
     {
         lua_pushstring(L, s->args);
         lua_trace_call(L, 1);
@@ -291,6 +291,13 @@ int qsf_service_init()
 
 void qsf_service_exit()
 {
-	assert(service_context.count == 0);
+    qsf_service_t* ctx = service_context.list;
+    while (ctx)
+    {
+        qsf_service_t* p = ctx;
+        ctx = ctx->next;
+        cleanup_service(p);
+    }
+    service_context.count = 0;
     uv_mutex_destroy(&service_context.mutex);
 }

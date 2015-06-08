@@ -1,8 +1,9 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
 #include "qsf.h"
+#include <signal.h>
 
 int main(int argc, char* argv[])
 {
@@ -11,6 +12,7 @@ int main(int argc, char* argv[])
     {
         default_file = argv[1];
     }
-    
+    signal(SIGILL, qsf_exit);
+    signal(SIGTERM, qsf_exit);
     return qsf_start(default_file);
 }

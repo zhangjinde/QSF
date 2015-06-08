@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -30,3 +30,4 @@ const char* qsf_service_name(qsf_service_t* s);
 
 int qsf_service_init();
 void qsf_service_exit();
+

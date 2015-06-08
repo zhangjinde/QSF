@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -121,8 +121,9 @@ static void qsf_init(void)
     qsf_context.router = router;
 }
 
-// cleanup qsf framework
-static void qsf_exit(void)
+// do cleanup work
+// TO-DO: signal code runs in different thread
+void qsf_exit(int sig)
 {
     qsf_env_exit();
     qsf_service_exit();
@@ -176,6 +177,6 @@ int qsf_start(const char* file)
             break;
         }
     }
-    qsf_exit();
+    qsf_exit(0);
     return 0;
 }

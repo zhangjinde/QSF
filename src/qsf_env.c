@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -70,7 +70,7 @@ int qsf_env_init(const char* file)
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
     r = luaL_dofile(L, file);
-    if (r != 0)
+    if (r != LUA_OK)
     {
         qsf_log("%s\n", lua_tostring(L, -1));
         lua_close(L);

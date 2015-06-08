@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -9,5 +9,5 @@
  * evolve between minor releases, but only in a backwards compatible way.
  */
 #define QSF_VERSION_MAJOR   0
-#define QSF_VERSION_MINOR   3
+#define QSF_VERSION_MINOR   4
 #define QSF_VERSION_PATCH   0
