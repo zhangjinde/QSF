@@ -56,6 +56,10 @@ solution 'qsf'
         targetname  'qsf'
         location    'build'
         kind        'ConsoleApp'
+        defines 
+        {
+            'LUA_COMPAT_5_2',
+        }
         files
         {
             'src/**.h',
@@ -65,47 +69,43 @@ solution 'qsf'
         {
             'src',
         }
-        libdirs 'bin'
 
         filter 'system:windows'
+            libdirs 'deps/lib'
+            includedirs
+            {
+                'deps/include',
+                'deps/include/lua',
+                'deps/include/zmq',
+                'deps/include/zlib',
+                'deps/include/libuv',
+                'deps/include/libmysql',            
+            }
             links
             {
                 'zlib',
-                'lua51',
+                'lua5.3',
                 'libuv',
                 'libzmq',
-            }
-            includedirs
-            {
-                'deps/zlib',
-                'deps/luajit/src',
-                'deps/libuv/include',
-                'deps/zeromq/include',
+                'libeay32',
+                'libmysql',
             }
 
         filter 'system:linux'
             defines 'USE_JEMALLOC'
-            includedirs '/usr/local/include/luajit-2.0'
+            includedirs
+            {
+                '/usr/include/mysql',
+            }
             links
             {
                 'z',
                 'uv',
                 'zmq',
                 'uuid',
-                'luajit-5.1',
+                'lua5.3',
+                'crypto',                
                 'jemalloc',
+                'mysqlclient',
             }
-
-         filter 'system:macosx'
-            includedirs 
-            {
-                '/usr/local/include',
-                '/usr/local/include/luajit-2.0',
-            }
-            links 
-            {
-                'z',
-                'uv',
-                'zmq',
-                'luajit-5.1'
-            }   
+ 
