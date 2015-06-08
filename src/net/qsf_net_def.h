@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -13,17 +13,14 @@
  *
  */
  
-// max net packet size
-#define NET_MAX_PACKET_SIZE (1024*8)
-
 // max alive connections per server
 #define NET_DEFAULT_MAX_CONN    5000
 
 // default heart beat seconds
-#define NET_DEFAULT_HEARTBEAT   15
+#define NET_DEFAULT_HEARTBEAT   30
 
 // default check heart beat seconds
-#define NET_DEFAULT_HEARTBEAT_CHECK     7
+#define NET_DEFAULT_HEARTBEAT_CHECK     10
 
 // error code
 #define NET_ERR_CONN_LIMIT      100001

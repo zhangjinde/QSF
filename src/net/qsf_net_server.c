@@ -1,4 +1,4 @@
-// Copyright (C) 2014-2015 ichenq@gmail.com. All rights reserved.
+// Copyright (C) 2014-2015 chenqiang@chaoyuehudong.com. All rights reserved.
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
@@ -12,7 +12,7 @@
 #include "qsf_net_def.h"
 
 #define START_SERIAL_NUMBER     1000
-#define DEFAULT_RECV_BUF_SIZE   256
+#define DEFAULT_RECV_BUF_SIZE   128
 
 #pragma pack(push, 4)
 // a session object presents a client connection
@@ -46,7 +46,6 @@ struct qsf_net_server_s
 };
 #pragma pack(pop)
 
-#pragma pack(push, 1)
 typedef struct write_buffer_s
 {
     uv_write_t  req;        // request handle
@@ -54,7 +53,7 @@ typedef struct write_buffer_s
     uint16_t    size;       // data size
     char        data[];     // data buffer
 }write_buffer_t;
-#pragma pack(pop)
+
 
 // set a unique serial number to this session
 static void set_session_serial(qsf_net_server_t* server, qsf_net_session_t* session)
