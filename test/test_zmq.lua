@@ -1,5 +1,6 @@
+local uv = require 'luv'
 local zmq = require 'zmq'
-local process = require 'process'
+
 
 local address = 'tcp://127.0.0.1:5055'
 
@@ -32,7 +33,7 @@ while true do
             break
         end
     end
-    process.sleep(100)
+    uv.sleep(100)
 end
 
 print('Passed')
