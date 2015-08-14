@@ -7,40 +7,44 @@
 #include <string.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
-#include <openssl/hmac.h>
+#include <openssl/evp.h>
 #include <openssl/aes.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include "qsf.h"
 
 
 #define RSA_BITS        1024
 #define MAX_RSA_BUF     16384
 
-#define AES_HANDLE      "cryptAES*"
-#define RSA_HANDLE      "cryptRSA*"
+#define AES_HANDLE      "qsfAES*"
+#define RSA_HANDLE      "qsfRSA*"
+#define HASH_HANDLE     "qsfHash*"
 
-#define check_aes(L)   ((cryptAES*)luaL_checkudata(L, 1, AES_HANDLE))
-#define check_rsa(L)   ((cryptRSA*)luaL_checkudata(L, 1, RSA_HANDLE))
+#define check_aes(L)   ((qsfAES*)luaL_checkudata(L, 1, AES_HANDLE))
+#define check_rsa(L)   ((qsfRSA*)luaL_checkudata(L, 1, RSA_HANDLE))
+#define check_hash(L)  ((qsfHash*)luaL_checkudata(L, 1, HASH_HANDLE))
 
 typedef int(*RSAFuncType)(int, const uint8_t*, uint8_t*, RSA*, int);
 
-typedef struct cryptAES
+typedef struct qsfAES
 {
     uint8_t key[AES_BLOCK_SIZE];
     uint8_t iv[AES_BLOCK_SIZE];
-    uint8_t buf[AES_BLOCK_SIZE * 512];  //16KB, big enough for our net packet
-}cryptAES;
+}qsfAES;
 
-typedef struct cryptRSA
+typedef struct qsfRSA
 {
     RSA     ctx;
     uint8_t buf[MAX_RSA_BUF];  //16KB
-}cryptRSA;
+}qsfRSA;
 
+typedef struct qsfHash
+{
+    EVP_MD_CTX ctx;
+}qsfHash;
 
-static void hex_dump(const void* data, size_t len, void* out, size_t outlen)
+static void hex_dump(const void* data, int len, void* out, int outlen)
 {
     assert(data && len > 0 && outlen >= len*2);
     static const char dict[] = "0123456789abcdef";
@@ -54,7 +58,6 @@ static void hex_dump(const void* data, size_t len, void* out, size_t outlen)
     }
 }
 
-
 static int crypto_aes_new(lua_State* L)
 {
     size_t key_len, iv_len;
@@ -64,92 +67,71 @@ static int crypto_aes_new(lua_State* L)
         return luaL_error(L, "invalid AES key size: %d", key_len);
     }
     const char* iv = lua_tolstring(L, 2, &iv_len);
-    if (iv && iv_len != AES_BLOCK_SIZE)
+    if ( iv_len != AES_BLOCK_SIZE)
     {
         return luaL_error(L, "invalid AES init vector size: %d", key_len);
     }
-    cryptAES* ptr = (cryptAES*)lua_newuserdata(L, sizeof(cryptAES));
+    qsfAES* ptr = (qsfAES*)lua_newuserdata(L, sizeof(qsfAES));
     memcpy(ptr->key, key, key_len);
-    if (iv)
-    {
-        memcpy(ptr->iv, iv, iv_len);
-    }
-    else
-    {
-        memset(ptr->iv, 0, AES_BLOCK_SIZE);
-    }
+    memcpy(ptr->iv, iv, iv_len);
     luaL_getmetatable(L, AES_HANDLE);
     lua_setmetatable(L, -2);
     return 1;
 }
 
-static int crypto_aes_encrypt(lua_State* L)
+static int aes_encrypt(lua_State* L, qsfAES* aes, const uint8_t* data, size_t size)
 {
-    cryptAES* aes = check_aes(L);
-    size_t size;
-    const uint8_t* data = (const uint8_t*)luaL_checklstring(L, 2, &size);
-    if (size > sizeof(aes->buf))
+    uint8_t buffer[512];
+    uint8_t* ptr = buffer;
+    if (size > sizeof(buffer))
     {
-        return luaL_error(L, "encrypt data too long: %d", size);
+        ptr = qsf_malloc(size);
     }
-
+    int num = 0;
     AES_KEY ctx;
     uint8_t iv[AES_BLOCK_SIZE];
     memcpy(iv, aes->iv, sizeof(iv));
-    AES_set_encrypt_key(aes->key, 128, &ctx);
-    uint8_t* dst = aes->buf;
-    const int slop = size & (AES_BLOCK_SIZE - 1);
-    for (size_t i = 0; i < size / AES_BLOCK_SIZE; ++i)
+    AES_set_encrypt_key(aes->key, AES_BLOCK_SIZE * 8, &ctx);
+    AES_ofb128_encrypt(data, ptr, size, &ctx, iv, &num);
+    lua_pushlstring(L, ptr, size);
+    if (ptr != buffer)
     {
-        AES_cbc_encrypt(data, dst, AES_BLOCK_SIZE, &ctx, iv, AES_ENCRYPT);
-        dst += AES_BLOCK_SIZE;
-        data += AES_BLOCK_SIZE;
+        qsf_free(ptr);
     }
-    if (slop > 0) // padding
-    {
-        uint8_t block[AES_BLOCK_SIZE];
-        memset(block, '\0', sizeof(block)); // padding zero
-        memcpy(block, data, slop);
-        AES_cbc_encrypt(block, dst, AES_BLOCK_SIZE, &ctx, iv, AES_ENCRYPT);
-        dst += AES_BLOCK_SIZE;
-    }
-    lua_pushlstring(L, (const char*)aes->buf, dst - aes->buf);
+    return num;
+}
+
+static int crypto_aes_encrypt(lua_State* L)
+{
+    qsfAES* aes = check_aes(L);
+    size_t size;
+    const uint8_t* data = (const uint8_t*)luaL_checklstring(L, 2, &size);
+    aes_encrypt(L, aes, data, size);
     return 1;
 }
 
 static int crypto_aes_decrypt(lua_State* L)
 {
-    cryptAES* aes = check_aes(L);
+    qsfAES* aes = check_aes(L);
     size_t size;
     const uint8_t* data = (const uint8_t*)luaL_checklstring(L, 2, &size);
-    luaL_argcheck(L, (size % AES_BLOCK_SIZE == 0), 2, "invalid block size");
-
-    AES_KEY ctx;
-    uint8_t iv[AES_BLOCK_SIZE];
-    AES_set_decrypt_key(aes->key, 128, &ctx);
-    memcpy(iv, aes->iv, sizeof(iv));
-
-    uint8_t* dst = aes->buf;
-    for (size_t i = 0; i < size / AES_BLOCK_SIZE; i++)
-    {
-        AES_cbc_encrypt(data, dst, AES_BLOCK_SIZE, &ctx, iv, AES_DECRYPT);
-        data += AES_BLOCK_SIZE;
-        dst += AES_BLOCK_SIZE;
-    }
-    // remove padding zero
-    while (*(dst-1) == '\0')
-        --dst;
-    lua_pushlstring(L, (const char*)aes->buf, dst - aes->buf);
+    aes_encrypt(L, aes, data, size);
     return 1;
 }
 
+//////////////////////////////////////////////////////////////////////////
 static int crypto_rsa_new(lua_State* L)
 {
-    cryptRSA* rsa = (cryptRSA*)lua_newuserdata(L, sizeof(cryptRSA));
+    qsfRSA* rsa = (qsfRSA*)lua_newuserdata(L, sizeof(qsfRSA));
     memset(rsa, 0, sizeof(*rsa));
     luaL_getmetatable(L, RSA_HANDLE);
     lua_setmetatable(L, -2);
     return 1;
+}
+
+static int crypto_rsa_clear(lua_State* L)
+{
+    qsfRSA* rsa = check_rsa(L);
 }
 
 static int crypto_rsa_gen_keypair(lua_State* L)
@@ -187,7 +169,7 @@ static int crypto_rsa_gen_keypair(lua_State* L)
 
 static int crypto_rsa_set_pubkey(lua_State* L)
 {
-    cryptRSA* rsa = check_rsa(L);
+    qsfRSA* rsa = check_rsa(L);
     size_t len;
     const char* key = luaL_checklstring(L, 2, &len);
     BIO* bio = BIO_new(BIO_s_mem());
@@ -207,7 +189,7 @@ static int crypto_rsa_set_pubkey(lua_State* L)
 
 static int crypto_rsa_set_key(lua_State* L)
 {
-    cryptRSA* rsa = check_rsa(L);
+    qsfRSA* rsa = check_rsa(L);
     size_t len;
     const char* key = luaL_checklstring(L, 2, &len);
     BIO* bio = BIO_new(BIO_s_mem());
@@ -225,7 +207,7 @@ static int crypto_rsa_set_key(lua_State* L)
     return 0;
 }
 
-static int do_rsa_encrypt(cryptRSA* rsa, RSAFuncType func, const uint8_t* src, int size)
+static int do_rsa_encrypt(qsfRSA* rsa, RSAFuncType func, const uint8_t* src, int size)
 {
     assert(rsa && func && src && size > 0);
     uint8_t* dst = rsa->buf;
@@ -254,7 +236,7 @@ static int do_rsa_encrypt(cryptRSA* rsa, RSAFuncType func, const uint8_t* src, i
     return (int)(dst - rsa->buf);
 }
 
-static int do_rsa_decrypt(cryptRSA* rsa, RSAFuncType func, const uint8_t* src, int size)
+static int do_rsa_decrypt(qsfRSA* rsa, RSAFuncType func, const uint8_t* src, int size)
 {
     assert(rsa && func && src && size > 0);
     const int modulus_size = RSA_size(&rsa->ctx);
@@ -288,7 +270,7 @@ static int do_rsa_decrypt(cryptRSA* rsa, RSAFuncType func, const uint8_t* src, i
 
 static int crypto_rsa_pub_encrypt(lua_State* L)
 {
-    cryptRSA* rsa = check_rsa(L);
+    qsfRSA* rsa = check_rsa(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
     int size = do_rsa_encrypt(rsa, RSA_public_encrypt, (const uint8_t*)data, (int)len);
@@ -302,7 +284,7 @@ static int crypto_rsa_pub_encrypt(lua_State* L)
 
 static int crypto_rsa_encrypt(lua_State* L)
 {
-    cryptRSA* rsa = check_rsa(L);
+    qsfRSA* rsa = check_rsa(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
     int size = do_rsa_encrypt(rsa, RSA_private_encrypt, (const uint8_t*)data, (int)len);
@@ -316,7 +298,7 @@ static int crypto_rsa_encrypt(lua_State* L)
 
 static int crypto_rsa_pub_decrypt(lua_State* L)
 {
-    cryptRSA* rsa = check_rsa(L);
+    qsfRSA* rsa = check_rsa(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
     int size = do_rsa_decrypt(rsa, RSA_public_decrypt, (const uint8_t*)data, (int)len);
@@ -330,7 +312,7 @@ static int crypto_rsa_pub_decrypt(lua_State* L)
 
 static int crypto_rsa_decrypt(lua_State* L)
 {
-    cryptRSA* rsa = check_rsa(L);
+    qsfRSA* rsa = check_rsa(L);
     size_t len;
     const char* data = luaL_checklstring(L, 2, &len);
     int size = do_rsa_decrypt(rsa, RSA_private_decrypt, (const uint8_t*)data, (int)len);
@@ -342,75 +324,92 @@ static int crypto_rsa_decrypt(lua_State* L)
     return 0;
 }
 
-static int crypto_md5(lua_State* L)
+//////////////////////////////////////////////////////////////////////////
+static int crypto_hash_new(lua_State* L)
 {
-    size_t len;
-    const char* data = luaL_checklstring(L, 1, &len);
-    uint8_t buffer[MD5_DIGEST_LENGTH];
-    MD5((const uint8_t*)data, len, buffer);
-    char hex[MD5_DIGEST_LENGTH * 2];
-    hex_dump(buffer, MD5_DIGEST_LENGTH, hex, sizeof(hex));
-    lua_pushlstring(L, hex, sizeof(hex));
+    const char* type = luaL_checkstring(L, 1);
+    const EVP_MD* md = NULL;
+    if (strcmp(type, "md5") == 0)
+    {
+        md = EVP_md5();
+    }
+    else if (strcmp(type, "sha1") == 0)
+    {
+        md = EVP_sha1();
+    }
+    else if (strcmp(type, "sha256") == 0)
+    {
+        md = EVP_sha256();
+    }
+    else if (strcmp(type, "sha512") == 0)
+    {
+        md = EVP_sha512();
+    }
+    if (md == NULL)
+    {
+        return luaL_error(L, "invalid hash type");
+    }
+    qsfHash* ptr = (qsfHash*)lua_newuserdata(L, sizeof(qsfHash));
+    EVP_MD_CTX_init(&ptr->ctx);
+    EVP_DigestInit_ex(&ptr->ctx, md, NULL);
+    luaL_getmetatable(L, HASH_HANDLE);
+    lua_setmetatable(L, -2);
     return 1;
 }
 
-static int crypto_sha1(lua_State* L)
+static int crypto_hash_gc(lua_State* L)
 {
-    size_t len = 0;
-    const uint8_t* data = (const uint8_t*)luaL_checklstring(L, 1, &len);
-    uint8_t buffer[SHA_DIGEST_LENGTH];
-    SHA1(data, len, buffer);
-    char hex[SHA_DIGEST_LENGTH * 2];
-    hex_dump(buffer, SHA_DIGEST_LENGTH, hex, sizeof(hex));
-    lua_pushlstring(L, hex, sizeof(hex));
+    qsfHash* hash = check_hash(L);
+    EVP_MD_CTX_cleanup(&hash->ctx);
+    return 0;
+}
+
+static int crypto_hash_update(lua_State* L)
+{
+    qsfHash* hash = check_hash(L);
+    size_t length = 0;
+    const char* data = luaL_checklstring(L, 2, &length);
+    EVP_DigestUpdate(&hash->ctx, data, length);
+    return 0;
+}
+
+static int crypto_hash_digest(lua_State* L)
+{
+    qsfHash* hash = check_hash(L);
+    int ishex = 1;
+    const char* option = luaL_optstring(L, 2, "hex");
+    if (strcmp(option, "bin") == 0)
+    {
+        ishex = 0;
+    }
+    int length = 0;
+    uint8_t data[EVP_MAX_MD_SIZE] = { '\0' };
+    EVP_DigestFinal_ex(&hash->ctx, data, &length);
+    if (ishex)
+    {
+        char hex[EVP_MAX_MD_SIZE * 2] = { '\0' };
+        hex_dump(data, length, hex, sizeof(hex));
+        lua_pushlstring(L, hex, length*2);
+    }
+    else
+    {
+        lua_pushlstring(L, data, length);
+    }
     return 1;
 }
 
-static int crypto_hmac_md5(lua_State* L)
-{
-    size_t key_len, size;
-    const char* key = luaL_checklstring(L, 1, &key_len);
-    const char* data = luaL_checklstring(L, 2, &size);
-    const EVP_MD* evp_md = EVP_md5();
-    unsigned int md_len = 0;
-    uint8_t md[EVP_MAX_MD_SIZE];
-    HMAC(evp_md, key, (int)key_len, (const uint8_t*)data, size, md, &md_len);
-    char hex[EVP_MAX_MD_SIZE * 2];
-    hex_dump(md, md_len, hex, sizeof(hex));
-    lua_pushlstring(L, hex, md_len*2);
-    return 1;
-}
-
-static int crypto_hmac_sha1(lua_State* L)
-{
-    size_t key_len, size;
-    const char* key = luaL_checklstring(L, 1, &key_len);
-    const char* data = luaL_checklstring(L, 2, &size);
-    const EVP_MD* evp_md = EVP_sha1();
-    unsigned int md_len = 0;
-    uint8_t md[EVP_MAX_MD_SIZE];
-    HMAC(evp_md, key, (int)key_len, (const uint8_t*)data, size, md, &md_len);
-    char hex[EVP_MAX_MD_SIZE * 2];
-    hex_dump(md, md_len, hex, sizeof(hex));
-    lua_pushlstring(L, hex, md_len*2);
-    return 1;
-}
-
+//////////////////////////////////////////////////////////////////////////
 static void create_meta(lua_State* L, const char* name, const luaL_Reg* methods)
 {
     assert(L && name && methods);
-    if (luaL_newmetatable(L, name))
-    {
-        lua_pushvalue(L, -1);
-        lua_setfield(L, -2, "__index");
-        luaL_setfuncs(L, methods, 0);
-        lua_pushliteral(L, "__metatable");
-        lua_pushliteral(L, "cannot access this metatable");
-        lua_settable(L, -3);
-        lua_pop(L, 1);  /* pop new metatable */
-        return;
-    }
-    luaL_error(L, "`%s` already registered.", name);
+    luaL_newmetatable(L, name);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
+    luaL_setfuncs(L, methods, 0);
+    lua_pushliteral(L, "__metatable");
+    lua_pushliteral(L, "cannot access this metatable");
+    lua_settable(L, -3);
+    lua_pop(L, 1);  /* pop new metatable */
 }
 
 static void make_meta(lua_State* L)
@@ -424,29 +423,36 @@ static void make_meta(lua_State* L)
 
     static const luaL_Reg rsa_lib[] =
     {
-        { "set_pubkey", crypto_rsa_set_pubkey },
-        { "set_key", crypto_rsa_set_key },
-        { "pub_encrypt", crypto_rsa_pub_encrypt },
-        { "pub_decrypt", crypto_rsa_pub_decrypt },
-        { "encrypt", crypto_rsa_encrypt },
-        { "decrypt", crypto_rsa_decrypt },
+        { "setPubKey", crypto_rsa_set_pubkey },
+        { "setPriKey", crypto_rsa_set_key },
+        { "pubEncrypt", crypto_rsa_pub_encrypt },
+        { "pubDecrypt", crypto_rsa_pub_decrypt },
+        { "priEncrypt", crypto_rsa_encrypt },
+        { "priDecrypt", crypto_rsa_decrypt },
         { NULL, NULL },
     };
+    static const luaL_Reg hash_lib[] = 
+    {
+        { "__gc", crypto_hash_gc },
+        { "clear", crypto_hash_gc },
+        { "update", crypto_hash_update },
+        { "digest", crypto_hash_digest },
+        { NULL, NULL },
+    };
+
     create_meta(L, AES_HANDLE, aes_lib);
     create_meta(L, RSA_HANDLE, rsa_lib);
+    create_meta(L, HASH_HANDLE, hash_lib);
 }
 
 LUALIB_API int luaopen_crypto(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
-        { "md5", crypto_md5 },
-        { "sha1", crypto_sha1 },
-        { "hmac_md5", crypto_hmac_md5 },
-        { "hmac_sha1", crypto_hmac_sha1 },
-        { "new_aes", crypto_aes_new },
-        { "new_rsa", crypto_rsa_new },
-        { "gen_rsa_keypair", crypto_rsa_gen_keypair },
+        { "createAES", crypto_aes_new },
+        { "createRSA", crypto_rsa_new }, 
+        { "createHash", crypto_hash_new },
+        { "genRSAKeypair", crypto_rsa_gen_keypair },
         { NULL, NULL },
     };
 

@@ -530,13 +530,13 @@ static void make_meta(lua_State* L)
     {
         { "__gc", conn_gc },
         { "__tostring", conn_tostring },
-        { "set_charset", conn_set_charset },
-        { "set_reconnect", conn_set_reconnect },
-        { "set_connect_timeout", conn_set_connect_timeout },
-        { "set_write_timeout", conn_set_write_timeout },
-        { "set_read_timeout", conn_set_read_timeout },
-        { "set_protocol", conn_set_protocol },
-        { "set_compress", conn_set_compress },
+        { "setCharset", conn_set_charset },
+        { "setReconnect", conn_set_reconnect },
+        { "setConnectTimeout", conn_set_connect_timeout },
+        { "setWriteTimeout", conn_set_write_timeout },
+        { "setReadTimeout", conn_set_read_timeout },
+        { "setProtocol", conn_set_protocol },
+        { "setCompress", conn_set_compress },
         { "escape", conn_escape_string },
         { "connect", conn_connect },
         { "ping", conn_ping },
@@ -551,7 +551,7 @@ static void make_meta(lua_State* L)
     {
         { "__gc", cursor_gc },
         { "fetch", cursor_fetch },
-        { "fetch_all", cursor_fetch_all },
+        { "fetchAll", cursor_fetch_all },
         { "numrows", cursor_numrows },
         { NULL, NULL },
     };
@@ -564,7 +564,7 @@ LUALIB_API int luaopen_mysql(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
-        { "new_client", conn_create },
+        { "createClient", conn_create },
         { NULL, NULL },
     };
 

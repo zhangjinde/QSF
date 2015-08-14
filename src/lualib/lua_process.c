@@ -2,13 +2,11 @@
 // Distributed under the terms and conditions of the Apache License.
 // See accompanying files LICENSE.
 
-#include <float.h>
 #include <assert.h>
 #include <string.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include <uv.h>
-#include "qsf.h"
+#include <stdint.h>
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -16,91 +14,39 @@
 #include <uuid/uuid.h>
 #include <unistd.h>
 #else
-#include <direct.h>
 #include <Windows.h>
 #include <objbase.h>
 #endif
 
+
+// Number of 100 nanosecond units from 1/1/1601 to 1/1/1970
+#define EPOCH_BIAS  116444736000000000i64
+
+// the number of milliseconds since Epoch, 1970-01-01 00:00:00 +0000 (UTC).
+static int process_time(lua_State* L)
+{
+    uint64_t now = 0;
+#ifdef _WIN32
+    GetSystemTimeAsFileTime((FILETIME*)&now);
+    now = (now - EPOCH_BIAS) / 10000;
+#else
+    struct timeval val = { 0, 0 };
+    gettimeofday(&val, NULL);
+    now = val.tv_sec * 1000 + val.tv_usec / 1000;
+#endif
+    lua_pushinteger(L, now);
+    return 1;
+}
+
 static int process_sleep(lua_State* L)
 {
-    int msec = (int)luaL_checkinteger(L, 1);
-#ifdef _WIN32 
+#ifdef _WIN32
+    DWORD msec = (DWORD)luaL_checkinteger(L, 1);
     Sleep(msec);
 #else
+    int msec = (int)luaL_checkinteger(L, 1);
     usleep(msec * 1000);
 #endif
-    return 0;
-}
-
-static int process_gettick(lua_State* L)
-{
-    uint64_t ticks = uv_hrtime();
-    lua_pushinteger(L, ticks/1000000);
-    return 1;
-}
-
-static int process_pid(lua_State* L)
-{
-#ifdef _WIN32
-    int pid = GetCurrentProcessId();
-#else
-    int pid = getpid();
-#endif
-    lua_pushinteger(L, pid);
-    return 1;
-}
-
-static int process_kill(lua_State* L)
-{
-    int pid = (int)luaL_checkinteger(L, 1);
-    int sig = (int)luaL_checkinteger(L, 2);
-    uv_kill(pid, sig);
-    return 0;
-}
-
-static int process_free_memory(lua_State* L)
-{
-    int64_t bytes = uv_get_free_memory();
-    lua_pushinteger(L, bytes);
-    return 1;
-}
-
-static int process_total_memory(lua_State* L)
-{
-    int64_t bytes = uv_get_total_memory();
-    lua_pushinteger(L, bytes);
-    return 1;
-}
-
-static int process_set_title(lua_State* L)
-{
-    const char* title = luaL_checkstring(L, 1);
-    uv_set_process_title(title);
-    return 0;
-}
-
-static int process_exepath(lua_State* L)
-{
-    char buf[256] = { '\0' };
-    size_t size = sizeof(buf);
-    uv_exepath(buf, &size);
-    lua_pushstring(L, buf);
-    return 1;
-}
-
-static int process_cwd(lua_State* L)
-{
-    char buf[256] = { '\0' };
-    size_t size = sizeof(buf);
-    uv_cwd(buf, &size);
-    lua_pushstring(L, buf);
-    return 1;
-}
-
-static int process_chdir(lua_State* L)
-{
-    const char* dir = luaL_checkstring(L, 1);
-    uv_chdir(dir);
     return 0;
 }
 
@@ -123,20 +69,32 @@ static int process_rand32(lua_State* L)
 
 static int process_new_uuid(lua_State* L)
 {
-    char out[40];
+    // default is binary representation
+    const char* option = luaL_optstring(L, 1, "bin"); 
 #ifdef _WIN32
-    GUID guid;
-    CoCreateGuid(&guid);
-    const char* fmt = "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X";
-    sprintf_s(out, sizeof(out), fmt, guid.Data1, guid.Data2, guid.Data3,
-        guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
-        guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+    GUID uuid;
+    CoCreateGuid(&uuid);
 #else
     uint8_t uuid[16];
     uuid_generate(uuid);
-    uuid_unparse(uuid, out);
 #endif
-    lua_pushlstring(L, out, 36);
+    if (memcmp(option, "hex", 3) == 0)
+    {
+        char out[40] = { '\0' };
+#ifdef _WIN32
+        const char* fmt = "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X";
+        sprintf_s(out, sizeof(out), fmt, uuid.Data1, uuid.Data2, uuid.Data3,
+            uuid.Data4[0], uuid.Data4[1], uuid.Data4[2], uuid.Data4[3],
+            uuid.Data4[4], uuid.Data4[5], uuid.Data4[6], uuid.Data4[7]);
+#else 
+        uuid_unparse(uuid, out);
+#endif
+        lua_pushlstring(L, out, 36);
+    }
+    else // binary
+    {
+        lua_pushlstring(L, (const char*)&uuid, sizeof(uuid));
+    }
     return 1;
 }
 
@@ -144,18 +102,10 @@ LUALIB_API int luaopen_process(lua_State* L)
 {
     static const luaL_Reg lib[] =
     {
-        { "sleep", process_sleep }, 
-        { "gettick", process_gettick }, 
-        { "pid", process_pid },
-        { "kill", process_kill },
-        { "free_memory", process_free_memory }, 
-        { "total_memory", process_total_memory },
-        { "set_title", process_set_title },
-        { "exepath", process_exepath },
-        { "cwd", process_cwd },
-        { "chdir", process_chdir },
+        { "time", process_time },
+        { "sleep", process_sleep },
         { "rand32", process_rand32 },
-        { "new_uuid", process_new_uuid },
+        { "createUUID", process_new_uuid },
         { NULL, NULL },
     };
     luaL_newlib(L, lib);
