@@ -1,27 +1,44 @@
 
-* Version 0.3.0
-    - Switch Lua VM to LuaJIT 2.0
-    - Remove native Lua modules: msgpack, mysql, crypto, uuid, cjson
-    --New modules: utf8, struct
+* 2015.08.03, Version 0.4.0
+    - Lua虚拟机切换回5.3(LuaJIT的64位内存限制)
+    - 删除JIT模块(md5, mysql)
+    - 删除C模块(msgpack)
+    - 增加b64模块
+    - 增加crypto模块
+    - 增加luv，用luv更换process的部分API
+    - net模块去掉client实现
+    
+* 2015.05.12, Version 0.3.0
+    - Lua虚拟机切换到LuaJIT
+    - 删除模块msgpack, mysql, crypto, uuid, cjson
+    --增加模块utf8, struct
 
-* Version 0.2.0
-    - Rewrite framework with pure C99
-    - Replace asio with libuv and uthash
-    - Thread-safe PRNG with TinyMT
-    - Fix Lua module bugs
+* 2015.05.09, Version 0.2.1
+    - 增加线程安全的随机数生成器(TinyMT)
+    - 预载入标准库的math.round, string.start_with, string.ends_with
+    - 优化TCP服务的内存使用
+    - lua-msgpack的bugfix
+
+* 2015.04.19, Version 0.2.0
+    - 重写的C语言版本框架结构（做减法）。
+    - 使用libuv代替asio实现TCP服务，使用uthash实现hash查找。
+    - 修复lua-msgpack的序列化key为数字的table的bug。
+    - lua-process新增API。
+    
+* 2015.04.03, Version 0.1.1
+    - 更新了lua-net的API。
    
-* Version 0.1.0
-    - ZeroMQ IPC based service
-    - Asio based TCP server
-    - Pre-loaded Lua module:
-        + lua-mysql     
-        + lua-zmq       
-        + lua-zlib      
-        + lua-uuid      
-        + lua-cjson     
-        + lua-msgpack   
-        + lua-process   
-        + lua-net       
-        + lua-fs        
-        + lua-crypto    
-        
+* 2015.04.03, Version 0.1.0
+    - 基于service的线程通信框架。
+    - 基于asio的TCP服务器。
+    - 预载入的Lua模块
+        + lua-mysql     MySQL数据库访问
+        + lua-zmq       ZeroMQ的API
+        + lua-zlib      zlib压缩
+        + lua-uuid      uuid生成
+        + lua-cjson     JSON解析
+        + lua-msgpack   msgpack解析
+        + lua-process   进程相关
+        + lua-net       TCP协议
+        + lua-fs        文件操作
+        + lua-crypto    AES和DES封装
