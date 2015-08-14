@@ -9,8 +9,7 @@
 #include "qsf_malloc.h"
 #include "qsf_log.h"
 #include "qsf_env.h"
-#include "qsf_trace.h"
-#include "qsf_service.h"
+#include "qsf_node.h"
 
 
 #define QSF_MAX(a, b)   ((a) > (b) ? (a) : (b))

@@ -37,11 +37,17 @@ static void write_log_to_file(const char* msg, int size)
     }
 }
 
-void qsf_abort(void)
+void qsf_abort(const char* msg)
 {
-    // force segmentation fault with core dump
-    int* p = NULL;
-    *p = 0;
+#ifdef _WIN32
+    //  Raise STATUS_FATAL_APP_EXIT.
+    ULONG_PTR extra_info[1];
+    extra_info[0] = (ULONG_PTR)msg;
+    RaiseException(0x40000015, EXCEPTION_NONCONTINUABLE, 1, extra_info);
+#else
+    (void)msg;
+    abort();
+#endif
 }
 
 int qsf_log_to_file(int enable)

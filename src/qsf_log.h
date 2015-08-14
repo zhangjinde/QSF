@@ -14,11 +14,11 @@
     do { \
     if (UNLIKELY(!(expr))){ \
         qsf_vlog(__FILE__, __LINE__, fmt, ##__VA_ARGS__); \
-        qsf_abort(); \
+        qsf_abort(#expr); \
     }}while(0)
 
 // abort current process
-void qsf_abort(void);
+void qsf_abort(const char* msg);
 
 void qsf_vlog(const char* file, int line, const char* fmt, ...)
     PRINTF_FORMAT_ATTR(3, 4);

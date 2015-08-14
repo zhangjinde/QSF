@@ -21,7 +21,7 @@ typedef struct qsf_context_s
     void* router;
 }qsf_context_t;
 
-// global  qsf context object
+// global qsf context object
 static qsf_context_t  qsf_context;
 
 // create a zmq dealer object connected to router
@@ -126,7 +126,7 @@ static void qsf_init(void)
 void qsf_exit(int sig)
 {
     qsf_env_exit();
-    qsf_service_exit();
+    qsf_node_exit();
     zmq_ctx_term(qsf_context.context);
 }
 
@@ -159,13 +159,13 @@ int qsf_start(const char* file)
 
     qsf_init();
     
-    r = qsf_service_init();
+    r = qsf_node_init();
     qsf_assert(r == 0, "qsf_service_init() failed.");
 
     const char* name = qsf_getenv("start_name");
     const char* path = qsf_getenv("start_file");
     qsf_assert(name && path, "name and path cannot be null");
-    r = qsf_create_service(name, path, "sys");
+    r = qsf_create_node(name, path, "sys");
     qsf_assert(r == 0, "create service '%s' failed, %d.", name, r);
     
     while (1)
