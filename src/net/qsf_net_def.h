@@ -17,7 +17,7 @@
 #define NET_DEFAULT_MAX_CONN    5000
 
 // default heart beat seconds
-#define NET_DEFAULT_HEARTBEAT   30
+#define NET_DEFAULT_HEARTBEAT   60
 
 // default check heart beat seconds
 #define NET_DEFAULT_HEARTBEAT_CHECK     10

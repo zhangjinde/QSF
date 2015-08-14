@@ -26,7 +26,7 @@ typedef struct qsf_net_session_s
     struct sockaddr_in  peer_addr;          // peer address
     uint32_t            buf_size;           // recv buffer size
     uint16_t            recv_bytes;         // total recieved bytes
-    uint16_t            head_size;          // head bytes
+    uint16_t            body_size;          // body bytes
     char*               recv_buf;           // recv buffer
 }qsf_net_session_t;
 
@@ -121,14 +121,14 @@ static void on_session_alloc(uv_handle_t* handle, size_t size, uv_buf_t* buf)
     assert(s);
     uint16_t bytes = s->recv_bytes;
     buf->base = s->recv_buf + bytes;
-    if (s->head_size == 0) // header not filled
+    if (s->body_size == 0) // header not filled
     {
-        assert(sizeof(s->head_size) >= bytes);
-        buf->len = sizeof(s->head_size) - bytes;
+        assert(sizeof(s->body_size) >= bytes);
+        buf->len = sizeof(s->body_size) - bytes;
     }
     else // read body content
     {
-        buf->len = s->head_size - bytes;
+        buf->len = s->body_size - bytes;
     }
 }
 
@@ -151,19 +151,19 @@ static void on_session_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* 
     }
     session->last_recv_time = uv_now(stream->loop);
     session->recv_bytes += (uint16_t)nread;
-    uint16_t size = session->head_size;
+    uint16_t size = session->body_size;
     if (size == 0) // header not full-filled
     {
         if (session->recv_bytes == sizeof(size))
         {
             memcpy(&size, session->recv_buf, sizeof(size));
-            session->head_size = ntohs(size); // network order
+            session->body_size = ntohs(size); // network order
             session->recv_bytes = 0;
-            if (session->head_size > session->buf_size) // extending recv buffer
+            if (session->body_size > session->buf_size) // extending recv buffer
             {
                 qsf_free(session->recv_buf);
-                session->recv_buf = qsf_malloc(session->head_size);
-                session->buf_size = session->head_size;
+                session->recv_buf = qsf_malloc(session->body_size);
+                session->buf_size = session->body_size;
             }
         }
     }
@@ -172,7 +172,7 @@ static void on_session_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* 
         if (session->recv_bytes == size)
         {
             session->recv_bytes = 0;
-            session->head_size = 0;
+            session->body_size = 0;
             cb(0, session->serial, session->recv_buf, size, server->udata);
         }
     }
