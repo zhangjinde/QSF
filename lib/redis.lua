@@ -9,10 +9,10 @@ local redis = {
 -- the module to a local variable when requiring it: `local redis = require('redis')`.
 Redis = redis
 
-local table, string, coroutine, pairs, ipairs, tonumber, tostring, type
-    = table, string, coroutine, pairs, ipairs, tonumber, tostring, type
+local table, string, coroutine, pairs, ipairs, tonumber, tostring, type, assert, require
+    = table, string, coroutine, pairs, ipairs, tonumber, tostring, type, assert, require
 
-local unpack = _G.unpack or table.unpack
+local unpack = table.unpack
 local network, request, response = {}, {}, {}
 
 local defaults = {
