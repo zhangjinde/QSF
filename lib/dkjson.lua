@@ -17,7 +17,7 @@ You can contact the author by sending an e-mail to 'david' at the
 domain 'dkolf.de'.
 
 
-Copyright (C) 2010-2013 David Heiko Kolf
+Copyright (C) 2010-2014 David Heiko Kolf
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -44,7 +44,8 @@ SOFTWARE.
 -- global dependencies:
 local pairs, type, tostring, tonumber, getmetatable, setmetatable, rawset =
       pairs, type, tostring, tonumber, getmetatable, setmetatable, rawset
-local error, require, pcall, select = error, require, pcall, select
+local io, error, require, pcall, select, assert =
+      io, error, require, pcall, select, assert
 local floor, huge = math.floor, math.huge
 local strrep, gsub, strsub, strbyte, strchar, strfind, strlen, strformat =
       string.rep, string.gsub, string.sub, string.byte, string.char,
@@ -704,6 +705,13 @@ function json.use_lpeg ()
   json.using_lpeg = true
 
   return json -- so you can get the module using json = require "dkjson".use_lpeg()
+end
+
+function json.load(filename)
+  local fp = assert(io.open(filename))
+  local text = fp:read('*a')
+  fp:close()
+  return json.decode(text)
 end
 
 if always_try_using_lpeg then
