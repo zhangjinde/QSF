@@ -2,13 +2,6 @@
 
 QSF is ZeroMQ based multi-thread communicating framework for Lua.
 
-## Feature highlights
-
-* Message queue based threading model.
-
-* Multi-platform(Linux, Windows) asynchronous networking.
-
-
 
 ## Installation
 
