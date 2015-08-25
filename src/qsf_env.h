@@ -7,10 +7,10 @@
 #include <stdint.h>
 
 // get qsf environment string vairable
-const char* qsf_getenv(const char* key);
+const char* qsf_getenv(const char* key, const char* deflt);
 
 // get qsf environment integer vairable
-int64_t qsf_getenv_int(const char* key);
+int64_t qsf_getenv_int(const char* key, int64_t deflt);
 
 // set qsf environment vairable
 void qsf_setenv(const char* key, const char* value);

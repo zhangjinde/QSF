@@ -22,7 +22,7 @@ typedef struct qsf_env_s
 static qsf_env_t  global_env;
 
 
-const char* qsf_getenv(const char* key)
+const char* qsf_getenv(const char* key, const char* value)
 {
     lua_State* L = global_env.L;
     assert(L && key);
@@ -31,17 +31,17 @@ const char* qsf_getenv(const char* key)
     const char* s = lua_tostring(L, -1);
     lua_pop(L, 1);
     uv_mutex_unlock(&global_env.mutex);
-    return s;
+    return (s == NULL ? value : s);
 }
 
-int64_t qsf_getenv_int(const char* key)
+int64_t qsf_getenv_int(const char* key, int64_t value)
 {
-    const char* s = qsf_getenv(key);
-    if (s)
+    const char* s = qsf_getenv(key, NULL);
+    if (s != NULL)
     {
         return atoll(s);
     }
-    return 0;
+    return value;
 }
 
 void qsf_setenv(const char* key, const char* value)
@@ -68,7 +68,8 @@ int qsf_env_init(const char* file)
         return r;
     }
     lua_State* L = luaL_newstate();
-    luaL_openlibs(L);
+    lua_pushstring(L, PLATFORM_STRING);
+    lua_setglobal(L, "OS");
     r = luaL_dofile(L, file);
     if (r != LUA_OK)
     {

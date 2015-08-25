@@ -4,6 +4,27 @@
 
 #pragma once
 
+// identify the current platform
+#if defined(__linux__)
+#define PLATFORM_LINUX    1
+#define PLATFORM_STRING   "linux"
+#elif defined(_WIN32)
+#define PLATFORM_WINDOWS  1
+#define PLATFORM_STRING   "windows"
+#elif defined(__APPLE__) && defined(__MACH__)
+#define PLATFORM_MACOSX   1
+#define PLATFORM_STRING   "macosx"
+#else
+#error "unsupported platform"
+#endif
+
+// detection for 64 bit
+#if defined(__x86_64__) || defined(_M_X64)
+# define ARCH_X64  1
+#else
+# define ARCH_X64  0
+#endif
+
 #if defined(__GNUC__) && __GNUC__ >= 4
 #define LIKELY(x)   (__builtin_expect((x), 1))
 #define UNLIKELY(x) (__builtin_expect((x), 0))
@@ -12,12 +33,8 @@
 #define UNLIKELY(x) (x)
 #endif
 
-/*
- * Compiler specific attribute translation
- * msvc should come first, so if clang is in msvc mode it gets the right defines
- * NOTE: this will only do checking in msvc with versions that support /analyze
- */
-#if _MSC_VER
+
+#if defined(_MSC_VER)
 # ifdef _USE_ATTRIBUTES_FOR_SAL
 #   undef _USE_ATTRIBUTES_FOR_SAL
 # endif
@@ -31,27 +48,8 @@
     __attribute__((format(printf, format_param, dots_param)))
 #endif
 
-/*
- * detection for 64 bit
- */
-#if defined(__x86_64__) || defined(_M_X64)
-# define QSF_X64  1
-#else
-# define QSF_X64  0
-#endif
-
-/* 
- * platform specific TLS support
- * gcc implements __thread
- * msvc implements __declspec(thread)
- * the semantics are the same (but remember __thread is broken on apple)
- */
-#if defined(_MSC_VER)
-# define QSF_TLS    __declspec(thread)
-#elif defined(__GNUC__) || defined(__clang__)
-# define QSF_TLS    __thread
-#else
-# error cannot define platform specific thread local storage
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+#define snprintf    _snprintf
 #endif
 
 #ifndef MAX_PATH

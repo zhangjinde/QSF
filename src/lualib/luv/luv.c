@@ -104,6 +104,5 @@ LUALIB_API int luaopen_luv(lua_State* L)
     qsf_node_t* self = lua_touserdata(L, -1);
     luaL_argcheck(L, self != NULL, 1, "invalid context pointer");
     luaL_setfuncs(L, libs, 1);
-    create_timer_meta(L);
     return 1;
 }

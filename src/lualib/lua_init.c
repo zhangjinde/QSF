@@ -34,7 +34,7 @@ static const luaL_Reg preload_libs[] =
     { NULL, NULL },
 };
 
-void init_preload_libs(lua_State* L)
+void open_preload_libs(lua_State* L)
 {
     // add open functions into 'package.preload' table
     luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");

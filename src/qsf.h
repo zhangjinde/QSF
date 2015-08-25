@@ -15,6 +15,9 @@
 #define QSF_MAX(a, b)   ((a) > (b) ? (a) : (b))
 #define QSF_MIN(a, b)   ((a) < (b) ? (a) : (b))
 
+#define qsf_zmq_assert(cond) \
+    qsf_assert((cond), "zmq error: %d, %s", zmq_errno(), zmq_strerror(zmq_errno()))
+
 // start qsf framework with a config file
 int qsf_start(const char* file);
 void qsf_exit(int sig);

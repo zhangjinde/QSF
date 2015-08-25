@@ -9,10 +9,10 @@
 #include <zmq.h>
 
 
-#define QSF_ROUTER_ADDRESS  ("inproc://qsf.router")
+#define QSF_MAX_IPC_MSG_SIZE    (32 * 1024 * 1024)
+#define QSF_DEFAULT_HWM         (2048)
 
-#define qsf_zmq_assert(cond) \
-    qsf_assert((cond), "zmq error: %d, %s", zmq_errno(), zmq_strerror(zmq_errno()))
+#define QSF_ROUTER_ADDRESS      ("inproc://qsf.router")
 
 
 typedef struct qsf_context_s
@@ -38,12 +38,20 @@ void* qsf_create_dealer(const char* identity)
     r = zmq_setsockopt(dealer, ZMQ_LINGER, &linger, sizeof(linger));
     qsf_zmq_assert(r == 0);
 
-    int max_recv_timeout = (int)qsf_getenv_int("max_recv_timeout");
+    int max_recv_timeout = (int)qsf_getenv_int("max_recv_timeout", -1);
     r = zmq_setsockopt(dealer, ZMQ_RCVTIMEO, &max_recv_timeout, sizeof(max_recv_timeout));
     qsf_zmq_assert(r == 0);
 
-    int64_t max_msg_size = qsf_getenv_int("max_ipc_msg_size");
+    int64_t max_msg_size = qsf_getenv_int("max_ipc_msg_size", QSF_MAX_IPC_MSG_SIZE);
     r = zmq_setsockopt(dealer, ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
+    qsf_zmq_assert(r == 0);
+
+    int recv_hwm = (int)qsf_getenv_int("recv_hwm", QSF_DEFAULT_HWM);
+    r = zmq_setsockopt(dealer, ZMQ_RCVHWM, &recv_hwm, sizeof(recv_hwm));
+    qsf_zmq_assert(r == 0);
+
+    int send_hwm = (int)qsf_getenv_int("send_hwm", QSF_DEFAULT_HWM);
+    r = zmq_setsockopt(dealer, ZMQ_SNDHWM, &send_hwm, sizeof(send_hwm));
     qsf_zmq_assert(r == 0);
 
     r = zmq_connect(dealer, QSF_ROUTER_ADDRESS);
@@ -106,16 +114,19 @@ static void qsf_init(void)
     int r = zmq_setsockopt(router, ZMQ_LINGER, &linger, sizeof(linger));
     qsf_zmq_assert(r == 0);
 
-    int mandatory = (int)qsf_getenv_int("router_mandatory");
+    int mandatory = (int)qsf_getenv_int("router_mandatory", 0);
     r = zmq_setsockopt(router, ZMQ_ROUTER_MANDATORY, &mandatory, sizeof(mandatory));
     qsf_zmq_assert(r == 0);
 
-    int64_t max_msg_size = qsf_getenv_int("max_ipc_msg_size");
+    int64_t max_msg_size = qsf_getenv_int("max_ipc_msg_size", QSF_MAX_IPC_MSG_SIZE);
     r = zmq_setsockopt(router, ZMQ_MAXMSGSIZE, &max_msg_size, sizeof(max_msg_size));
     qsf_zmq_assert(r == 0);
 
     r = zmq_bind(router, QSF_ROUTER_ADDRESS);
     qsf_zmq_assert(r == 0);
+
+    int enable = (int)qsf_getenv_int("log_to_file", 0);
+    qsf_log_to_file(enable);
 
     qsf_context.context = ctx;
     qsf_context.router = router;
@@ -152,7 +163,8 @@ int qsf_start(const char* file)
 {
     int major, minor, patch;
     zmq_version(&major, &minor, &patch);
-    qsf_assert(major == ZMQ_VERSION_MAJOR, "invalid zmq version %d/%d.", major, ZMQ_VERSION_MAJOR);
+    const char* fmt = "zmq version unmatch, expect major %d, but get %d.";
+    qsf_assert(major == ZMQ_VERSION_MAJOR, fmt, major, ZMQ_VERSION_MAJOR);
 
     int r = qsf_env_init(file);
     qsf_assert(r == 0, "qsf_env_init() failed.");
@@ -162,8 +174,8 @@ int qsf_start(const char* file)
     r = qsf_node_init();
     qsf_assert(r == 0, "qsf_service_init() failed.");
 
-    const char* name = qsf_getenv("start_name");
-    const char* path = qsf_getenv("start_file");
+    const char* name = qsf_getenv("start_name", "main");
+    const char* path = qsf_getenv("start_file", "main.lua");
     qsf_assert(name && path, "name and path cannot be null");
     r = qsf_create_node(name, path, "sys");
     qsf_assert(r == 0, "create service '%s' failed, %d.", name, r);

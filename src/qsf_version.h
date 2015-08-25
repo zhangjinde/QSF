@@ -10,4 +10,4 @@
  */
 #define QSF_VERSION_MAJOR   0
 #define QSF_VERSION_MINOR   4
-#define QSF_VERSION_PATCH   0
+#define QSF_VERSION_PATCH   1

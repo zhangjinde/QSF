@@ -16,37 +16,35 @@
 #define MAX_ID_LENGTH       32
 #define MAX_ARG_LENGTH      256
 
-#define qsf_zmq_assert(cond) \
-    qsf_assert((cond), "zmq error: %d, %s", zmq_errno(), zmq_strerror(zmq_errno()))
 
 // a node represent a OS thread running lua code
 struct qsf_node_s
 {
     qsf_node_t*         next;         // linked list
     struct lua_State*   L;            // lua VM
-    uv_thread_t         thread;       // service thread
-    uv_loop_t           loop;         // uv loop
+    uv_thread_t         thread;       // thread context
+    uv_loop_t           loop;         // uv loop object
 
     void*       dealer;               // zmq dealer
-    char        name[MAX_ID_LENGTH];  // service name
-    char        path[MAX_PATH];       // lua file path
-    char        args[MAX_ARG_LENGTH]; // passed arguments
+    char        name[MAX_ID_LENGTH];  // node name
+    char        path[MAX_PATH];       // file path
+    char        args[MAX_ARG_LENGTH]; // arguments to pass
 
     uint32_t    tag;                  // used to check whether the object is good.
 };
 
 struct qsf_node_context_s
 {
-    int             count;      // number of services
+    int             count;      // number of node
     qsf_node_t*     list;       // single list container
-    uv_mutex_t      mutex;      // service mutex
+    uv_mutex_t      mutex;      // node mutex
 };
 
 // global node context
 static struct qsf_node_context_s node_ctx;
 
 // forward declaration
-extern void init_preload_libs(lua_State* L);
+extern void open_preload_libs(lua_State* L);
 
 static qsf_node_t* find_from_node_list(const char* name)
 {
@@ -96,7 +94,6 @@ static qsf_node_t* create_from_node_list(const char* name, const char* path, con
     strncpy(s->name, name, sizeof(s->name));
     strncpy(s->path, path, sizeof(s->path));
     strncpy(s->args, args, sizeof(s->args));
-
     qsf_node_t** pph = &node_ctx.list;
     while (*pph)
     {
@@ -111,16 +108,16 @@ static qsf_node_t* create_from_node_list(const char* name, const char* path, con
 static void load_node_path(lua_State* L)
 {
     char chunk[512];
-    const char* path = qsf_getenv("lua_path");
-    if (strlen(path) > 0)
+    const char* path = qsf_getenv("lua_path", "");
+    if (path && path[0] != '\0')
     {
         int r = snprintf(chunk, sizeof(chunk), "package.path = package.path .. ';' .. '%s'", path);
         qsf_assert(r > 0, "path too long");
         r = luaL_dostring(L, chunk);
         qsf_assert(r == LUA_OK, "%s", lua_tostring(L, -1));
     }
-    const char* cpath = qsf_getenv("lua_cpath");
-    if (strlen(cpath) > 0)
+    const char* cpath = qsf_getenv("lua_cpath", "");
+    if (path && path[0] != '\0')
     {
         int r = snprintf(chunk, sizeof(chunk), "package.cpath = package.cpath .. ';' .. '%s'", cpath);
         qsf_assert(r > 0, "cpath too long");
@@ -139,7 +136,7 @@ static int init_node(qsf_node_t* s)
     }
     lua_gc(L, LUA_GCSTOP, 0);  // stop collector during initialization
     luaL_openlibs(L);
-    init_preload_libs(L);
+    open_preload_libs(L);
     load_node_path(L);
     lua_pushlightuserdata(L, s); // thus pointer `s` cannot be moved before lua_close()
     lua_setfield(L, LUA_REGISTRYINDEX, "qsf_ctx");
@@ -165,7 +162,7 @@ static void cleanup_node(qsf_node_t* s)
     {
         uv_stop(&s->loop);
     }
-    //uv_loop_close(&s->loop);
+    uv_loop_close(&s->loop);
     s->tag = QSF_NODE_TAG_VALUE_BAD;
     qsf_log("service [%s] exit.\n", s->name);
     uv_mutex_lock(&node_ctx.mutex);
@@ -183,7 +180,7 @@ static void node_thread_callback(void* args)
         if (r == LUA_OK)
         {
             lua_pushstring(s->L, s->args);
-            qsf_trace_pcall(s->L, 1);
+            r = qsf_trace_pcall(s->L, 1);
         }
         else
         {

@@ -18,6 +18,8 @@
 #include <objbase.h>
 #endif
 
+#include "qsf.h"
+
 
 // Number of 100 nanosecond units from 1/1/1601 to 1/1/1970
 #define EPOCH_BIAS  116444736000000000i64
@@ -98,6 +100,8 @@ static int process_new_uuid(lua_State* L)
     return 1;
 }
 
+#define SET_FIELD(n,v)  (lua_pushliteral(L, n), lua_pushstring(L, v), lua_settable(L, -3))
+
 LUALIB_API int luaopen_process(lua_State* L)
 {
     static const luaL_Reg lib[] =
@@ -109,5 +113,6 @@ LUALIB_API int luaopen_process(lua_State* L)
         { NULL, NULL },
     };
     luaL_newlib(L, lib);
+    SET_FIELD("platform", PLATFORM_STRING);
     return 1;
 }

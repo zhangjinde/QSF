@@ -14,13 +14,10 @@
 #include <Windows.h>
 #endif
 
-#define LOG_BUFSIZE     8196
 
 static const char* qsf_file_name = "qsf.log";
-static volatile int qsf_enable_log_to_file = 1;
+static volatile int qsf_enable_log_to_file = 0;
 
-// global thread local log buffer
-static QSF_TLS char global_log_buffer[LOG_BUFSIZE];
 
 static void write_log_to_file(const char* msg, int size)
 {
@@ -28,10 +25,11 @@ static void write_log_to_file(const char* msg, int size)
     if (fp)
     {
         time_t now = time(NULL);
+        struct tm date = *localtime(&now);
         char timestamp[40];
-        size_t ch = strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S ", localtime(&now));
-        assert(ch > 0);
-        fwrite(timestamp, 1, ch, fp);
+        size_t bytes = strftime(timestamp, 40, "%Y-%m-%d %H:%M:%S ", &date);
+        assert(bytes > 0);
+        fwrite(timestamp, 1, bytes, fp);
         fwrite(msg, 1, size, fp);
         fclose(fp);
     }
@@ -61,25 +59,36 @@ int qsf_log_to_file(int enable)
 
 void qsf_vlog(const char* file, int line, const char* fmt, ...)
 {
-    int ch = snprintf(global_log_buffer, LOG_BUFSIZE, "%s[%d]: ", file, line);
-    assert(ch > 0);
+    char buffer[2048];
+    char* bufptr = buffer;
+    int left_bytes = sizeof(buffer);
+    int bytes = snprintf(bufptr, left_bytes, "%s[%d]: ", file, line);
+    assert(bytes > 0);
+    bufptr += bytes;
+    left_bytes -= bytes;
+
     va_list ap;
     va_start(ap, fmt);
-    int bytes = vsnprintf(global_log_buffer + ch, LOG_BUFSIZE - ch, fmt, ap);
+    bytes = vsnprintf(bufptr, left_bytes, fmt, ap);
     va_end(ap);
-    if (bytes > 0)
+    bufptr += bytes;
+    left_bytes -= bytes;
+    if (bytes <= 0)
     {
-        int size = ch + bytes;
-        assert(size + 2 < LOG_BUFSIZE);
-        global_log_buffer[size] = '\n';
-        global_log_buffer[size + 1] = '\0';
-        fprintf(stderr, "%s", global_log_buffer);
+        return;
+    }
+
+    if (left_bytes >= 2)
+    {
+        *(bufptr++) = '\n';
+        *bufptr = '\0';
+        fprintf(stderr, "%s", buffer);
         if (qsf_enable_log_to_file)
         {
-            write_log_to_file(global_log_buffer, size);
+            write_log_to_file(buffer, (int)(bufptr - buffer));
         }
 #ifdef _WIN32
-        OutputDebugStringA(global_log_buffer);
+        OutputDebugStringA(buffer);
 #endif
     }
 }

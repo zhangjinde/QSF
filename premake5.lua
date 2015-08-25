@@ -2,7 +2,6 @@
 -- Premake script (http://premake.github.io)
 --
 
-
 solution 'qsf'
     configurations  {'Debug', 'Release'}
     language        'C'
@@ -30,8 +29,7 @@ solution 'qsf'
             'snprintf=_snprintf',
             'strncasecmp=_strnicmp',
         }
-        --buildoptions [[/wd"4127" /wd"4204" /wd"4201"]]
-
+        buildoptions [[/wd"4996"]]
         links
         {
             'ws2_32',
@@ -42,7 +40,7 @@ solution 'qsf'
     filter 'action:gmake'
         buildoptions    '-std=c99 -mrdrnd'
         defines         '_GNU_SOURCE'
-        
+
     filter 'system:linux'
         links
         {
@@ -51,24 +49,26 @@ solution 'qsf'
             'dl',
             'pthread',
         }
-        
+
     project 'qsf'
         targetname  'qsf'
         location    'build'
         kind        'ConsoleApp'
-        defines 
+        defines
         {
             'LUA_COMPAT_5_2',
         }
         files
         {
-            'src/**.h',
-            'src/**.c',
+            'src/lualib/**.h',
+            'src/lualib/**.c',
+            'src/net/*.c',
+            'src/net/*.h',
+            'src/*.h',
+            'src/*.c',
         }
-        includedirs
-        {
-            'src',
-        }
+        includedirs 'src'
+        libdirs 'bin'
 
         filter 'system:windows'
             libdirs 'deps/lib'
@@ -79,7 +79,7 @@ solution 'qsf'
                 'deps/include/zmq',
                 'deps/include/zlib',
                 'deps/include/libuv',
-                'deps/include/libmysql',            
+                'deps/include/libmysql',
             }
             links
             {
@@ -104,8 +104,8 @@ solution 'qsf'
                 'zmq',
                 'uuid',
                 'lua5.3',
-                'crypto',                
+                'crypto',
                 'jemalloc',
                 'mysqlclient',
             }
- 
+
