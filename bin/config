@@ -3,20 +3,20 @@
 --
 
 -- start-up service
-start_type = 'LuaService'
 start_name = 'test'
 start_file = '../test/runner.lua'
 
 -- lua module searching path
-if os.getenv('windir') then
-    lua_path = './?.lua;./lib/?.lua;../test/?.lua'
-    lua_cpath = './bin/win/?.dll;../lib/?.dll;'    
-else
-    lua_path = './?.lua;./lib/?.lua;'
-    lua_cpath = './bin/posix/?.so;../lib/?.so'
-end
+lua_path = './?.lua;../lib/?.lua;../test/?.lua'
+lua_cpath = '../lib/?.so;../lib/?.dll'
 
--- Max size of an inproc message, limited to 32M
-max_ipc_msg_size = 32 * 1024 * 1024
+-- Max size of an inproc message, limited to 64M
+max_ipc_msg_size = 64 * 1024 * 1024
 max_recv_timeout = -1
-router_mandatory = true
+router_mandatory = 1
+
+-- high water marks
+recv_hwm = 2048
+send_hwm = 2048
+
+log_to_file = 1
