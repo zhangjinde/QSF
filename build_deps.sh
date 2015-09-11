@@ -24,9 +24,9 @@ wget -c http://download.zeromq.org/zeromq-4.1.2.tar.gz
 tar -xzvf zeromq-4.1.2.tar.gz
 
 # libuv
-wget -c http://dist.libuv.org/dist/v1.7.0/libuv-v1.7.0.tar.gz
-tar -xzvf libuv-v1.6.1.tar.gz
+wget -c http://dist.libuv.org/dist/v1.7.0/libuv-v1.7.3.tar.gz
+tar -xzvf libuv-v1.7.3.tar.gz
 
 # jemalloc
-wget -c https://github.com/jemalloc/jemalloc/releases/download/3.6.0/jemalloc-3.6.0.tar.bz2
-tar -xjvf jemalloc-3.6.0.tar.bz2
+wget -c https://github.com/jemalloc/jemalloc/releases/download/4.0.0/jemalloc-4.0.0.tar.bz2
+tar -xjvf jemalloc-4.0.0.tar.bz2
