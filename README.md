@@ -9,7 +9,9 @@ Prerequisites:
 
 * [Premake5](http://premake.github.io/download.html) toolchain.
 
-* A C99 compiler, I recommend [Visual Studio 2013 Community](https://www.visualstudio.com/en-us/products/visual-studio-community-vs.aspx) for Windows folks.
+* A C99 compiler
+
+* Install [lua5.3](http://www.lua.org/download.html), [libuv]( http://dist.libuv.org/dist), [jemalloc](https://github.com/jemalloc/jemalloc/releases/) and [zeromq](http://download.zeromq.org)
 
 
 ### Build on Windows (Windows 7 x64)
@@ -19,8 +21,11 @@ Prerequisites:
 
 ### Build on Linux (Ubuntu 14.04 x64)
 
-1. Type `./build_deps.sh` to install dependency libraries.
-2. Type `premake5 gmake && make config=release`
+Type `premake5 gmake && make config=release`
+
+### Build on OSX (Yosemite 10.10.5)
+
+Type `premake5 --cc=clang gmake && make config=release`
 
 
 ## References
