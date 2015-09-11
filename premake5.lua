@@ -71,7 +71,6 @@ solution 'qsf'
         libdirs 'bin'
 
         filter 'system:windows'
-            libdirs 'deps/lib'
             includedirs
             {
                 'deps/include',
@@ -81,6 +80,7 @@ solution 'qsf'
                 'deps/include/libuv',
                 'deps/include/libmysql',
             }
+            libdirs 'deps/lib'
             links
             {
                 'zlib',
@@ -93,19 +93,31 @@ solution 'qsf'
 
         filter 'system:linux'
             defines 'USE_JEMALLOC'
-            includedirs
-            {
-                '/usr/include/mysql',
-            }
+            includedirs  '/usr/include/mysql'
             links
             {
                 'z',
                 'uv',
                 'zmq',
                 'uuid',
-                'lua5.3',
+                'lua',
                 'crypto',
                 'jemalloc',
                 'mysqlclient',
             }
-
+            
+        filter 'system:macosx'
+            defines 'USE_JEMALLOC'
+            toolset 'clang'
+            includedirs '/usr/local/mysql/include'
+            libdirs '/usr/local/mysql/lib'
+            links
+            {
+                'z',
+                'uv',
+                'zmq',
+                'lua',
+                'crypto',
+                'jemalloc',
+                'mysqlclient',
+            }
